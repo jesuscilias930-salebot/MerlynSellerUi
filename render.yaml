@@ -4,7 +4,9 @@ services:
     runtime: node
     region: virginia
     plan: starter
-    buildCommand: npm ci && npm run build
+    # Vinext is a development dependency required to compile the UI.
+    # Explicitly include it even though NODE_ENV is production at runtime.
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /
     envVars:
