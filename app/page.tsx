@@ -152,7 +152,16 @@ export default function Home() {
     const handleConversationUpdate = (event: Event) => {
       try {
         const update = JSON.parse((event as MessageEvent).data);
-        if (update.type === "message.received") playIncomingSound();
+        if (update.type === "message.received") {
+          playIncomingSound();
+          const activeConversationId = chat?.id || modalChat?.id;
+          if (activeConversationId === update.conversationId) {
+            request(`/conversations/${activeConversationId}/read`, { method: "POST" })
+              .then(refresh)
+              .catch(refresh);
+            return;
+          }
+        }
       } catch { /* Refresh still works if an unexpected event is received. */ }
       refresh();
     };

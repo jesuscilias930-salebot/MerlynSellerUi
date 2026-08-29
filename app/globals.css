@@ -853,7 +853,8 @@ button {
     opacity: .45
 }
 
-.lead-card>span:last-child {
+.lead-card>span:not(.lead-avatar) {
+    flex: 1;
     min-width: 0;
     display: grid;
     gap: 3px
