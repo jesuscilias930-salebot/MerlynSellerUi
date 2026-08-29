@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 
 type Props = { disabled?: boolean; onSend: (audio: Blob, filename: string) => Promise<void> };
 
-const preferredMimeType = () => ["audio/ogg;codecs=opus", "audio/webm;codecs=opus", "audio/mp4"]
+// WebM is consistently produced by Chromium and is normalized to OGG/Opus in
+// the backend. Prefer it over browser-declared OGG, whose bytes can be invalid.
+const preferredMimeType = () => ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg;codecs=opus"]
   .find((type) => MediaRecorder.isTypeSupported(type));
 
 export function AudioRecorder({ disabled, onSend }: Props) {
