@@ -4,6 +4,7 @@ export type Chat = {
   name: string | null;
   last_message: string | null;
   updated_at: string;
+  unreadCount: number;
 };
 
 export type Message = {

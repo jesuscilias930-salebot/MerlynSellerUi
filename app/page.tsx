@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@supabase/supabase-js";
-import { ChangeEvent, DragEvent, FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { api, request } from "./lib/api";
 import type { Chat, DocumentOption, LeadColumn, Message, RemarketingPreset, User } from "./lib/types";
 import { ConversationModal } from "./components/ConversationModal";
@@ -52,6 +52,7 @@ export default function Home() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null);
+  const soundContext = useRef<AudioContext | null>(null);
 
   const loadChats = async () =>
     setChats(await request<Chat[]>("/conversations"));
@@ -80,15 +81,17 @@ export default function Home() {
   const openInbox = async (item: Chat) => {
     setMessages([]);
     setChat(item);
-    const [nextMessages] = await Promise.all([loadMessages(item), loadDocumentOptions(item)]);
+    const [nextMessages] = await Promise.all([loadMessages(item), loadDocumentOptions(item), request(`/conversations/${item.id}/read`, { method: "POST" })]);
     setMessages(nextMessages);
+    await Promise.all([loadChats(), loadPipeline()]);
   };
   const openModal = async (item: Chat) => {
     setModalMessages([]);
     setModalChat(item);
     setModalDraft("");
-    const [nextMessages] = await Promise.all([loadMessages(item), loadDocumentOptions(item)]);
+    const [nextMessages] = await Promise.all([loadMessages(item), loadDocumentOptions(item), request(`/conversations/${item.id}/read`, { method: "POST" })]);
     setModalMessages(nextMessages);
+    await Promise.all([loadChats(), loadPipeline()]);
   };
   const refreshData = async () => {
     await Promise.all([loadChats(), loadPipeline(), loadPresets()]);
@@ -96,6 +99,24 @@ export default function Home() {
     if (modalChat) setModalMessages(await loadMessages(modalChat));
   };
   const canEditPipeline = user?.role === "owner" || user?.role === "admin";
+  const playIncomingSound = () => {
+    try {
+      const BrowserAudioContext = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!BrowserAudioContext) return;
+      const context = soundContext.current || new BrowserAudioContext();
+      soundContext.current = context;
+      context.resume().catch(() => undefined);
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.frequency.setValueAtTime(740, context.currentTime);
+      gain.gain.setValueAtTime(0.0001, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.22);
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.23);
+    } catch { /* Audio notifications can be blocked until a user interacts with the page. */ }
+  };
 
   useEffect(() => {
     request<{ user: User }>("/auth/me")
@@ -115,7 +136,14 @@ export default function Home() {
       refreshData().catch(() =>
         setNotice("No fue posible actualizar los leads y conversaciones."),
       );
-    stream.addEventListener("conversation.updated", refresh);
+    const handleConversationUpdate = (event: Event) => {
+      try {
+        const update = JSON.parse((event as MessageEvent).data);
+        if (update.type === "message.received") playIncomingSound();
+      } catch { /* Refresh still works if an unexpected event is received. */ }
+      refresh();
+    };
+    stream.addEventListener("conversation.updated", handleConversationUpdate);
     return () => stream.close();
   }, [user, chat?.id, modalChat?.id]);
 

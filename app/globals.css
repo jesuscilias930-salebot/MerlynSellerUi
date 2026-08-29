@@ -277,6 +277,28 @@ button {
     background: #f0faf4
 }
 
+.row.has-unread,
+.lead-card.has-unread {
+    border-color: #66c996;
+    background: #ecfff4;
+    box-shadow: 0 3px 14px #17804d20
+}
+
+.unread-badge {
+    display: grid;
+    place-items: center;
+    flex: none;
+    min-width: 22px;
+    height: 22px;
+    margin-left: auto;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #13824f;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800
+}
+
 .row>b {
     background: #fde5bb;
     color: #945914
