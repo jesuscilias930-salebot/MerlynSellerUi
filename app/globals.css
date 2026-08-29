@@ -16,7 +16,8 @@
 body {
     margin: 0;
     color: var(--ink);
-    font-family: Arial, sans-serif
+    font-family: Arial, sans-serif;
+    overflow: hidden
 }
 
 button,
@@ -117,7 +118,8 @@ button {
 .shell {
     display: grid;
     grid-template-columns: 220px 355px 1fr;
-    height: 100vh
+    height: 100dvh;
+    overflow: hidden
 }
 
 .shell>aside {
@@ -208,7 +210,8 @@ button {
     border-right: 1px solid var(--line);
     display: flex;
     flex-direction: column;
-    background: #fff
+    background: #fff;
+    min-height: 0
 }
 
 .list header {
@@ -247,7 +250,8 @@ button {
 }
 
 .rows {
-    overflow: auto
+    min-height: 0;
+    overflow-y: auto
 }
 
 .rows em {
@@ -299,7 +303,9 @@ button {
     display: grid;
     grid-template-rows: auto 1fr auto;
     position: relative;
-    background: #f7faf8
+    background: #f7faf8;
+    min-height: 0;
+    overflow: hidden
 }
 
 .panel header {
@@ -313,7 +319,8 @@ button {
 
 .thread {
     padding: 28px clamp(20px, 6vw, 100px);
-    overflow: auto;
+    min-height: 0;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 10px
@@ -424,6 +431,86 @@ button {
     border-radius: 10px;
     background: var(--green);
     color: #fff
+}
+
+.audio-recorder {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    margin: 0 22px 14px;
+    color: var(--muted)
+}
+
+.audio-recorder>button {
+    border: 1px solid #cce3d6;
+    border-radius: 9px;
+    background: #fff;
+    color: var(--deep);
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 700
+}
+
+.audio-recorder>button.recording {
+    border-color: #ebbbbb;
+    background: #fff4f4;
+    color: #9d2f2f
+}
+
+.audio-recorder .send-recording {
+    border-color: var(--green);
+    background: var(--green);
+    color: #fff
+}
+
+.audio-recorder audio {
+    width: min(260px, 52vw);
+    height: 34px
+}
+
+.audio-recorder small {
+    color: #a14713;
+    font-size: 11px
+}
+
+.close-conversation {
+    width: 32px;
+    height: 32px;
+    margin-left: auto;
+    border: 0;
+    border-radius: 9px;
+    background: #f2f5f3;
+    color: var(--muted);
+    font-size: 21px
+}
+
+.conversation-modal {
+    position: fixed;
+    z-index: 10;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px
+}
+
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: #1020188a
+}
+
+.modal-content {
+    position: relative;
+    width: min(860px, 100%);
+    height: min(760px, calc(100dvh - 48px));
+    box-shadow: 0 24px 70px #09170f55
+}
+
+.modal-content .panel {
+    height: 100%;
+    border-radius: 18px;
+    border: 1px solid var(--line)
 }
 
 .send:disabled {
@@ -884,5 +971,17 @@ button {
 
     .composer {
         margin: 0 12px 12px
+    }
+
+    .audio-recorder {
+        margin: 0 12px 10px
+    }
+
+    .conversation-modal {
+        padding: 8px
+    }
+
+    .modal-content {
+        height: calc(100dvh - 16px)
     }
 }
