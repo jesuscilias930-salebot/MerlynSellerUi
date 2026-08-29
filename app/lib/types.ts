@@ -30,3 +30,4 @@ export type User = { email: string; role: string };
 export type RemarketingPreset = { id: string; name: string; body: string | null; mediaId: string | null; filename: string | null; updated_at: string };
 export type DocumentOption = { mediaId: string; filename: string; caption: string | null; created_at: string };
 export type ConversationFilter = "all" | "unread" | "needs-response" | `column:${string}`;
+export type AutomationScenario = { id: string; key: "catalogo_anuncio" | "envios_nacionales"; name: string; isActive: boolean; config: Record<string, unknown>; updatedAt: string };

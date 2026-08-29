@@ -44,6 +44,63 @@
   .intent-learner { flex-wrap:wrap; }
 }
 
+/* Guided-sales scenarios */
+.scenarios {
+    min-width: 0;
+    padding: 30px;
+    background: #f7faf8
+}
+
+.scenario-list {
+    display: grid;
+    gap: 18px;
+    max-width: 980px
+}
+
+.scenario-editor {
+    display: grid;
+    gap: 14px;
+    padding: 20px;
+    border: 1px solid #dce7e1;
+    border-radius: 16px;
+    background: #fff
+}
+
+.scenario-editor>header,
+.scenario-evidence {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px
+}
+
+.scenario-editor h2,
+.scenario-editor p { margin: 0 }
+.scenario-editor h2 { font-size: 18px }
+.scenario-editor p, .scenario-evidence small { color: var(--muted); font-size: 13px }
+.scenario-evidence { flex-wrap: wrap; padding: 13px; border-radius: 10px; background: #f3f8f5 }
+.scenario-evidence>div { display: grid; gap: 4px }
+
+.scenario-field { display: grid; gap: 6px }
+.scenario-field span, .scenario-boxes>strong { font-size: 12px; font-weight: 700; color: var(--deep) }
+.scenario-field textarea, .scenario-field select, .scenario-box input, .scenario-box textarea {
+    width: 100%; box-sizing: border-box; border: 1px solid #d7e3dc; border-radius: 9px; padding: 9px; color: var(--ink); background: #fff; font: inherit
+}
+.scenario-field textarea { min-height: 64px; resize: vertical }
+.scenario-boxes { display: grid; gap: 9px }
+.scenario-box { display: grid; grid-template-columns: minmax(150px, .35fr) 1fr; gap: 8px }
+.scenario-box textarea { min-height: 55px; resize: vertical }
+.scenario-asset { display: flex; gap: 8px; align-items: center; width: 100%; padding: 8px; border-radius: 7px; background: #fff; font-size: 12px }
+.scenario-asset span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.scenario-asset button { border: 0; background: transparent; color: #b13434; cursor: pointer }
+
+@media (max-width: 580px) {
+    .scenarios { padding: 16px 10px }
+    .scenario-editor { padding: 14px }
+    .scenario-editor>header { flex-direction: column }
+    .scenario-box { grid-template-columns: 1fr }
+}
+
 .intent-learner { display: flex; gap: 6px; margin-top: 8px; }
 .intent-learner select { min-width: 0; max-width: 210px; font-size: 12px; }
 .intent-learner button { border: 0; border-radius: 7px; padding: 5px 8px; font-size: 12px; background: #e1f6eb; color: #176b44; cursor: pointer; }

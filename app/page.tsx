@@ -3,7 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { api, request } from "./lib/api";
-import type { AutomationIntent, Chat, ConversationFilter, DocumentOption, LeadColumn, Message, RemarketingPreset, User } from "./lib/types";
+import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, DocumentOption, LeadColumn, Message, RemarketingPreset, User } from "./lib/types";
 import { AutomationsPanel } from "./components/AutomationsPanel";
 import { ConversationModal } from "./components/ConversationModal";
 import { Inbox } from "./components/Inbox";
@@ -11,6 +11,7 @@ import { LeadBoard } from "./components/LeadBoard";
 import { LoginScreen } from "./components/LoginScreen";
 import { RemarketingPanel } from "./components/RemarketingPanel";
 import { Sidebar } from "./components/Sidebar";
+import { ScenariosPanel } from "./components/ScenariosPanel";
 
 type View = "inbox" | "pipeline" | "remarketing" | "automations";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -45,6 +46,7 @@ export default function Home() {
   } | null>(null);
   const [presets, setPresets] = useState<RemarketingPreset[]>([]);
   const [automationIntents, setAutomationIntents] = useState<AutomationIntent[]>([]);
+  const [automationScenarios, setAutomationScenarios] = useState<AutomationScenario[]>([]);
   const [presetName, setPresetName] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingAudio, setUploadingAudio] = useState(false);
@@ -77,6 +79,7 @@ export default function Home() {
   const loadPresets = async () =>
     setPresets(await request<RemarketingPreset[]>("/remarketing/presets"));
   const loadAutomations = async () => setAutomationIntents(await request<AutomationIntent[]>("/automations"));
+  const loadScenarios = async () => setAutomationScenarios(await request<AutomationScenario[]>("/scenarios"));
   const loadPipeline = async () => {
     const columns = await request<LeadColumn[]>("/leads/board");
     setPipeline(columns);
@@ -106,7 +109,7 @@ export default function Home() {
     await Promise.all([loadChats(), loadPipeline()]);
   };
   const refreshData = async () => {
-    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations()]);
+    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios()]);
     if (chat) setMessages(await loadMessages(chat));
     if (modalChat) setModalMessages(await loadMessages(modalChat));
   };
@@ -155,7 +158,7 @@ export default function Home() {
     request<{ user: User }>("/auth/me")
       .then(async (session) => {
         setUser(session.user);
-        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations()]);
+        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios()]);
       })
       .catch(() => undefined);
   }, []);
@@ -207,7 +210,7 @@ export default function Home() {
       });
       await supabase.auth.signOut();
       setUser(session.user);
-      await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations()]);
+      await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios()]);
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "Error al iniciar sesión.",
@@ -536,6 +539,13 @@ export default function Home() {
     if (!window.confirm("¿Eliminar esta automatización?")) return;
     try { await request(`/automations/${id}`, { method: "DELETE" }); await loadAutomations(); } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudo eliminar la automatización."); }
   };
+  const saveScenario = async (key: string, value: { isActive: boolean; config: Record<string, unknown> }) => {
+    try {
+      await request(`/scenarios/${key}`, { method: "PUT", body: JSON.stringify(value) });
+      await loadScenarios();
+      setNotice("Escenario guardado.");
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudo guardar el escenario."); }
+  };
   const learnIntent = async (target: Chat | null, messageId: string, intentId: string) => {
     if (!target) return;
     try {
@@ -656,7 +666,7 @@ export default function Home() {
           onSend={sendRemarketing}
         />
       ) : view === "automations" ? (
-        <AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} />
+        <><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></>
       ) : null}
       <ConversationModal
         chat={modalChat}
