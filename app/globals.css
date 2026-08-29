@@ -566,7 +566,8 @@ button {
     gap: 6px
 }
 
-.catalog-picker select {
+.catalog-picker select,
+.catalog-picker input {
     min-width: 0;
     flex: 1;
     border: 1px solid #dbe3df;
@@ -575,6 +576,10 @@ button {
     padding: 7px;
     color: var(--ink);
     font-size: 12px
+}
+
+.catalog-picker input {
+    min-width: 180px
 }
 
 .catalog-picker button,

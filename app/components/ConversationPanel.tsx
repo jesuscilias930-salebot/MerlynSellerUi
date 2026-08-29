@@ -14,6 +14,7 @@ type Props = {
   uploadingMedia: boolean;
   documentOptions: DocumentOption[];
   selectedDocumentId: string;
+  documentCaption: string;
   onDraftChange: (value: string) => void;
   onSendText: (event: FormEvent) => void;
   onUploadAudio: (event: ChangeEvent<HTMLInputElement>) => void;
@@ -21,6 +22,7 @@ type Props = {
   onUploadVideo: (event: ChangeEvent<HTMLInputElement>) => void;
   onUploadDocument: (event: ChangeEvent<HTMLInputElement>) => void;
   onDocumentChange: (mediaId: string) => void;
+  onDocumentCaptionChange: (caption: string) => void;
   onSendDocument: () => void;
   onRecordAudio: (audio: Blob, filename: string) => Promise<void>;
   onAutoReplyChange: (enabled: boolean) => void;
@@ -36,7 +38,7 @@ function IntentLearner({ message, intents, onLearn }: { message: Message; intent
   return <div className="intent-learner"><select value={intentId} onChange={(event) => setIntentId(event.target.value)}><option value="">Este mensaje corresponde a…</option>{intents.map((intent) => <option key={intent.id} value={intent.id}>{intent.name}</option>)}</select><button type="button" disabled={!intentId || saving} onClick={async () => { setSaving(true); try { await onLearn(message.id, intentId); setIntentId(""); } finally { setSaving(false); } }}>{saving ? "Guardando…" : "Aprender"}</button></div>;
 }
 
-export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploadingMedia, documentOptions, selectedDocumentId, onDraftChange, onSendText, onUploadAudio, onUploadImage, onUploadVideo, onUploadDocument, onDocumentChange, onSendDocument, onRecordAudio, onAutoReplyChange, automationIntents, onLearnIntent, onClose }: Props) {
+export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploadingMedia, documentOptions, selectedDocumentId, documentCaption, onDraftChange, onSendText, onUploadAudio, onUploadImage, onUploadVideo, onUploadDocument, onDocumentChange, onDocumentCaptionChange, onSendDocument, onRecordAudio, onAutoReplyChange, automationIntents, onLearnIntent, onClose }: Props) {
   const threadRef = useRef<HTMLDivElement>(null);
   const scrolledConversationId = useRef<string | null>(null);
   useEffect(() => {
@@ -65,7 +67,7 @@ export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploa
       {!chat && <div className="empty"><b className="mark">M</b><h2>Atiende desde un solo lugar</h2><p>Crea una conversación o espera un mensaje entrante.</p></div>}
       {messages.map((message) => <article className={message.direction} key={message.id}>{messageContent(message)}<small>{new Date(message.created_at).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })} · {message.status}{message.status === "failed" && message.error_code ? ` · ${message.error_code}` : ""}</small><IntentLearner message={message} intents={automationIntents} onLearn={onLearnIntent} /></article>)}
     </div>
-    <div className="chat-attachments"><div className="catalog-picker"><select value={selectedDocumentId} onChange={(event) => onDocumentChange(event.target.value)} disabled={!chat || documentOptions.length === 0}>{documentOptions.length === 0 ? <option>No hay catálogo disponible</option> : documentOptions.map((document) => <option key={document.mediaId} value={document.mediaId}>{document.filename}</option>)}</select><button type="button" onClick={onSendDocument} disabled={!chat || !selectedDocumentId || uploadingMedia}>Enviar catálogo</button></div><label className="media-button">▤ PDF<input type="file" accept="application/pdf,.pdf" onChange={onUploadDocument} disabled={!chat || uploadingMedia} /></label><label className="media-button">▧ Imagen<input type="file" accept="image/jpeg,image/png,image/webp" onChange={onUploadImage} disabled={!chat || uploadingMedia} /></label><label className="media-button">▸ Video<input type="file" accept="video/mp4,video/3gpp" onChange={onUploadVideo} disabled={!chat || uploadingMedia} /></label>{uploadingMedia && <span>Subiendo…</span>}</div>
+    <div className="chat-attachments"><div className="catalog-picker"><select value={selectedDocumentId} onChange={(event) => onDocumentChange(event.target.value)} disabled={!chat || documentOptions.length === 0}>{documentOptions.length === 0 ? <option>No hay catálogo disponible</option> : documentOptions.map((document) => <option key={document.mediaId} value={document.mediaId}>{document.filename}</option>)}</select><input value={documentCaption} onChange={(event) => onDocumentCaptionChange(event.target.value)} maxLength={1024} placeholder="Mensaje que acompaña el catálogo (opcional)" disabled={!chat || !selectedDocumentId || uploadingMedia} aria-label="Mensaje que acompaña el catálogo" /><button type="button" onClick={onSendDocument} disabled={!chat || !selectedDocumentId || uploadingMedia}>Enviar catálogo</button></div><label className="media-button">▤ PDF<input type="file" accept="application/pdf,.pdf" onChange={onUploadDocument} disabled={!chat || uploadingMedia} /></label><label className="media-button">▧ Imagen<input type="file" accept="image/jpeg,image/png,image/webp" onChange={onUploadImage} disabled={!chat || uploadingMedia} /></label><label className="media-button">▸ Video<input type="file" accept="video/mp4,video/3gpp" onChange={onUploadVideo} disabled={!chat || uploadingMedia} /></label>{uploadingMedia && <span>Subiendo…</span>}</div>
     <form className="composer" onSubmit={onSendText}>
       <label className={uploadingAudio ? "audio-upload loading" : "audio-upload"} aria-label="Seleccionar audio">{uploadingAudio ? "…" : "♫"}<input type="file" accept="audio/aac,audio/mp4,audio/mpeg,audio/amr,audio/ogg,audio/opus" onChange={onUploadAudio} disabled={!chat || uploadingAudio} /></label>
       <textarea disabled={!chat} value={draft} onChange={(event) => onDraftChange(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && draft.trim()) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={chat ? "Escribe un mensaje…" : "Selecciona una conversación"} />

@@ -51,6 +51,7 @@ export default function Home() {
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [documentOptions, setDocumentOptions] = useState<DocumentOption[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
+  const [documentCaption, setDocumentCaption] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null);
@@ -65,7 +66,13 @@ export default function Home() {
   const loadDocumentOptions = async (item: Chat, selectLatest = false) => {
     const options = await request<DocumentOption[]>(`/conversations/${item.id}/document-options`);
     setDocumentOptions(options);
-    setSelectedDocumentId((current) => selectLatest || !options.some((option) => option.mediaId === current) ? options[0]?.mediaId || "" : current);
+    setSelectedDocumentId((current) => {
+      const nextId = selectLatest || !options.some((option) => option.mediaId === current)
+        ? options[0]?.mediaId || ""
+        : current;
+      setDocumentCaption(options.find((option) => option.mediaId === nextId)?.caption || "");
+      return nextId;
+    });
   };
   const loadPresets = async () =>
     setPresets(await request<RemarketingPreset[]>("/remarketing/presets"));
@@ -342,7 +349,7 @@ export default function Home() {
     try {
       await request(`/conversations/${target.id}/messages/document`, {
         method: "POST",
-        body: JSON.stringify({ mediaId: document.mediaId, filename: document.filename, caption: document.caption || undefined }),
+        body: JSON.stringify({ mediaId: document.mediaId, filename: document.filename, caption: documentCaption.trim() || undefined }),
       });
       await refreshData();
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar el catálogo."); } finally { setUploadingMedia(false); }
@@ -583,6 +590,7 @@ export default function Home() {
           uploadingMedia={uploadingMedia}
           documentOptions={documentOptions}
           selectedDocumentId={selectedDocumentId}
+          documentCaption={documentCaption}
           onNumberChange={setNumber}
           onDraftChange={setDraft}
           onCreate={create}
@@ -595,7 +603,11 @@ export default function Home() {
           onUploadImage={uploadSelectedMedia(chat, "image")}
           onUploadVideo={uploadSelectedMedia(chat, "video")}
           onUploadDocument={uploadSelectedMedia(chat, "document")}
-          onDocumentChange={setSelectedDocumentId}
+          onDocumentChange={(mediaId) => {
+            setSelectedDocumentId(mediaId);
+            setDocumentCaption(documentOptions.find((option) => option.mediaId === mediaId)?.caption || "");
+          }}
+          onDocumentCaptionChange={setDocumentCaption}
           onSendDocument={() => sendDocument(chat)}
           onRecordAudio={(audio, filename) =>
             uploadAudio(chat, audio, filename)
@@ -654,6 +666,7 @@ export default function Home() {
         uploadingMedia={uploadingMedia}
         documentOptions={documentOptions}
         selectedDocumentId={selectedDocumentId}
+        documentCaption={documentCaption}
         onDraftChange={setModalDraft}
         onSendText={(event) =>
           sendText(event, modalChat, modalDraft, () => setModalDraft(""))
@@ -662,7 +675,11 @@ export default function Home() {
         onUploadImage={uploadSelectedMedia(modalChat, "image")}
         onUploadVideo={uploadSelectedMedia(modalChat, "video")}
         onUploadDocument={uploadSelectedMedia(modalChat, "document")}
-        onDocumentChange={setSelectedDocumentId}
+        onDocumentChange={(mediaId) => {
+          setSelectedDocumentId(mediaId);
+          setDocumentCaption(documentOptions.find((option) => option.mediaId === mediaId)?.caption || "");
+        }}
+        onDocumentCaptionChange={setDocumentCaption}
         onSendDocument={() => sendDocument(modalChat)}
         onRecordAudio={(audio, filename) =>
           uploadAudio(modalChat, audio, filename)
