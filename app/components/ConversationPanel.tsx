@@ -1,9 +1,9 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useRef } from "react";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { initials } from "../lib/format";
-import type { Chat, DocumentOption, Message } from "../lib/types";
+import type { AutomationIntent, Chat, DocumentOption, Message } from "../lib/types";
 import { AudioRecorder } from "./AudioRecorder";
 
 type Props = {
@@ -24,10 +24,19 @@ type Props = {
   onSendDocument: () => void;
   onRecordAudio: (audio: Blob, filename: string) => Promise<void>;
   onAutoReplyChange: (enabled: boolean) => void;
+  automationIntents: AutomationIntent[];
+  onLearnIntent: (messageId: string, intentId: string) => Promise<void>;
   onClose?: () => void;
 };
 
-export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploadingMedia, documentOptions, selectedDocumentId, onDraftChange, onSendText, onUploadAudio, onUploadImage, onUploadVideo, onUploadDocument, onDocumentChange, onSendDocument, onRecordAudio, onAutoReplyChange, onClose }: Props) {
+function IntentLearner({ message, intents, onLearn }: { message: Message; intents: AutomationIntent[]; onLearn: (messageId: string, intentId: string) => Promise<void> }) {
+  const [intentId, setIntentId] = useState("");
+  const [saving, setSaving] = useState(false);
+  if (message.direction !== "inbound" || message.type !== "text" || !message.body) return null;
+  return <div className="intent-learner"><select value={intentId} onChange={(event) => setIntentId(event.target.value)}><option value="">Este mensaje corresponde a…</option>{intents.map((intent) => <option key={intent.id} value={intent.id}>{intent.name}</option>)}</select><button type="button" disabled={!intentId || saving} onClick={async () => { setSaving(true); try { await onLearn(message.id, intentId); setIntentId(""); } finally { setSaving(false); } }}>{saving ? "Guardando…" : "Aprender"}</button></div>;
+}
+
+export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploadingMedia, documentOptions, selectedDocumentId, onDraftChange, onSendText, onUploadAudio, onUploadImage, onUploadVideo, onUploadDocument, onDocumentChange, onSendDocument, onRecordAudio, onAutoReplyChange, automationIntents, onLearnIntent, onClose }: Props) {
   const threadRef = useRef<HTMLDivElement>(null);
   const scrolledConversationId = useRef<string | null>(null);
   useEffect(() => {
@@ -54,7 +63,7 @@ export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploa
     <header><b className="avatar">{chat ? initials(chat.name || chat.phone_number) : "M"}</b><div><h2>{chat ? chat.name || chat.phone_number : "Tu bandeja está lista"}</h2><small>{chat?.phone_number || "Selecciona un chat para comenzar"}</small></div>{chat && <button className={`bot-toggle ${chat.autoReplyEnabled !== false ? "on" : ""}`} type="button" onClick={() => onAutoReplyChange(chat.autoReplyEnabled === false)}>{chat.autoReplyEnabled === false ? "Bot apagado" : "Bot activo"}</button>}{onClose && <button className="close-conversation" type="button" onClick={onClose} aria-label="Cerrar conversación">×</button>}</header>
     <div className="thread" ref={threadRef}>
       {!chat && <div className="empty"><b className="mark">M</b><h2>Atiende desde un solo lugar</h2><p>Crea una conversación o espera un mensaje entrante.</p></div>}
-      {messages.map((message) => <article className={message.direction} key={message.id}>{messageContent(message)}<small>{new Date(message.created_at).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })} · {message.status}{message.status === "failed" && message.error_code ? ` · ${message.error_code}` : ""}</small></article>)}
+      {messages.map((message) => <article className={message.direction} key={message.id}>{messageContent(message)}<small>{new Date(message.created_at).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })} · {message.status}{message.status === "failed" && message.error_code ? ` · ${message.error_code}` : ""}</small><IntentLearner message={message} intents={automationIntents} onLearn={onLearnIntent} /></article>)}
     </div>
     <div className="chat-attachments"><div className="catalog-picker"><select value={selectedDocumentId} onChange={(event) => onDocumentChange(event.target.value)} disabled={!chat || documentOptions.length === 0}>{documentOptions.length === 0 ? <option>No hay catálogo disponible</option> : documentOptions.map((document) => <option key={document.mediaId} value={document.mediaId}>{document.filename}</option>)}</select><button type="button" onClick={onSendDocument} disabled={!chat || !selectedDocumentId || uploadingMedia}>Enviar catálogo</button></div><label className="media-button">▤ PDF<input type="file" accept="application/pdf,.pdf" onChange={onUploadDocument} disabled={!chat || uploadingMedia} /></label><label className="media-button">▧ Imagen<input type="file" accept="image/jpeg,image/png,image/webp" onChange={onUploadImage} disabled={!chat || uploadingMedia} /></label><label className="media-button">▸ Video<input type="file" accept="video/mp4,video/3gpp" onChange={onUploadVideo} disabled={!chat || uploadingMedia} /></label>{uploadingMedia && <span>Subiendo…</span>}</div>
     <form className="composer" onSubmit={onSendText}>

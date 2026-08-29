@@ -526,6 +526,14 @@ export default function Home() {
     if (!window.confirm("¿Eliminar esta automatización?")) return;
     try { await request(`/automations/${id}`, { method: "DELETE" }); await loadAutomations(); } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudo eliminar la automatización."); }
   };
+  const learnIntent = async (target: Chat | null, messageId: string, intentId: string) => {
+    if (!target) return;
+    try {
+      const result = await request<{ intentName: string }>(`/conversations/${target.id}/messages/${messageId}/learn-intent`, { method: "POST", body: JSON.stringify({ intentId }) });
+      await loadAutomations();
+      setNotice(`Ejemplo guardado para “${result.intentName}”.`);
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudo guardar el ejemplo."); }
+  };
   const logout = async () => {
     await request("/auth/session", { method: "DELETE" });
     setUser(null);
@@ -590,6 +598,8 @@ export default function Home() {
             uploadAudio(chat, audio, filename)
           }
           onAutoReplyChange={(enabled) => setAutoReply(chat, enabled)}
+          automationIntents={automationIntents}
+          onLearnIntent={(messageId, intentId) => learnIntent(chat, messageId, intentId)}
         />
       ) : view === "pipeline" ? (
         <LeadBoard
@@ -655,6 +665,8 @@ export default function Home() {
           uploadAudio(modalChat, audio, filename)
         }
         onAutoReplyChange={(enabled) => setAutoReply(modalChat, enabled)}
+        automationIntents={automationIntents}
+        onLearnIntent={(messageId, intentId) => learnIntent(modalChat, messageId, intentId)}
         onClose={() => {
           setModalChat(null);
           setModalMessages([]);
