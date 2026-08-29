@@ -630,9 +630,9 @@ export default function Home() {
           onSavePreset={savePreset}
           onSend={sendRemarketing}
         />
-      ) : (
+      ) : view === "automations" ? (
         <AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} />
-      )}
+      ) : null}
       <ConversationModal
         chat={modalChat}
         messages={modalMessages}
