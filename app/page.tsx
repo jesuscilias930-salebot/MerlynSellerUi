@@ -3,7 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useState } from "react";
 import { api, request } from "./lib/api";
-import type { Chat, LeadColumn, Message, RemarketingPreset, User } from "./lib/types";
+import type { Chat, DocumentOption, LeadColumn, Message, RemarketingPreset, User } from "./lib/types";
 import { ConversationModal } from "./components/ConversationModal";
 import { Inbox } from "./components/Inbox";
 import { LeadBoard } from "./components/LeadBoard";
@@ -46,6 +46,9 @@ export default function Home() {
   const [presetName, setPresetName] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingAudio, setUploadingAudio] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [documentOptions, setDocumentOptions] = useState<DocumentOption[]>([]);
+  const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null);
@@ -54,6 +57,11 @@ export default function Home() {
     setChats(await request<Chat[]>("/conversations"));
   const loadMessages = (item: Chat) =>
     request<Message[]>(`/conversations/${item.id}/messages`);
+  const loadDocumentOptions = async (item: Chat) => {
+    const options = await request<DocumentOption[]>(`/conversations/${item.id}/document-options`);
+    setDocumentOptions(options);
+    setSelectedDocumentId((current) => options.some((option) => option.mediaId === current) ? current : options[0]?.mediaId || "");
+  };
   const loadPresets = async () =>
     setPresets(await request<RemarketingPreset[]>("/remarketing/presets"));
   const loadPipeline = async () => {
@@ -71,12 +79,14 @@ export default function Home() {
   };
   const openInbox = async (item: Chat) => {
     setChat(item);
-    setMessages(await loadMessages(item));
+    const [nextMessages] = await Promise.all([loadMessages(item), loadDocumentOptions(item)]);
+    setMessages(nextMessages);
   };
   const openModal = async (item: Chat) => {
     setModalChat(item);
     setModalDraft("");
-    setModalMessages(await loadMessages(item));
+    const [nextMessages] = await Promise.all([loadMessages(item), loadDocumentOptions(item)]);
+    setModalMessages(nextMessages);
   };
   const refreshData = async () => {
     await Promise.all([loadChats(), loadPipeline(), loadPresets()]);
@@ -228,6 +238,44 @@ export default function Home() {
         );
       }
     };
+
+  const uploadMedia = async (target: Chat | null, type: "image" | "video", file: File) => {
+    if (!target) return;
+    const allowedTypes = type === "image" ? ["image/jpeg", "image/png", "image/webp"] : ["video/mp4", "video/3gpp"];
+    const maxSize = type === "image" ? 5 * 1024 * 1024 : 16 * 1024 * 1024;
+    if (!allowedTypes.includes(file.type)) throw new Error(type === "image" ? "Selecciona una imagen JPEG, PNG o WebP." : "Selecciona un video MP4 o 3GPP.");
+    if (file.size > maxSize) throw new Error(type === "image" ? "La imagen no puede superar 5 MB." : "El video no puede superar 16 MB.");
+    setUploadingMedia(true);
+    try {
+      const response = await fetch(`${api}/conversations/${target.id}/messages/${type}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": file.type, "X-Upload-Filename": encodeURIComponent(file.name) },
+        body: file,
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || `No fue posible enviar el ${type === "image" ? "archivo" : "video"}.`);
+      await refreshData();
+    } finally { setUploadingMedia(false); }
+  };
+  const uploadSelectedMedia = (target: Chat | null, type: "image" | "video") => async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try { await uploadMedia(target, type, file); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar el archivo."); }
+  };
+  const sendDocument = async (target: Chat | null) => {
+    const document = documentOptions.find((option) => option.mediaId === selectedDocumentId);
+    if (!target || !document) return;
+    setUploadingMedia(true);
+    try {
+      await request(`/conversations/${target.id}/messages/document`, {
+        method: "POST",
+        body: JSON.stringify({ mediaId: document.mediaId, filename: document.filename, caption: document.caption || undefined }),
+      });
+      await refreshData();
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar el catálogo."); } finally { setUploadingMedia(false); }
+  };
 
   const addColumn = async (event: FormEvent) => {
     event.preventDefault();
@@ -439,6 +487,9 @@ export default function Home() {
           number={number}
           draft={draft}
           uploadingAudio={uploadingAudio}
+          uploadingMedia={uploadingMedia}
+          documentOptions={documentOptions}
+          selectedDocumentId={selectedDocumentId}
           onNumberChange={setNumber}
           onDraftChange={setDraft}
           onCreate={create}
@@ -447,6 +498,10 @@ export default function Home() {
             sendText(event, chat, draft, () => setDraft(""))
           }
           onUploadAudio={uploadSelectedAudio(chat)}
+          onUploadImage={uploadSelectedMedia(chat, "image")}
+          onUploadVideo={uploadSelectedMedia(chat, "video")}
+          onDocumentChange={setSelectedDocumentId}
+          onSendDocument={() => sendDocument(chat)}
           onRecordAudio={(audio, filename) =>
             uploadAudio(chat, audio, filename)
           }
@@ -494,11 +549,18 @@ export default function Home() {
         messages={modalMessages}
         draft={modalDraft}
         uploadingAudio={uploadingAudio}
+        uploadingMedia={uploadingMedia}
+        documentOptions={documentOptions}
+        selectedDocumentId={selectedDocumentId}
         onDraftChange={setModalDraft}
         onSendText={(event) =>
           sendText(event, modalChat, modalDraft, () => setModalDraft(""))
         }
         onUploadAudio={uploadSelectedAudio(modalChat)}
+        onUploadImage={uploadSelectedMedia(modalChat, "image")}
+        onUploadVideo={uploadSelectedMedia(modalChat, "video")}
+        onDocumentChange={setSelectedDocumentId}
+        onSendDocument={() => sendDocument(modalChat)}
         onRecordAudio={(audio, filename) =>
           uploadAudio(modalChat, audio, filename)
         }

@@ -358,6 +358,16 @@ button {
     object-fit: contain
 }
 
+.thread .chat-image,
+.thread .chat-video {
+    display: block;
+    width: min(320px, 100%);
+    max-height: 320px;
+    border-radius: 10px;
+    object-fit: contain;
+    background: #edf2ef
+}
+
 .thread article small {
     display: block;
     text-align: right;
@@ -390,6 +400,62 @@ button {
     background: #fff;
     border: 1px solid var(--line);
     border-radius: 15px
+}
+
+.chat-attachments {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+    margin: 0 22px 8px
+}
+
+.catalog-picker {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    gap: 6px
+}
+
+.catalog-picker select {
+    min-width: 0;
+    flex: 1;
+    border: 1px solid #dbe3df;
+    border-radius: 8px;
+    background: #fff;
+    padding: 7px;
+    color: var(--ink);
+    font-size: 12px
+}
+
+.catalog-picker button,
+.media-button {
+    border: 1px solid #cce3d6;
+    border-radius: 8px;
+    background: #fff;
+    color: var(--deep);
+    padding: 7px 9px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap
+}
+
+.catalog-picker button:disabled {
+    cursor: not-allowed;
+    opacity: .45
+}
+
+.media-button {
+    cursor: pointer
+}
+
+.media-button input {
+    display: none
+}
+
+.chat-attachments>span {
+    color: var(--muted);
+    font-size: 11px
 }
 
 .composer button {
@@ -1099,6 +1165,14 @@ button {
 
     .composer {
         margin: 0 12px 12px
+    }
+
+    .chat-attachments {
+        margin: 0 12px 8px
+    }
+
+    .catalog-picker {
+        flex-basis: 100%
     }
 
     .audio-recorder {
