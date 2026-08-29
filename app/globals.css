@@ -726,6 +726,95 @@ button {
     margin: 0 auto
 }
 
+.remarketing-layout {
+    width: min(1040px, 100%);
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 22px;
+    margin: 26px auto 0
+}
+
+.remarketing-layout .remarketing-form {
+    width: 100%;
+    margin: 0
+}
+
+.preset-library {
+    align-self: start;
+    display: grid;
+    gap: 10px;
+    padding: 17px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: #fff
+}
+
+.preset-library p {
+    margin: 0 0 4px;
+    color: var(--green);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .11em
+}
+
+.preset-library h2 {
+    margin: 0;
+    font-size: 17px
+}
+
+.empty-presets {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5
+}
+
+.preset-library article {
+    display: grid;
+    gap: 5px;
+    padding: 11px;
+    border: 1px solid #e7ece9;
+    border-radius: 10px
+}
+
+.preset-library article strong,
+.preset-library article small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
+}
+
+.preset-library article strong {
+    font-size: 12px
+}
+
+.preset-library article small {
+    color: var(--muted);
+    font-size: 11px
+}
+
+.preset-library article div {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3px
+}
+
+.preset-library article button {
+    border: 0;
+    border-radius: 7px;
+    background: #edf7f0;
+    color: var(--green);
+    padding: 5px 8px;
+    font-size: 11px;
+    font-weight: 700
+}
+
+.preset-library article .delete-preset {
+    background: transparent;
+    color: var(--muted);
+    font-size: 16px;
+    padding: 0 5px
+}
+
 .remarketing-header p {
     margin: 0 0 5px;
     color: var(--green);
@@ -830,6 +919,36 @@ button {
     gap: 10px
 }
 
+.save-preset {
+    display: flex;
+    gap: 8px
+}
+
+.save-preset input {
+    min-width: 0;
+    flex: 1;
+    border: 1px solid #dbe3df;
+    border-radius: 10px;
+    padding: 10px;
+    outline-color: var(--green)
+}
+
+.save-preset button {
+    border: 1px solid #b9dcca;
+    border-radius: 10px;
+    background: #fff;
+    color: var(--deep);
+    padding: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap
+}
+
+.save-preset button:disabled {
+    cursor: not-allowed;
+    opacity: .45
+}
+
 .image-ready span {
     color: var(--green)
 }
@@ -911,6 +1030,10 @@ button {
     .remarketing {
         padding: 22px
     }
+
+    .remarketing-layout {
+        grid-template-columns: 1fr
+    }
 }
 
 @media(max-width:580px) {
@@ -954,6 +1077,11 @@ button {
 
     .remarketing-form {
         padding: 18px
+    }
+
+    .save-preset {
+        align-items: stretch;
+        flex-direction: column
     }
 
     .image-picker {
