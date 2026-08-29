@@ -23,10 +23,11 @@ type Props = {
   onDocumentChange: (mediaId: string) => void;
   onSendDocument: () => void;
   onRecordAudio: (audio: Blob, filename: string) => Promise<void>;
+  onAutoReplyChange: (enabled: boolean) => void;
   onClose?: () => void;
 };
 
-export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploadingMedia, documentOptions, selectedDocumentId, onDraftChange, onSendText, onUploadAudio, onUploadImage, onUploadVideo, onUploadDocument, onDocumentChange, onSendDocument, onRecordAudio, onClose }: Props) {
+export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploadingMedia, documentOptions, selectedDocumentId, onDraftChange, onSendText, onUploadAudio, onUploadImage, onUploadVideo, onUploadDocument, onDocumentChange, onSendDocument, onRecordAudio, onAutoReplyChange, onClose }: Props) {
   const threadRef = useRef<HTMLDivElement>(null);
   const scrolledConversationId = useRef<string | null>(null);
   useEffect(() => {
@@ -50,7 +51,7 @@ export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploa
     return <p>{message.body || `[${message.type}]`}</p>;
   };
   return <section className="panel">
-    <header><b className="avatar">{chat ? initials(chat.name || chat.phone_number) : "M"}</b><div><h2>{chat ? chat.name || chat.phone_number : "Tu bandeja está lista"}</h2><small>{chat?.phone_number || "Selecciona un chat para comenzar"}</small></div>{onClose && <button className="close-conversation" type="button" onClick={onClose} aria-label="Cerrar conversación">×</button>}</header>
+    <header><b className="avatar">{chat ? initials(chat.name || chat.phone_number) : "M"}</b><div><h2>{chat ? chat.name || chat.phone_number : "Tu bandeja está lista"}</h2><small>{chat?.phone_number || "Selecciona un chat para comenzar"}</small></div>{chat && <button className={`bot-toggle ${chat.autoReplyEnabled !== false ? "on" : ""}`} type="button" onClick={() => onAutoReplyChange(chat.autoReplyEnabled === false)}>{chat.autoReplyEnabled === false ? "Bot apagado" : "Bot activo"}</button>}{onClose && <button className="close-conversation" type="button" onClick={onClose} aria-label="Cerrar conversación">×</button>}</header>
     <div className="thread" ref={threadRef}>
       {!chat && <div className="empty"><b className="mark">M</b><h2>Atiende desde un solo lugar</h2><p>Crea una conversación o espera un mensaje entrante.</p></div>}
       {messages.map((message) => <article className={message.direction} key={message.id}>{messageContent(message)}<small>{new Date(message.created_at).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })} · {message.status}{message.status === "failed" && message.error_code ? ` · ${message.error_code}` : ""}</small></article>)}

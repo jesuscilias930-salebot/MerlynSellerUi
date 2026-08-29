@@ -3,7 +3,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { api, request } from "./lib/api";
-import type { Chat, ConversationFilter, DocumentOption, LeadColumn, Message, RemarketingPreset, User } from "./lib/types";
+import type { AutomationIntent, Chat, ConversationFilter, DocumentOption, LeadColumn, Message, RemarketingPreset, User } from "./lib/types";
+import { AutomationsPanel } from "./components/AutomationsPanel";
 import { ConversationModal } from "./components/ConversationModal";
 import { Inbox } from "./components/Inbox";
 import { LeadBoard } from "./components/LeadBoard";
@@ -11,7 +12,7 @@ import { LoginScreen } from "./components/LoginScreen";
 import { RemarketingPanel } from "./components/RemarketingPanel";
 import { Sidebar } from "./components/Sidebar";
 
-type View = "inbox" | "pipeline" | "remarketing";
+type View = "inbox" | "pipeline" | "remarketing" | "automations";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase =
@@ -43,6 +44,7 @@ export default function Home() {
     filename: string;
   } | null>(null);
   const [presets, setPresets] = useState<RemarketingPreset[]>([]);
+  const [automationIntents, setAutomationIntents] = useState<AutomationIntent[]>([]);
   const [presetName, setPresetName] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingAudio, setUploadingAudio] = useState(false);
@@ -67,6 +69,7 @@ export default function Home() {
   };
   const loadPresets = async () =>
     setPresets(await request<RemarketingPreset[]>("/remarketing/presets"));
+  const loadAutomations = async () => setAutomationIntents(await request<AutomationIntent[]>("/automations"));
   const loadPipeline = async () => {
     const columns = await request<LeadColumn[]>("/leads/board");
     setPipeline(columns);
@@ -96,11 +99,21 @@ export default function Home() {
     await Promise.all([loadChats(), loadPipeline()]);
   };
   const refreshData = async () => {
-    await Promise.all([loadChats(), loadPipeline(), loadPresets()]);
+    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations()]);
     if (chat) setMessages(await loadMessages(chat));
     if (modalChat) setModalMessages(await loadMessages(modalChat));
   };
   const canEditPipeline = user?.role === "owner" || user?.role === "admin";
+  const setAutoReply = async (target: Chat | null, enabled: boolean) => {
+    if (!target) return;
+    try {
+      await request(`/conversations/${target.id}/automation`, { method: "PATCH", body: JSON.stringify({ enabled }) });
+      setChats((items) => items.map((item) => item.id === target.id ? { ...item, autoReplyEnabled: enabled } : item));
+      setPipeline((columns) => columns.map((column) => ({ ...column, leads: column.leads.map((lead) => lead.id === target.id ? { ...lead, autoReplyEnabled: enabled } : lead) })));
+      if (chat?.id === target.id) setChat({ ...chat, autoReplyEnabled: enabled });
+      if (modalChat?.id === target.id) setModalChat({ ...modalChat, autoReplyEnabled: enabled });
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible actualizar el bot."); }
+  };
   const matchesFilter = (item: Chat, filter: ConversationFilter) => {
     if (filter === "unread") return item.unreadCount > 0;
     if (filter === "needs-response") return item.needsResponse === true;
@@ -135,7 +148,7 @@ export default function Home() {
     request<{ user: User }>("/auth/me")
       .then(async (session) => {
         setUser(session.user);
-        await Promise.all([loadChats(), loadPipeline(), loadPresets()]);
+        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations()]);
       })
       .catch(() => undefined);
   }, []);
@@ -187,7 +200,7 @@ export default function Home() {
       });
       await supabase.auth.signOut();
       setUser(session.user);
-      await Promise.all([loadChats(), loadPipeline(), loadPresets()]);
+      await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations()]);
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "Error al iniciar sesión.",
@@ -502,6 +515,17 @@ export default function Home() {
       );
     }
   };
+  const saveAutomation = async (intent: Omit<AutomationIntent, "id">, id?: string) => {
+    try {
+      await request(id ? `/automations/${id}` : "/automations", { method: id ? "PATCH" : "POST", body: JSON.stringify(intent) });
+      await loadAutomations();
+      setNotice("Automatización guardada.");
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudo guardar la automatización."); }
+  };
+  const deleteAutomation = async (id: string) => {
+    if (!window.confirm("¿Eliminar esta automatización?")) return;
+    try { await request(`/automations/${id}`, { method: "DELETE" }); await loadAutomations(); } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudo eliminar la automatización."); }
+  };
   const logout = async () => {
     await request("/auth/session", { method: "DELETE" });
     setUser(null);
@@ -512,6 +536,7 @@ export default function Home() {
     setModalMessages([]);
     setPipeline([]);
     setPresets([]);
+    setAutomationIntents([]);
   };
 
   if (!user)
@@ -564,6 +589,7 @@ export default function Home() {
           onRecordAudio={(audio, filename) =>
             uploadAudio(chat, audio, filename)
           }
+          onAutoReplyChange={(enabled) => setAutoReply(chat, enabled)}
         />
       ) : view === "pipeline" ? (
         <LeadBoard
@@ -585,7 +611,7 @@ export default function Home() {
           onDragEnd={() => setDraggingLeadId(null)}
           onDrop={dropLead}
         />
-      ) : (
+      ) : view === "remarketing" ? (
         <RemarketingPanel
           columns={pipeline}
           selectedColumnId={remarketingColumnId}
@@ -604,6 +630,8 @@ export default function Home() {
           onSavePreset={savePreset}
           onSend={sendRemarketing}
         />
+      ) : (
+        <AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} />
       )}
       <ConversationModal
         chat={modalChat}
@@ -626,6 +654,7 @@ export default function Home() {
         onRecordAudio={(audio, filename) =>
           uploadAudio(modalChat, audio, filename)
         }
+        onAutoReplyChange={(enabled) => setAutoReply(modalChat, enabled)}
         onClose={() => {
           setModalChat(null);
           setModalMessages([]);

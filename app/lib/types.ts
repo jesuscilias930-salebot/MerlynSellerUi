@@ -8,6 +8,9 @@ export type Chat = {
   leadColumnId?: string;
   lastDirection?: "inbound" | "outbound" | null;
   needsResponse?: boolean;
+  autoReplyEnabled?: boolean;
+
+export type AutomationIntent = { id: string; key: string; name: string; responseBody: string | null; action: "text" | "send_catalog"; examples: string[]; isActive: boolean; priority: number };
 };
 
 export type Message = {
