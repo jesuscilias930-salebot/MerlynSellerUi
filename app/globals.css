@@ -584,7 +584,8 @@ button {
     border-radius: 50%;
     background: #d7e2dc;
     color: #61776c;
-    font-size: 24px
+    font-size: 12px;
+    font-weight: 800
 }
 
 .empty-column {

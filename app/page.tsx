@@ -27,6 +27,14 @@ const supabase = url && key
   ? createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
   : null;
 
+const initials = (value: string) => value
+  .trim()
+  .split(/\s+/)
+  .slice(0, 2)
+  .map((part) => part[0])
+  .join("")
+  .toUpperCase();
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${api}${path}`, {
     credentials: "include",
@@ -299,7 +307,7 @@ export default function Home() {
                 <div className="lead-stack">
                   {column.leads.map((lead) => (
                     <button className={draggingLeadId === lead.id ? "lead-card dragging" : "lead-card"} key={lead.id} draggable onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/merlynsales-conversation", lead.id); setDraggingLeadId(lead.id); }} onDragEnd={() => setDraggingLeadId(null)} onClick={() => openLead(lead)}>
-                      <span className="lead-avatar" aria-hidden="true">◌</span>
+                      <span className="lead-avatar" aria-hidden="true">{initials(lead.name || lead.phone_number)}</span>
                       <span><strong>{lead.name || lead.phone_number}</strong><small>{lead.phone_number}</small><em>{lead.last_message || "Sin mensajes aún"}</em></span>
                     </button>
                   ))}
@@ -324,10 +332,10 @@ export default function Home() {
         <section className="list">
           <header><div><p>BANDEJA</p><h2>Conversaciones</h2></div><b>＋</b></header>
           <form onSubmit={create}><input value={number} onChange={(event) => setNumber(event.target.value)} placeholder="Número con código de país" /><button>Nuevo</button></form>
-          <div className="rows">{chats.length === 0 && <em>Aún no hay conversaciones.</em>}{chats.map((item) => <button onClick={() => open(item)} className={item.id === chat?.id ? "row active" : "row"} key={item.id}><b>{(item.name || item.phone_number)[0]}</b><span><strong>{item.name || item.phone_number}</strong><small>{item.last_message || "Sin mensajes aún"}</small></span></button>)}</div>
+          <div className="rows">{chats.length === 0 && <em>Aún no hay conversaciones.</em>}{chats.map((item) => <button onClick={() => open(item)} className={item.id === chat?.id ? "row active" : "row"} key={item.id}><b>{initials(item.name || item.phone_number)}</b><span><strong>{item.name || item.phone_number}</strong><small>{item.phone_number} · {item.last_message || "Sin mensajes aún"}</small></span></button>)}</div>
         </section>
         <section className="panel">
-          <header><b className="avatar">{chat ? (chat.name || chat.phone_number)[0] : "M"}</b><div><h2>{chat ? chat.name || chat.phone_number : "Tu bandeja está lista"}</h2><small>{chat?.phone_number || "Selecciona un chat para comenzar"}</small></div></header>
+          <header><b className="avatar">{chat ? initials(chat.name || chat.phone_number) : "M"}</b><div><h2>{chat ? chat.name || chat.phone_number : "Tu bandeja está lista"}</h2><small>{chat?.phone_number || "Selecciona un chat para comenzar"}</small></div></header>
           <div className="thread">{!chat && <div className="empty"><b className="mark">M</b><h2>Atiende desde un solo lugar</h2><p>Crea una conversación o espera un mensaje entrante.</p></div>}{messages.map((message) => <article className={message.direction} key={message.id}><p>{message.body || `[${message.type}]`}</p><small>{new Date(message.created_at).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })} · {message.status}</small></article>)}</div>
           <form className="composer" onSubmit={send}><button type="button">⌕</button><textarea disabled={!chat} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={chat ? "Escribe un mensaje…" : "Selecciona una conversación"} /><button disabled={!chat || !draft.trim()} className="send">↑</button></form>
         </section>
