@@ -57,10 +57,10 @@ export default function Home() {
     setChats(await request<Chat[]>("/conversations"));
   const loadMessages = (item: Chat) =>
     request<Message[]>(`/conversations/${item.id}/messages`);
-  const loadDocumentOptions = async (item: Chat) => {
+  const loadDocumentOptions = async (item: Chat, selectLatest = false) => {
     const options = await request<DocumentOption[]>(`/conversations/${item.id}/document-options`);
     setDocumentOptions(options);
-    setSelectedDocumentId((current) => options.some((option) => option.mediaId === current) ? current : options[0]?.mediaId || "");
+    setSelectedDocumentId((current) => selectLatest || !options.some((option) => option.mediaId === current) ? options[0]?.mediaId || "" : current);
   };
   const loadPresets = async () =>
     setPresets(await request<RemarketingPreset[]>("/remarketing/presets"));
@@ -239,26 +239,30 @@ export default function Home() {
       }
     };
 
-  const uploadMedia = async (target: Chat | null, type: "image" | "video", file: File) => {
+  const uploadMedia = async (target: Chat | null, type: "image" | "video" | "document", file: File) => {
     if (!target) return;
-    const allowedTypes = type === "image" ? ["image/jpeg", "image/png", "image/webp"] : ["video/mp4", "video/3gpp"];
-    const maxSize = type === "image" ? 5 * 1024 * 1024 : 16 * 1024 * 1024;
-    if (!allowedTypes.includes(file.type)) throw new Error(type === "image" ? "Selecciona una imagen JPEG, PNG o WebP." : "Selecciona un video MP4 o 3GPP.");
-    if (file.size > maxSize) throw new Error(type === "image" ? "La imagen no puede superar 5 MB." : "El video no puede superar 16 MB.");
+    const allowedTypes = type === "image" ? ["image/jpeg", "image/png", "image/webp"] : type === "document" ? ["application/pdf"] : ["video/mp4", "video/3gpp", "video/quicktime"];
+    const maxSize = type === "image" ? 5 * 1024 * 1024 : type === "document" ? 25 * 1024 * 1024 : 16 * 1024 * 1024;
+    const isMov = type === "video" && /\.mov$/i.test(file.name);
+    const isPdf = type === "document" && /\.pdf$/i.test(file.name);
+    if (!allowedTypes.includes(file.type) && !isMov && !isPdf) throw new Error(type === "image" ? "Selecciona una imagen JPEG, PNG o WebP." : type === "document" ? "Selecciona un archivo PDF." : "Selecciona un video MP4, 3GPP o MOV.");
+    if (file.size > maxSize) throw new Error(type === "image" ? "La imagen no puede superar 5 MB." : type === "document" ? "El PDF no puede superar 25 MB." : "El video no puede superar 16 MB.");
     setUploadingMedia(true);
     try {
-      const response = await fetch(`${api}/conversations/${target.id}/messages/${type}`, {
+      const endpoint = type === "document" ? "document/upload" : type;
+      const response = await fetch(`${api}/conversations/${target.id}/messages/${endpoint}`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": file.type, "X-Upload-Filename": encodeURIComponent(file.name) },
+        headers: { "Content-Type": isMov ? "video/quicktime" : isPdf ? "application/pdf" : file.type, "X-Upload-Filename": encodeURIComponent(file.name) },
         body: file,
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || `No fue posible enviar el ${type === "image" ? "archivo" : "video"}.`);
+      if (!response.ok) throw new Error(result.error || `No fue posible enviar el ${type === "document" ? "PDF" : type === "image" ? "archivo" : "video"}.`);
       await refreshData();
+      if (type === "document") await loadDocumentOptions(target, true);
     } finally { setUploadingMedia(false); }
   };
-  const uploadSelectedMedia = (target: Chat | null, type: "image" | "video") => async (event: ChangeEvent<HTMLInputElement>) => {
+  const uploadSelectedMedia = (target: Chat | null, type: "image" | "video" | "document") => async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
@@ -500,6 +504,7 @@ export default function Home() {
           onUploadAudio={uploadSelectedAudio(chat)}
           onUploadImage={uploadSelectedMedia(chat, "image")}
           onUploadVideo={uploadSelectedMedia(chat, "video")}
+          onUploadDocument={uploadSelectedMedia(chat, "document")}
           onDocumentChange={setSelectedDocumentId}
           onSendDocument={() => sendDocument(chat)}
           onRecordAudio={(audio, filename) =>
@@ -559,6 +564,7 @@ export default function Home() {
         onUploadAudio={uploadSelectedAudio(modalChat)}
         onUploadImage={uploadSelectedMedia(modalChat, "image")}
         onUploadVideo={uploadSelectedMedia(modalChat, "video")}
+        onUploadDocument={uploadSelectedMedia(modalChat, "document")}
         onDocumentChange={setSelectedDocumentId}
         onSendDocument={() => sendDocument(modalChat)}
         onRecordAudio={(audio, filename) =>
