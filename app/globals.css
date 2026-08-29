@@ -799,6 +799,18 @@ button {
     background: #f4f7f5
 }
 
+.automation-workspace {
+    min-width: 0;
+    height: 100%;
+    overflow-y: auto;
+    background: #f7faf8
+}
+
+.automation-workspace .scenarios,
+.automation-workspace .automations {
+    overflow: visible
+}
+
 .pipeline {
     min-width: 0;
     display: grid;
@@ -1468,4 +1480,5 @@ button {
     .composer { margin: 0 8px 8px; }
     .composer textarea { min-height: 42px; max-height: 110px; }
     .audio-recorder { margin: 0 8px 8px; }
+    .automation-workspace { height: auto; overflow: visible; }
 }

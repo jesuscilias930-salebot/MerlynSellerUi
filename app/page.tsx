@@ -666,7 +666,7 @@ export default function Home() {
           onSend={sendRemarketing}
         />
       ) : view === "automations" ? (
-        <><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></>
+        <div className="automation-workspace"><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
       ) : null}
       <ConversationModal
         chat={modalChat}
