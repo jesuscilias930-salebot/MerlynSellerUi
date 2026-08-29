@@ -1,65 +1,46 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useState } from "react";
 import { api } from "../lib/api";
-import type { AutomationScenario, LeadColumn } from "../lib/types";
+import type { AutomationScenario, LeadColumn, ScenarioBranch, ScenarioMedia, ScenarioStep } from "../lib/types";
 
-type Props = {
-  scenarios: AutomationScenario[];
-  columns: LeadColumn[];
-  onSave: (key: string, value: { isActive: boolean; config: Record<string, unknown> }) => Promise<void>;
-};
+type Draft = Omit<AutomationScenario, "id" | "key" | "updatedAt">;
+type Props = { scenarios: AutomationScenario[]; columns: LeadColumn[]; onSave: (value: Draft, id?: string) => Promise<void>; onDelete: (id: string) => Promise<void> };
+const stepId = () => `step_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+const blankStep = (type: ScenarioStep["type"] = "send_text"): ScenarioStep => ({ id: stepId(), type, label: type === "send_text" ? "Enviar mensaje" : type === "wait_reply" ? "Esperar respuesta" : type === "send_catalog" ? "Enviar catálogo" : type === "send_media" ? "Enviar archivos" : type === "move_column" ? "Mover lead" : "Finalizar", ...(type === "send_text" ? { body: "" } : {}), ...(type === "wait_reply" ? { branches: [] } : {}) });
+const emptyScenario = (): Draft => { const message = blankStep("send_text"); const end = blankStep("end"); message.nextStepId = end.id; return { name: "", isActive: true, triggerExamples: [], steps: [message, end] }; };
+const labels: Record<ScenarioStep["type"], string> = { send_text: "Enviar texto", send_catalog: "Enviar catálogo", send_media: "Enviar imágenes o documentos", wait_reply: "Esperar y decidir", move_column: "Mover a columna", end: "Finalizar" };
 
-const asText = (value: unknown) => typeof value === "string" ? value : "";
-type Evidence = { mediaId: string; filename: string; caption?: string };
-type Box = { title: string; description: string };
-
-function ScenarioEditor({ scenario, columns, onSave }: { scenario: AutomationScenario; columns: LeadColumn[]; onSave: Props["onSave"] }) {
-  const [active, setActive] = useState(scenario.isActive);
-  const [config, setConfig] = useState<Record<string, unknown>>(scenario.config || {});
+function Editor({ initial, columns, onSave, onDelete, onCancel }: { initial?: AutomationScenario; columns: LeadColumn[]; onSave: Props["onSave"]; onDelete?: () => Promise<void>; onCancel?: () => void }) {
+  const [value, setValue] = useState<Draft>(initial ? { name: initial.name, isActive: initial.isActive, triggerExamples: initial.triggerExamples, steps: initial.steps } : emptyScenario());
+  const [triggerText, setTriggerText] = useState((initial?.triggerExamples || []).join("\n"));
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState("");
-  useEffect(() => { setActive(scenario.isActive); setConfig(scenario.config || {}); }, [scenario]);
-  const field = (name: string, label: string, placeholder = "") => <label className="scenario-field"><span>{label}</span><textarea value={asText(config[name])} placeholder={placeholder} onChange={(event) => setConfig({ ...config, [name]: event.target.value })} /></label>;
-  const evidence = Array.isArray(config.evidence) ? config.evidence as Evidence[] : [];
-  const boxes = Array.isArray(config.boxes) ? config.boxes as Box[] : [];
-  const uploadEvidence = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]; event.target.value = "";
-    if (!file) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) { setUploadError("Selecciona una imagen JPEG, PNG o WebP."); return; }
-    setUploading(true);
-    setUploadError("");
-    try {
-      const response = await fetch(`${api}/scenarios/evidence/upload`, { method: "POST", credentials: "include", headers: { "Content-Type": file.type, "X-Upload-Filename": encodeURIComponent(file.name) }, body: file });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || "No fue posible subir la evidencia.");
-      setConfig({ ...config, evidence: [...evidence, { mediaId: result.mediaId, filename: result.filename }] });
-    } catch (error) { setUploadError(error instanceof Error ? error.message : "No fue posible subir la evidencia."); } finally { setUploading(false); }
+  const [error, setError] = useState("");
+  const ids = value.steps.map((step) => step.id);
+  const updateStep = (id: string, patch: Partial<ScenarioStep>) => setValue({ ...value, steps: value.steps.map((step) => step.id === id ? { ...step, ...patch } : step) });
+  const removeStep = (id: string) => setValue({ ...value, steps: value.steps.filter((step) => step.id !== id).map((step) => ({ ...step, nextStepId: step.nextStepId === id ? undefined : step.nextStepId, fallbackStepId: step.fallbackStepId === id ? undefined : step.fallbackStepId, branches: step.branches?.filter((branch) => branch.nextStepId !== id) })) });
+  const selectStep = (step: ScenarioStep) => <select value={step.nextStepId || ""} onChange={(event) => updateStep(step.id, { nextStepId: event.target.value || undefined })}><option value="">Terminar después de este paso</option>{value.steps.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.label || candidate.id}</option>)}</select>;
+  const uploadMedia = async (step: ScenarioStep, event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]; event.target.value = ""; if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(file.type)) { setError("Selecciona una imagen JPEG, PNG, WebP o un PDF."); return; }
+    setError("");
+    try { const response = await fetch(`${api}/scenarios/evidence/upload`, { method: "POST", credentials: "include", headers: { "Content-Type": file.type, "X-Upload-Filename": encodeURIComponent(file.name) }, body: file }); const uploaded = await response.json().catch(() => ({})); if (!response.ok) throw new Error(uploaded.error || "No fue posible subir el archivo."); updateStep(step.id, { items: [...(step.items || []), { mediaId: uploaded.mediaId, filename: uploaded.filename, type: file.type === "application/pdf" ? "document" : "image" }] }); } catch (reason) { setError(reason instanceof Error ? reason.message : "No fue posible subir el archivo."); }
   };
-  const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); try { await onSave(scenario.key, { isActive: active, config }); } finally { setSaving(false); } };
-  const catalogScenario = scenario.key === "catalogo_anuncio";
-  return <form className="scenario-editor" onSubmit={submit}>
-    <header><div><h2>{scenario.name}</h2><p>{catalogScenario ? "Atiende solicitudes de catálogo, confirma apertura y califica al lead." : "Responde dudas de envíos, comparte evidencia y recomienda cajas."}</p></div><label className="automation-active"><input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} /> Activo</label></header>
-    {catalogScenario ? <>
-      {field("catalogCaption", "Mensaje que acompaña el catálogo")}
-      {field("goalQuestion", "Pregunta después de confirmar que abrió el catálogo")}
-      {field("entrepreneurQuestion", "Pregunta para quien quiere emprender")}
-      {field("closingMessage", "Mensaje de cierre al volver a pedir el catálogo")}
-      <label className="scenario-field"><span>Columna al terminar</span><select value={asText(config.completionColumnId)} onChange={(event) => setConfig({ ...config, completionColumnId: event.target.value })}><option value="">No mover automáticamente</option>{columns.map((column) => <option key={column.id} value={column.id}>{column.name}</option>)}</select></label>
-    </> : <>
-      {field("shippingMessage", "Respuesta sobre envíos")}
-      {field("catalogQuestion", "Pregunta para ofrecer el catálogo")}
-      {field("catalogCaption", "Mensaje que acompaña el catálogo")}
-      {field("goalQuestion", "Pregunta después de enviar el catálogo")}
-      {field("entrepreneurQuestion", "Pregunta para quien quiere emprender")}
-      <section className="scenario-evidence"><div><strong>Fotos de evidencia</strong><small>Se subirán una sola vez a Meta y se reutilizarán con cada lead.</small></div><label className="media-button">{uploading ? "Subiendo…" : "＋ Agregar foto"}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={uploadEvidence} disabled={uploading} /></label>{uploadError && <small>{uploadError}</small>}{evidence.map((item) => <div className="scenario-asset" key={item.mediaId}><span>{item.filename}</span><button type="button" onClick={() => setConfig({ ...config, evidence: evidence.filter((candidate) => candidate.mediaId !== item.mediaId) })}>Quitar</button></div>)}</section>
-      <section className="scenario-boxes"><strong>Las 3 cajas emprendedoras</strong>{[0, 1, 2].map((index) => { const box = boxes[index] || { title: `Caja emprendedora ${index + 1}`, description: "" }; return <div className="scenario-box" key={index}><input value={box.title} placeholder="Nombre de la caja" onChange={(event) => { const next = [...boxes]; next[index] = { ...box, title: event.target.value }; setConfig({ ...config, boxes: next }); }} /><textarea value={box.description} placeholder="Mercancía, precio y ganancia aproximada" onChange={(event) => { const next = [...boxes]; next[index] = { ...box, description: event.target.value }; setConfig({ ...config, boxes: next }); }} /></div>; })}</section>
-    </>}
-    <button className="primary-action" disabled={saving}>{saving ? "Guardando…" : "Guardar escenario"}</button>
+  const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); setError(""); try { await onSave({ ...value, triggerExamples: triggerText.split("\n").map((item) => item.trim()).filter(Boolean) }, initial?.id); } catch (reason) { setError(reason instanceof Error ? reason.message : "No fue posible guardar."); } finally { setSaving(false); } };
+  return <form className="scenario-editor generic-scenario-editor" onSubmit={submit}>
+    <header><div><h2>{initial ? value.name : "Nuevo escenario"}</h2><p>Define qué lo inicia, qué se envía y cómo avanza el lead.</p></div><label className="automation-active"><input type="checkbox" checked={value.isActive} onChange={(event) => setValue({ ...value, isActive: event.target.checked })} /> Activo</label></header>
+    <div className="scenario-meta"><label className="scenario-field"><span>Nombre del escenario</span><input value={value.name} onChange={(event) => setValue({ ...value, name: event.target.value })} placeholder="Ej. Cotización para mayoristas" required /></label><label className="scenario-field"><span>Frases que inician el flujo — una por línea</span><textarea value={triggerText} onChange={(event) => setTriggerText(event.target.value)} placeholder="Quiero una cotización\n¿Cuánto cuesta mayoreo?" required /></label></div>
+    <section className="scenario-steps"><div className="scenario-section-title"><strong>Pasos del flujo</strong><small>Las acciones continúan solas hasta llegar a “Esperar y decidir”.</small></div>{value.steps.map((step, index) => <section className="scenario-step" key={step.id}><div className="scenario-step-heading"><b>{index + 1}</b><input value={step.label} onChange={(event) => updateStep(step.id, { label: event.target.value })} aria-label="Nombre del paso" /><select value={step.type} onChange={(event) => { const type = event.target.value as ScenarioStep["type"]; updateStep(step.id, { type, body: type === "send_text" ? step.body || "" : undefined, branches: type === "wait_reply" ? step.branches || [] : undefined, items: type === "send_media" ? step.items || [] : undefined }); }}>{Object.entries(labels).map(([type, label]) => <option key={type} value={type}>{label}</option>)}</select><button type="button" className="plain-button" onClick={() => removeStep(step.id)} disabled={value.steps.length <= 1}>Eliminar</button></div>
+      {step.type === "send_text" && <label className="scenario-field"><span>Texto a enviar</span><textarea value={step.body || ""} onChange={(event) => updateStep(step.id, { body: event.target.value })} required /></label>}
+      {step.type === "send_catalog" && <label className="scenario-field"><span>Texto que acompaña el catálogo</span><textarea value={step.caption || ""} onChange={(event) => updateStep(step.id, { caption: event.target.value })} placeholder="Opcional" /></label>}
+      {step.type === "send_media" && <div className="scenario-media"><label className="media-button">＋ Subir imagen o PDF reutilizable<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" onChange={(event) => uploadMedia(step, event)} /></label>{(step.items || []).map((item: ScenarioMedia) => <div className="scenario-asset" key={item.mediaId}><span>{item.filename || item.mediaId}</span><button type="button" onClick={() => updateStep(step.id, { items: (step.items || []).filter((candidate) => candidate.mediaId !== item.mediaId) })}>Quitar</button></div>)}</div>}
+      {step.type === "move_column" && <label className="scenario-field"><span>Columna destino</span><select value={step.columnId || ""} onChange={(event) => updateStep(step.id, { columnId: event.target.value })}><option value="">No mover</option>{columns.map((column) => <option key={column.id} value={column.id}>{column.name}</option>)}</select></label>}
+      {step.type === "wait_reply" && <div className="scenario-branches"><strong>Posibles respuestas</strong>{(step.branches || []).map((branch, branchIndex) => <div className="scenario-branch" key={branch.id}><input value={branch.name} placeholder="Nombre de intención" onChange={(event) => { const next = [...(step.branches || [])]; next[branchIndex] = { ...branch, name: event.target.value }; updateStep(step.id, { branches: next }); }} /><textarea value={branch.examples.join("\n")} placeholder="Una frase por línea" onChange={(event) => { const next = [...(step.branches || [])]; next[branchIndex] = { ...branch, examples: event.target.value.split("\n").map((item) => item.trim()).filter(Boolean) }; updateStep(step.id, { branches: next }); }} /><select value={branch.nextStepId} onChange={(event) => { const next = [...(step.branches || [])]; next[branchIndex] = { ...branch, nextStepId: event.target.value }; updateStep(step.id, { branches: next }); }}>{ids.map((id) => <option key={id} value={id}>{value.steps.find((candidate) => candidate.id === id)?.label || id}</option>)}</select><button type="button" onClick={() => updateStep(step.id, { branches: (step.branches || []).filter((candidate) => candidate.id !== branch.id) })}>×</button></div>)}<button type="button" className="plain-button" onClick={() => { const branch: ScenarioBranch = { id: `branch_${stepId()}`, name: "", examples: [], nextStepId: value.steps.find((candidate) => candidate.id !== step.id)?.id || step.id }; updateStep(step.id, { branches: [...(step.branches || []), branch] }); }}>＋ Agregar respuesta</button></div>}
+      {!['wait_reply', 'end'].includes(step.type) && <label className="scenario-next"><span>Siguiente paso</span>{selectStep(step)}</label>}
+    </section>)}</section>
+    <div className="scenario-toolbar"><select defaultValue="send_text" onChange={(event) => { if (!event.target.value) return; setValue({ ...value, steps: [...value.steps, blankStep(event.target.value as ScenarioStep["type"])] }); event.target.value = ""; }}><option value="">＋ Agregar paso…</option>{Object.entries(labels).map(([type, label]) => <option key={type} value={type}>{label}</option>)}</select></div>
+    {error && <p className="scenario-error">{error}</p>}<div className="automation-actions"><button className="primary-action" disabled={saving}>{saving ? "Guardando…" : "Guardar escenario"}</button>{onDelete && <button type="button" className="danger" onClick={() => void onDelete()}>Eliminar escenario</button>}{onCancel && <button type="button" className="plain-button" onClick={onCancel}>Cancelar</button>}</div>
   </form>;
 }
 
-export function ScenariosPanel({ scenarios, columns, onSave }: Props) {
-  return <section className="scenarios"><header className="automations-header"><div><p>ESCENARIOS</p><h1>Atención guiada</h1><span>Configura los mensajes y decisiones de cada etapa; el bot solo avanza cuando el cliente responde.</span></div></header><div className="scenario-list">{scenarios.map((scenario) => <ScenarioEditor key={scenario.id} scenario={scenario} columns={columns} onSave={onSave} />)}</div></section>;
-}
+export function ScenariosPanel({ scenarios, columns, onSave, onDelete }: Props) { const [creating, setCreating] = useState(false); return <section className="scenarios"><header className="automations-header"><div><p>ESCENARIOS</p><h1>Atención guiada</h1><span>Crea flujos desde cero con mensajes, decisiones, archivos y movimientos de leads.</span></div><button className="primary-action" type="button" onClick={() => setCreating(true)} disabled={creating}>＋ Nuevo escenario</button></header><div className="scenario-list">{scenarios.map((scenario) => <Editor key={scenario.id} initial={scenario} columns={columns} onSave={onSave} onDelete={() => onDelete(scenario.id)} />)}{creating && <Editor columns={columns} onSave={async (value) => { await onSave(value); setCreating(false); }} onCancel={() => setCreating(false)} />}</div></section>; }

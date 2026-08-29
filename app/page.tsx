@@ -539,9 +539,9 @@ export default function Home() {
     if (!window.confirm("¿Eliminar esta automatización?")) return;
     try { await request(`/automations/${id}`, { method: "DELETE" }); await loadAutomations(); } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudo eliminar la automatización."); }
   };
-  const saveScenario = async (key: string, value: { isActive: boolean; config: Record<string, unknown> }) => {
+  const saveScenario = async (value: Omit<AutomationScenario, "id" | "key" | "updatedAt">, id?: string) => {
     try {
-      await request(`/scenarios/${key}`, { method: "PUT", body: JSON.stringify(value) });
+      await request(id ? `/scenarios/${id}` : "/scenarios", { method: id ? "PUT" : "POST", body: JSON.stringify(value) });
       await loadScenarios();
       setNotice("Escenario guardado.");
     } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudo guardar el escenario."); }
@@ -666,7 +666,7 @@ export default function Home() {
           onSend={sendRemarketing}
         />
       ) : view === "automations" ? (
-        <div className="automation-workspace"><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
+        <div className="automation-workspace"><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onDelete={async (id) => { if (!window.confirm("¿Eliminar este escenario?")) return; await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
       ) : null}
       <ConversationModal
         chat={modalChat}

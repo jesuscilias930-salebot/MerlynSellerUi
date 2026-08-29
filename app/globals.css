@@ -83,7 +83,7 @@
 
 .scenario-field { display: grid; gap: 6px }
 .scenario-field span, .scenario-boxes>strong { font-size: 12px; font-weight: 700; color: var(--deep) }
-.scenario-field textarea, .scenario-field select, .scenario-box input, .scenario-box textarea {
+.scenario-field textarea, .scenario-field select, .scenario-field input, .scenario-box input, .scenario-box textarea {
     width: 100%; box-sizing: border-box; border: 1px solid #d7e3dc; border-radius: 9px; padding: 9px; color: var(--ink); background: #fff; font: inherit
 }
 .scenario-field textarea { min-height: 64px; resize: vertical }
@@ -93,12 +93,28 @@
 .scenario-asset { display: flex; gap: 8px; align-items: center; width: 100%; padding: 8px; border-radius: 7px; background: #fff; font-size: 12px }
 .scenario-asset span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .scenario-asset button { border: 0; background: transparent; color: #b13434; cursor: pointer }
+.scenario-steps { display: grid; gap: 12px }
+.scenario-section-title { display: grid; gap: 3px }
+.scenario-section-title small { color: var(--muted) }
+.scenario-step { display: grid; gap: 10px; padding: 13px; border: 1px solid #dce7e1; border-radius: 11px; background: #fcfefd }
+.scenario-step-heading { display: grid; grid-template-columns: auto minmax(110px, 1fr) minmax(145px, .6fr) auto; gap: 8px; align-items: center }
+.scenario-step-heading>b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--mint); color: var(--deep) }
+.scenario-step-heading input, .scenario-step-heading select, .scenario-branch input, .scenario-branch textarea, .scenario-branch select, .scenario-toolbar select { min-width: 0; border: 1px solid #d7e3dc; border-radius: 8px; padding: 8px; font: inherit; font-size: 12px; background: #fff }
+.scenario-branches { display: grid; gap: 8px }
+.scenario-branch { display: grid; grid-template-columns: .8fr 1.4fr .8fr auto; gap: 6px; align-items: start }
+.scenario-branch textarea { min-height: 48px; resize: vertical }
+.scenario-branch button { border: 0; background: transparent; color: #b13434; font-size: 18px; cursor: pointer }
+.scenario-next { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted) }
+.scenario-next select { min-width: 160px; border: 1px solid #d7e3dc; border-radius: 8px; padding: 7px; background: #fff }
+.scenario-toolbar select { min-width: 185px }
+.scenario-error { margin: 0; color: #b13434; font-size: 13px }
 
 @media (max-width: 580px) {
     .scenarios { padding: 16px 10px }
     .scenario-editor { padding: 14px }
     .scenario-editor>header { flex-direction: column }
     .scenario-box { grid-template-columns: 1fr }
+    .scenario-step-heading, .scenario-branch { grid-template-columns: 1fr }
 }
 
 .intent-learner { display: flex; gap: 6px; margin-top: 8px; }
