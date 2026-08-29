@@ -16,6 +16,9 @@
 .automation-card-header { display:flex; justify-content:space-between; align-items:start; gap:12px; }
 .automation-card-header > div { display:grid; gap:3px; }
 .automation-card-header small { color:var(--muted); font-size:12px; }
+.collapsible-actions { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.collapse-toggle { border:1px solid #cce3d6; border-radius:8px; padding:6px 9px; background:#fff; color:var(--deep); font:inherit; font-size:12px; cursor:pointer; white-space:nowrap; }
+.collapse-toggle:hover { background:#eef8f2; }
 .plain-button { border:0; background:transparent; color:var(--green); font:inherit; cursor:pointer; }
 .automation-empty { display:grid; gap:5px; padding:28px; border:1px dashed #b8cbc1; border-radius:15px; background:#fff; color:var(--muted); }
 .automation-empty b { color:var(--ink); }
@@ -77,6 +80,7 @@
 .scenario-editor h2,
 .scenario-editor p { margin: 0 }
 .scenario-editor h2 { font-size: 18px }
+.scenario-editor>header .collapsible-actions { align-items:center }
 .scenario-editor p, .scenario-evidence small { color: var(--muted); font-size: 13px }
 .scenario-evidence { flex-wrap: wrap; padding: 13px; border-radius: 10px; background: #f3f8f5 }
 .scenario-evidence>div { display: grid; gap: 4px }
@@ -113,6 +117,7 @@
     .scenarios { padding: 16px 10px }
     .scenario-editor { padding: 14px }
     .scenario-editor>header { flex-direction: column }
+    .collapsible-actions { width:100%; justify-content:space-between }
     .scenario-box { grid-template-columns: 1fr }
     .scenario-step-heading, .scenario-branch { grid-template-columns: 1fr }
 }

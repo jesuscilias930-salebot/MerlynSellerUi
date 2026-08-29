@@ -36,6 +36,7 @@ function AutomationEditor({ initial, onSave, onDelete, onCancel }: EditorProps) 
     (initial?.examples || []).join("\n"),
   );
   const [saving, setSaving] = useState(false);
+  const [expanded, setExpanded] = useState(!initial);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -60,8 +61,9 @@ function AutomationEditor({ initial, onSave, onDelete, onCancel }: EditorProps) 
     <form className="automation-editor" onSubmit={submit}>
       <div className="automation-card-header">
         <div><strong>{initial ? initial.name : "Nueva automatización"}</strong><small>{initial ? initial.key : "Crea una respuesta o acción automática"}</small></div>
-        {onCancel && <button className="plain-button" type="button" onClick={onCancel}>Cancelar</button>}
+        <div className="collapsible-actions"><button className="collapse-toggle" type="button" onClick={() => setExpanded((current) => !current)} aria-expanded={expanded}>{expanded ? "⌃ Ocultar" : "⌄ Editar"}</button>{onCancel && <button className="plain-button" type="button" onClick={onCancel}>Cancelar</button>}</div>
       </div>
+      {expanded && <>
       <div className="automation-grid">
         <input
           value={value.name}
@@ -137,6 +139,7 @@ function AutomationEditor({ initial, onSave, onDelete, onCancel }: EditorProps) 
           </button>
         )}
       </div>
+      </>}
     </form>
   );
 }
