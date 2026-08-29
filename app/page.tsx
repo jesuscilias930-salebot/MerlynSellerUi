@@ -78,11 +78,13 @@ export default function Home() {
     });
   };
   const openInbox = async (item: Chat) => {
+    setMessages([]);
     setChat(item);
     const [nextMessages] = await Promise.all([loadMessages(item), loadDocumentOptions(item)]);
     setMessages(nextMessages);
   };
   const openModal = async (item: Chat) => {
+    setModalMessages([]);
     setModalChat(item);
     setModalDraft("");
     const [nextMessages] = await Promise.all([loadMessages(item), loadDocumentOptions(item)]);
@@ -241,11 +243,10 @@ export default function Home() {
 
   const uploadMedia = async (target: Chat | null, type: "image" | "video" | "document", file: File) => {
     if (!target) return;
-    const allowedTypes = type === "image" ? ["image/jpeg", "image/png", "image/webp"] : type === "document" ? ["application/pdf"] : ["video/mp4", "video/3gpp", "video/quicktime"];
+    const allowedTypes = type === "image" ? ["image/jpeg", "image/png", "image/webp"] : type === "document" ? ["application/pdf"] : ["video/mp4", "video/3gpp"];
     const maxSize = type === "image" ? 5 * 1024 * 1024 : type === "document" ? 25 * 1024 * 1024 : 16 * 1024 * 1024;
-    const isMov = type === "video" && /\.mov$/i.test(file.name);
     const isPdf = type === "document" && /\.pdf$/i.test(file.name);
-    if (!allowedTypes.includes(file.type) && !isMov && !isPdf) throw new Error(type === "image" ? "Selecciona una imagen JPEG, PNG o WebP." : type === "document" ? "Selecciona un archivo PDF." : "Selecciona un video MP4, 3GPP o MOV.");
+    if (!allowedTypes.includes(file.type) && !isPdf) throw new Error(type === "image" ? "Selecciona una imagen JPEG, PNG o WebP." : type === "document" ? "Selecciona un archivo PDF." : "Selecciona un video MP4 o 3GPP.");
     if (file.size > maxSize) throw new Error(type === "image" ? "La imagen no puede superar 5 MB." : type === "document" ? "El PDF no puede superar 25 MB." : "El video no puede superar 16 MB.");
     setUploadingMedia(true);
     try {
@@ -253,7 +254,7 @@ export default function Home() {
       const response = await fetch(`${api}/conversations/${target.id}/messages/${endpoint}`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": isMov ? "video/quicktime" : isPdf ? "application/pdf" : file.type, "X-Upload-Filename": encodeURIComponent(file.name) },
+        headers: { "Content-Type": isPdf ? "application/pdf" : file.type, "X-Upload-Filename": encodeURIComponent(file.name) },
         body: file,
       });
       const result = await response.json().catch(() => ({}));

@@ -368,6 +368,62 @@ button {
     background: #edf2ef
 }
 
+.document-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 220px;
+    color: var(--ink);
+    text-decoration: none
+}
+
+.document-card:hover strong {
+    text-decoration: underline
+}
+
+.document-icon {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 46px;
+    border-radius: 8px;
+    background: #e94848;
+    color: #fff;
+    font-size: 10px;
+    letter-spacing: .04em
+}
+
+.document-card span {
+    display: grid;
+    gap: 3px;
+    min-width: 0
+}
+
+.document-card strong,
+.document-card em,
+.document-card small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
+}
+
+.document-card strong {
+    font-size: 13px
+}
+
+.document-card em,
+.thread .document-card small {
+    color: #62786f;
+    font-size: 11px;
+    font-style: normal
+}
+
+.thread .document-card small {
+    display: inline;
+    margin-top: 0;
+    text-align: left
+}
+
 .thread article small {
     display: block;
     text-align: right;

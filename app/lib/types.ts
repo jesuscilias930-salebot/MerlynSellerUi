@@ -11,6 +11,7 @@ export type Message = {
   direction: "inbound" | "outbound";
   body: string | null;
   media_id: string | null;
+  filename?: string | null;
   type: string;
   status: string;
   error_code?: string | null;
