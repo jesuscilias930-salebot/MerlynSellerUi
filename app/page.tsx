@@ -253,6 +253,9 @@ export default function Home() {
     filename: string,
   ) => {
     if (!target) return;
+    const rawContentType = audio.type.toLowerCase();
+    const baseContentType = rawContentType.split(";", 1)[0];
+    const contentType = baseContentType === "audio/x-m4a" ? "audio/mp4" : baseContentType;
     const allowedTypes = [
       "audio/aac",
       "audio/mp4",
@@ -262,7 +265,7 @@ export default function Home() {
       "audio/opus",
       "audio/webm",
     ];
-    if (!allowedTypes.includes(audio.type))
+    if (!allowedTypes.includes(contentType))
       throw new Error("Selecciona un audio compatible.");
     if (audio.size > 16 * 1024 * 1024)
       throw new Error("El audio no puede superar 16 MB.");
@@ -274,7 +277,7 @@ export default function Home() {
           method: "POST",
           credentials: "include",
           headers: {
-            "Content-Type": audio.type,
+            "Content-Type": contentType,
             "X-Upload-Filename": encodeURIComponent(filename),
           },
           body: audio,

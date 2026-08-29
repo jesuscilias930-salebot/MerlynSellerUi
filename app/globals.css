@@ -1387,3 +1387,23 @@ button {
         height: calc(100dvh - 16px)
     }
 }
+
+/* Phone navigation and conversation layout: these rules intentionally come
+   after the desktop breakpoints above. */
+@media (max-width: 580px) {
+    .shell, .shell.pipeline-mode { display: flex; flex-direction: column; min-height: 100dvh; height: auto; overflow: visible; }
+    .shell > aside { display: flex; position: sticky; top: 0; z-index: 30; height: 58px; min-height: 58px; padding: 7px 8px; background: var(--deep); overflow-x: auto; }
+    .shell > aside .brand, .shell > aside .profile { display: none; }
+    .shell nav { display: flex; align-items: center; gap: 4px; margin: 0; }
+    .shell nav button { display: block; padding: 9px 10px; font-size: 12px; white-space: nowrap; }
+    .shell nav button::first-letter { font-size: 12px; }
+    .list { display: flex; min-height: 260px; max-height: 42dvh; border-right: 0; border-bottom: 1px solid var(--line); }
+    .panel { min-height: calc(58dvh - 58px); height: calc(58dvh - 58px); }
+    .panel header { padding: 12px; }
+    .thread { padding: 14px; }
+    .chat-attachments { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+    .catalog-picker { min-width: max-content; flex-basis: auto; }
+    .composer { margin: 0 8px 8px; }
+    .composer textarea { min-height: 42px; max-height: 110px; }
+    .audio-recorder { margin: 0 8px 8px; }
+}
