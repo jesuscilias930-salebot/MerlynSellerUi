@@ -237,6 +237,20 @@ button {
     padding: 0 16px 15px
 }
 
+.inbox-filter {
+    padding: 0 16px 12px
+}
+
+.inbox-filter select {
+    width: 100%;
+    border: 1px solid #dbe3df;
+    border-radius: 9px;
+    background: #fff;
+    padding: 8px 10px;
+    color: var(--ink);
+    font-size: 12px
+}
+
 .list form input {
     min-width: 0;
     flex: 1;
@@ -702,6 +716,37 @@ button {
     margin-top: 6px;
     color: var(--muted);
     font-size: 13px
+}
+
+.dashboard-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff
+}
+
+.filter-buttons button {
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    padding: 7px 9px;
+    font-size: 12px
+}
+
+.filter-buttons button.selected {
+    background: var(--deep);
+    color: #fff
 }
 
 .add-column {

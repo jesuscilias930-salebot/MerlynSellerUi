@@ -3,7 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { api, request } from "./lib/api";
-import type { Chat, DocumentOption, LeadColumn, Message, RemarketingPreset, User } from "./lib/types";
+import type { Chat, ConversationFilter, DocumentOption, LeadColumn, Message, RemarketingPreset, User } from "./lib/types";
 import { ConversationModal } from "./components/ConversationModal";
 import { Inbox } from "./components/Inbox";
 import { LeadBoard } from "./components/LeadBoard";
@@ -52,6 +52,8 @@ export default function Home() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null);
+  const [inboxFilter, setInboxFilter] = useState<ConversationFilter>("all");
+  const [dashboardFilter, setDashboardFilter] = useState<ConversationFilter>("all");
   const soundContext = useRef<AudioContext | null>(null);
 
   const loadChats = async () =>
@@ -99,6 +101,17 @@ export default function Home() {
     if (modalChat) setModalMessages(await loadMessages(modalChat));
   };
   const canEditPipeline = user?.role === "owner" || user?.role === "admin";
+  const matchesFilter = (item: Chat, filter: ConversationFilter) => {
+    if (filter === "unread") return item.unreadCount > 0;
+    if (filter === "needs-response") return item.needsResponse === true;
+    if (filter.startsWith("column:")) return item.leadColumnId === filter.slice("column:".length);
+    return true;
+  };
+  const filteredChats = chats.filter((item) => matchesFilter(item, inboxFilter));
+  const filteredPipeline = pipeline.map((column) => ({
+    ...column,
+    leads: column.leads.filter((lead) => matchesFilter(lead, dashboardFilter)),
+  }));
   const playIncomingSound = () => {
     try {
       const BrowserAudioContext = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -514,7 +527,9 @@ export default function Home() {
       />
       {view === "inbox" ? (
         <Inbox
-          chats={chats}
+          chats={filteredChats}
+          columns={pipeline}
+          filter={inboxFilter}
           chat={chat}
           messages={messages}
           number={number}
@@ -527,6 +542,7 @@ export default function Home() {
           onDraftChange={setDraft}
           onCreate={create}
           onOpen={openInbox}
+          onFilterChange={setInboxFilter}
           onSendText={(event) =>
             sendText(event, chat, draft, () => setDraft(""))
           }
@@ -542,11 +558,13 @@ export default function Home() {
         />
       ) : view === "pipeline" ? (
         <LeadBoard
-          columns={pipeline}
+          columns={filteredPipeline}
+          filter={dashboardFilter}
           canEdit={canEditPipeline}
           columnName={columnName}
           draggingLeadId={draggingLeadId}
           onColumnNameChange={setColumnName}
+          onFilterChange={setDashboardFilter}
           onAddColumn={addColumn}
           onRemoveColumn={removeColumn}
           onOpenLead={openModal}
