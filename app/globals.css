@@ -9,6 +9,41 @@
     --mint: #d9f7e8
 }
 
+.automations-header { display:flex; align-items:end; justify-content:space-between; gap:18px; max-width:980px; }
+.automations-header > div { display:grid; gap:5px; }
+.primary-action { border:0; border-radius:10px; padding:11px 14px; background:var(--green); color:#fff; font:inherit; font-weight:700; white-space:nowrap; cursor:pointer; }
+.primary-action:disabled { opacity:.55; cursor:default; }
+.automation-card-header { display:flex; justify-content:space-between; align-items:start; gap:12px; }
+.automation-card-header > div { display:grid; gap:3px; }
+.automation-card-header small { color:var(--muted); font-size:12px; }
+.plain-button { border:0; background:transparent; color:var(--green); font:inherit; cursor:pointer; }
+.automation-empty { display:grid; gap:5px; padding:28px; border:1px dashed #b8cbc1; border-radius:15px; background:#fff; color:var(--muted); }
+.automation-empty b { color:var(--ink); }
+
+@media (max-width: 750px) {
+  .shell { height:auto; min-height:100dvh; overflow:visible; }
+  .shell>aside { position:sticky; top:0; z-index:10; padding:10px 8px; }
+  .shell nav { margin-top:24px; }
+  .automations { padding:22px 16px 88px; }
+  .automations-header { align-items:stretch; flex-direction:column; }
+  .primary-action { width:100%; }
+  .automation-grid { grid-template-columns:1fr 1fr; }
+}
+
+@media (max-width: 580px) {
+  .shell>aside { display:flex; position:sticky; height:auto; align-items:center; gap:10px; overflow-x:auto; }
+  .shell>aside .brand { display:none; }
+  .shell nav { display:flex; margin:0; gap:4px; }
+  .shell nav button { font-size:12px; padding:9px 10px; white-space:nowrap; }
+  .shell nav button::first-letter { font-size:12px; }
+  .shell .profile { display:none; }
+  .shell.pipeline-mode { grid-template-columns:1fr; }
+  .automation-grid { grid-template-columns:1fr; }
+  .automation-actions { justify-content:stretch; }
+  .automation-actions button { flex:1; }
+  .intent-learner { flex-wrap:wrap; }
+}
+
 .intent-learner { display: flex; gap: 6px; margin-top: 8px; }
 .intent-learner select { min-width: 0; max-width: 210px; font-size: 12px; }
 .intent-learner button { border: 0; border-radius: 7px; padding: 5px 8px; font-size: 12px; background: #e1f6eb; color: #176b44; cursor: pointer; }

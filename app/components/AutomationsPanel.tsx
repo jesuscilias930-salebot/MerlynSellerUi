@@ -25,9 +25,10 @@ type EditorProps = {
   initial?: AutomationIntent;
   onSave: Props["onSave"];
   onDelete?: () => Promise<void>;
+  onCancel?: () => void;
 };
 
-function AutomationEditor({ initial, onSave, onDelete }: EditorProps) {
+function AutomationEditor({ initial, onSave, onDelete, onCancel }: EditorProps) {
   const [value, setValue] = useState<IntentDraft>(
     initial ? { ...initial } : emptyIntent(),
   );
@@ -57,6 +58,10 @@ function AutomationEditor({ initial, onSave, onDelete }: EditorProps) {
 
   return (
     <form className="automation-editor" onSubmit={submit}>
+      <div className="automation-card-header">
+        <div><strong>{initial ? initial.name : "Nueva automatización"}</strong><small>{initial ? initial.key : "Crea una respuesta o acción automática"}</small></div>
+        {onCancel && <button className="plain-button" type="button" onClick={onCancel}>Cancelar</button>}
+      </div>
       <div className="automation-grid">
         <input
           value={value.name}
@@ -137,18 +142,13 @@ function AutomationEditor({ initial, onSave, onDelete }: EditorProps) {
 }
 
 export function AutomationsPanel({ intents, onSave, onDelete }: Props) {
+  const [creating, setCreating] = useState(false);
   return (
     <section className="automations">
-      <header>
-        <p>AUTOMATIZACIONES</p>
-        <h1>Respuestas automáticas</h1>
-        <span>
-          El bot usa estas respuestas aprobadas. El catálogo se envía solo si
-          está configurado en Ajustes.
-        </span>
-      </header>
+      <header className="automations-header"><div><p>AUTOMATIZACIONES</p><h1>Respuestas automáticas</h1><span>Configura qué debe contestar el bot y agrega ejemplos de frases que debe reconocer.</span></div><button type="button" className="primary-action" onClick={() => setCreating(true)} disabled={creating}>＋ Nueva automatización</button></header>
 
       <div className="automation-list">
+        {intents.length === 0 && <div className="automation-empty"><b>Aún no tienes automatizaciones</b><span>Crea una para comenzar a responder automáticamente.</span></div>}
         {intents.map((intent) => (
           <AutomationEditor
             key={intent.id}
@@ -157,7 +157,7 @@ export function AutomationsPanel({ intents, onSave, onDelete }: Props) {
             onDelete={() => onDelete(intent.id)}
           />
         ))}
-        <AutomationEditor onSave={onSave} />
+        {creating && <AutomationEditor onSave={async (intent) => { await onSave(intent); setCreating(false); }} onCancel={() => setCreating(false)} />}
       </div>
     </section>
   );
