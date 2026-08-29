@@ -13,6 +13,7 @@ export type Message = {
   media_id: string | null;
   type: string;
   status: string;
+  error_code?: string | null;
   created_at: string;
 };
 
