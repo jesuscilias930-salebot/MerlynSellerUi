@@ -488,6 +488,17 @@ button {
     color: #167548
 }
 
+.delete-conversation {
+    border: 1px solid #f1c8c2;
+    border-radius: 999px;
+    background: #fff5f3;
+    color: #a33f35;
+    padding: 7px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap
+}
+
 .thread {
     padding: 28px clamp(20px, 6vw, 100px);
     min-height: 0;
@@ -781,6 +792,10 @@ button {
     background: #f2f5f3;
     color: var(--muted);
     font-size: 21px
+}
+
+.delete-conversation + .close-conversation {
+    margin-left: 0
 }
 
 .conversation-modal {

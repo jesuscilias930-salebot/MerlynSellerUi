@@ -28,6 +28,7 @@ type Props = {
   onAutoReplyChange: (enabled: boolean) => void;
   automationIntents: AutomationIntent[];
   onLearnIntent: (messageId: string, intentId: string) => Promise<void>;
+  onDeleteConversation: () => void;
   onClose?: () => void;
 };
 
@@ -38,7 +39,7 @@ function IntentLearner({ message, intents, onLearn }: { message: Message; intent
   return <div className="intent-learner"><select value={intentId} onChange={(event) => setIntentId(event.target.value)}><option value="">Este mensaje corresponde a…</option>{intents.map((intent) => <option key={intent.id} value={intent.id}>{intent.name}</option>)}</select><button type="button" disabled={!intentId || saving} onClick={async () => { setSaving(true); try { await onLearn(message.id, intentId); setIntentId(""); } finally { setSaving(false); } }}>{saving ? "Guardando…" : "Aprender"}</button></div>;
 }
 
-export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploadingMedia, documentOptions, selectedDocumentId, documentCaption, onDraftChange, onSendText, onUploadAudio, onUploadImage, onUploadVideo, onUploadDocument, onDocumentChange, onDocumentCaptionChange, onSendDocument, onRecordAudio, onAutoReplyChange, automationIntents, onLearnIntent, onClose }: Props) {
+export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploadingMedia, documentOptions, selectedDocumentId, documentCaption, onDraftChange, onSendText, onUploadAudio, onUploadImage, onUploadVideo, onUploadDocument, onDocumentChange, onDocumentCaptionChange, onSendDocument, onRecordAudio, onAutoReplyChange, automationIntents, onLearnIntent, onDeleteConversation, onClose }: Props) {
   const threadRef = useRef<HTMLDivElement>(null);
   const scrolledConversationId = useRef<string | null>(null);
   useEffect(() => {
@@ -62,7 +63,7 @@ export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploa
     return <p>{message.body || `[${message.type}]`}</p>;
   };
   return <section className="panel">
-    <header><b className="avatar">{chat ? initials(chat.name || chat.phone_number) : "M"}</b><div><h2>{chat ? chat.name || chat.phone_number : "Tu bandeja está lista"}</h2><small>{chat?.phone_number || "Selecciona un chat para comenzar"}</small></div>{chat && <button className={`bot-toggle ${chat.autoReplyEnabled !== false ? "on" : ""}`} type="button" onClick={() => onAutoReplyChange(chat.autoReplyEnabled === false)}>{chat.autoReplyEnabled === false ? "Bot apagado" : "Bot activo"}</button>}{onClose && <button className="close-conversation" type="button" onClick={onClose} aria-label="Cerrar conversación">×</button>}</header>
+    <header><b className="avatar">{chat ? initials(chat.name || chat.phone_number) : "M"}</b><div><h2>{chat ? chat.name || chat.phone_number : "Tu bandeja está lista"}</h2><small>{chat?.phone_number || "Selecciona un chat para comenzar"}</small></div>{chat && <button className={`bot-toggle ${chat.autoReplyEnabled !== false ? "on" : ""}`} type="button" onClick={() => onAutoReplyChange(chat.autoReplyEnabled === false)}>{chat.autoReplyEnabled === false ? "Bot apagado" : "Bot activo"}</button>}{chat && <button className="delete-conversation" type="button" onClick={onDeleteConversation}>Borrar prueba</button>}{onClose && <button className="close-conversation" type="button" onClick={onClose} aria-label="Cerrar conversación">×</button>}</header>
     <div className="thread" ref={threadRef}>
       {!chat && <div className="empty"><b className="mark">M</b><h2>Atiende desde un solo lugar</h2><p>Crea una conversación o espera un mensaje entrante.</p></div>}
       {messages.map((message) => <article className={message.direction} key={message.id}>{messageContent(message)}<small>{new Date(message.created_at).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })} · {message.status}{message.status === "failed" && message.error_code ? ` · ${message.error_code}` : ""}</small><IntentLearner message={message} intents={automationIntents} onLearn={onLearnIntent} /></article>)}

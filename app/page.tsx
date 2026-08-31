@@ -124,6 +124,16 @@ export default function Home() {
       if (modalChat?.id === target.id) setModalChat({ ...modalChat, autoReplyEnabled: enabled });
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible actualizar el bot."); }
   };
+  const deleteConversation = async (target: Chat | null) => {
+    if (!target || !window.confirm(`¿Borrar la conversación de ${target.name || target.phone_number}? Esta acción elimina sus mensajes y el progreso de escenarios para poder hacer pruebas.`)) return;
+    try {
+      await request(`/conversations/${target.id}`, { method: "DELETE" });
+      if (chat?.id === target.id) { setChat(null); setMessages([]); setDraft(""); }
+      if (modalChat?.id === target.id) { setModalChat(null); setModalMessages([]); setModalDraft(""); }
+      await Promise.all([loadChats(), loadPipeline()]);
+      setNotice("Conversación eliminada. El próximo mensaje del número iniciará una prueba limpia.");
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible borrar la conversación."); }
+  };
   const matchesFilter = (item: Chat, filter: ConversationFilter) => {
     if (filter === "unread") return item.unreadCount > 0;
     if (filter === "needs-response") return item.needsResponse === true;
@@ -625,6 +635,7 @@ export default function Home() {
           onAutoReplyChange={(enabled) => setAutoReply(chat, enabled)}
           automationIntents={automationIntents}
           onLearnIntent={(messageId, intentId) => learnIntent(chat, messageId, intentId)}
+          onDeleteConversation={() => deleteConversation(chat)}
         />
       ) : view === "pipeline" ? (
         <LeadBoard
@@ -697,6 +708,7 @@ export default function Home() {
         onAutoReplyChange={(enabled) => setAutoReply(modalChat, enabled)}
         automationIntents={automationIntents}
         onLearnIntent={(messageId, intentId) => learnIntent(modalChat, messageId, intentId)}
+        onDeleteConversation={() => deleteConversation(modalChat)}
         onClose={() => {
           setModalChat(null);
           setModalMessages([]);
