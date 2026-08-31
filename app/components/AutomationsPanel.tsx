@@ -93,6 +93,7 @@ function AutomationEditor({ initial, onSave, onDelete, onCancel }: EditorProps) 
         >
           <option value="text">Responder texto</option>
           <option value="send_catalog">Enviar catálogo</option>
+          <option value="send_shipping_info">Costo de envío + catálogo si falta</option>
         </select>
         <label className="automation-active">
           <input
@@ -106,13 +107,13 @@ function AutomationEditor({ initial, onSave, onDelete, onCancel }: EditorProps) 
         </label>
       </div>
 
-      {value.action === "text" && (
+      {value.action !== "send_catalog" && (
         <textarea
           value={value.responseBody || ""}
           onChange={(event) =>
             setValue({ ...value, responseBody: event.target.value })
           }
-          placeholder="Respuesta aprobada que recibirá el cliente"
+          placeholder={value.action === "send_shipping_info" ? "Mensaje para solicitar mercancía, código postal, calle y colonia" : "Respuesta aprobada que recibirá el cliente"}
           required
         />
       )}

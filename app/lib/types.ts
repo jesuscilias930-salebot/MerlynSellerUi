@@ -10,7 +10,7 @@ export type Chat = {
   needsResponse?: boolean;
   autoReplyEnabled?: boolean;
 
-export type AutomationIntent = { id: string; key: string; name: string; responseBody: string | null; action: "text" | "send_catalog"; examples: string[]; isActive: boolean; priority: number };
+export type AutomationIntent = { id: string; key: string; name: string; responseBody: string | null; action: "text" | "send_catalog" | "send_shipping_info"; examples: string[]; isActive: boolean; priority: number };
 };
 
 export type Message = {
