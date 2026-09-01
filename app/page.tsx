@@ -3,8 +3,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { api, request } from "./lib/api";
-import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, DocumentOption, LeadColumn, Message, RemarketingPreset, User } from "./lib/types";
+import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, DocumentOption, DocumentTemplate, LeadColumn, Message, RemarketingPreset, User } from "./lib/types";
 import { AutomationsPanel } from "./components/AutomationsPanel";
+import { DocumentTemplatesPanel } from "./components/DocumentTemplatesPanel";
 import { ConversationModal } from "./components/ConversationModal";
 import { Inbox } from "./components/Inbox";
 import { LeadBoard } from "./components/LeadBoard";
@@ -52,6 +53,7 @@ export default function Home() {
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [documentOptions, setDocumentOptions] = useState<DocumentOption[]>([]);
+  const [documentTemplates, setDocumentTemplates] = useState<DocumentTemplate[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [documentCaption, setDocumentCaption] = useState("");
   const [notice, setNotice] = useState("");
@@ -80,6 +82,7 @@ export default function Home() {
     setPresets(await request<RemarketingPreset[]>("/remarketing/presets"));
   const loadAutomations = async () => setAutomationIntents(await request<AutomationIntent[]>("/automations"));
   const loadScenarios = async () => setAutomationScenarios(await request<AutomationScenario[]>("/scenarios"));
+  const loadDocumentTemplates = async () => setDocumentTemplates(await request<DocumentTemplate[]>("/settings/document-templates"));
   const loadPipeline = async () => {
     const columns = await request<LeadColumn[]>("/leads/board");
     setPipeline(columns);
@@ -109,7 +112,7 @@ export default function Home() {
     await Promise.all([loadChats(), loadPipeline()]);
   };
   const refreshData = async () => {
-    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios()]);
+    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios(), loadDocumentTemplates()]);
     if (chat) setMessages(await loadMessages(chat));
     if (modalChat) setModalMessages(await loadMessages(modalChat));
   };
@@ -168,7 +171,7 @@ export default function Home() {
     request<{ user: User }>("/auth/me")
       .then(async (session) => {
         setUser(session.user);
-        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios()]);
+        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios(), loadDocumentTemplates()]);
       })
       .catch(() => undefined);
   }, []);
@@ -220,7 +223,7 @@ export default function Home() {
       });
       await supabase.auth.signOut();
       setUser(session.user);
-      await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios()]);
+      await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios(), loadDocumentTemplates()]);
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "Error al iniciar sesión.",
@@ -549,6 +552,30 @@ export default function Home() {
     if (!window.confirm("¿Eliminar esta automatización?")) return;
     try { await request(`/automations/${id}`, { method: "DELETE" }); await loadAutomations(); } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudo eliminar la automatización."); }
   };
+  const uploadDocumentTemplate = async (file: File) => {
+    try {
+      const response = await fetch(`${api}/settings/document-templates/upload`, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/pdf", "X-Upload-Filename": encodeURIComponent(file.name) }, body: file,
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "No fue posible subir el PDF.");
+      await loadDocumentTemplates();
+      setNotice("Documento guardado. Ahora puedes editar su mensaje predeterminado.");
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible subir el PDF."); }
+  };
+  const saveDocumentTemplate = async (template: DocumentTemplate, changes: { filename: string; caption: string; isCatalog: boolean }) => {
+    try {
+      await request(`/settings/document-templates/${template.id}`, { method: "PATCH", body: JSON.stringify(changes) });
+      await Promise.all([loadDocumentTemplates(), chat ? loadDocumentOptions(chat) : Promise.resolve(), modalChat ? loadDocumentOptions(modalChat) : Promise.resolve()]);
+      setNotice("Plantilla de documento guardada.");
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible guardar el documento."); }
+  };
+  const deleteDocumentTemplate = async (template: DocumentTemplate) => {
+    if (!window.confirm(`¿Eliminar “${template.filename}”? Ya no estará disponible para enviar.`)) return;
+    try { await request(`/settings/document-templates/${template.id}`, { method: "DELETE" }); await loadDocumentTemplates(); setNotice("Documento eliminado."); }
+    catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible eliminar el documento."); }
+  };
   const saveScenario = async (value: Omit<AutomationScenario, "id" | "key" | "updatedAt">, id?: string) => {
     try {
       await request(id ? `/scenarios/${id}` : "/scenarios", { method: id ? "PUT" : "POST", body: JSON.stringify(value) });
@@ -677,7 +704,7 @@ export default function Home() {
           onSend={sendRemarketing}
         />
       ) : view === "automations" ? (
-        <div className="automation-workspace"><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onDelete={async (id) => { if (!window.confirm("¿Eliminar este escenario?")) return; await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
+        <div className="automation-workspace"><DocumentTemplatesPanel templates={documentTemplates} onUpload={uploadDocumentTemplate} onSave={saveDocumentTemplate} onDelete={deleteDocumentTemplate} /><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onDelete={async (id) => { if (!window.confirm("¿Eliminar este escenario?")) return; await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
       ) : null}
       <ConversationModal
         chat={modalChat}

@@ -843,9 +843,31 @@ button {
 }
 
 .automation-workspace .scenarios,
-.automation-workspace .automations {
+.automation-workspace .automations,
+.automation-workspace .document-templates {
     overflow: visible
 }
+
+.document-templates { padding: 32px clamp(20px, 5vw, 72px) 0; background: #f7faf8; min-width: 0 }
+.document-templates > header { display: flex; align-items: center; justify-content: space-between; gap: 18px; max-width: 820px }
+.document-templates p { color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: .13em; margin: 0 }
+.document-templates h1 { margin: 4px 0; font-size: 28px }
+.document-templates header span { color: var(--muted); font-size: 13px }
+.document-templates .primary-action { cursor: pointer; white-space: nowrap }
+.document-templates .primary-action input { display: none }
+.document-template-list { display: grid; gap: 12px; max-width: 820px; margin-top: 20px }
+.document-template-card { border: 1px solid var(--line); background: #fff; border-radius: 15px; padding: 16px }
+.document-template-card > header { display: flex; justify-content: space-between; align-items: center; gap: 12px }
+.document-template-card header strong, .document-template-card header small { display: block }
+.document-template-card header small { color: var(--muted); margin-top: 3px }
+.document-template-editor { display: grid; gap: 11px; margin-top: 15px }
+.document-template-editor label { display: grid; gap: 6px; color: #174938; font-size: 13px; font-weight: 700 }
+.document-template-editor input, .document-template-editor textarea { width: 100%; border: 1px solid #dbe3df; border-radius: 8px; padding: 9px; font: inherit; font-size: 13px; font-weight: 400 }
+.document-template-editor textarea { min-height: 76px; resize: vertical }
+.document-template-editor .template-catalog { display: flex; align-items: center; gap: 7px; font-weight: 500; color: #26352e }
+.document-template-editor .template-catalog input { width: auto }
+.template-actions { display: flex; justify-content: flex-end; gap: 8px }
+.template-actions .danger { background: #fff0ed; color: #a14713 }
 
 .pipeline {
     min-width: 0;
