@@ -830,6 +830,18 @@ button {
     opacity: .4
 }
 
+.message-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 5px }
+.reply-button { border: 0; background: transparent; color: #527467; font: inherit; font-size: 11px; cursor: pointer; opacity: 0; padding: 2px 0 }
+.thread article:hover .reply-button, .thread article:focus-within .reply-button { opacity: 1 }
+.quoted-message { border-left: 3px solid #2c9b68; background: #ffffff70; border-radius: 5px; margin: 0 0 7px; padding: 5px 8px; max-width: 250px; display: grid; gap: 1px }
+.quoted-message b { color: #14613f; font-size: 11px }
+.quoted-message span, .reply-preview span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #4f675d; font-size: 12px }
+.composer { position: relative }
+.reply-preview { position: absolute; left: 0; right: 0; bottom: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid var(--line); border-bottom: 0; border-radius: 10px 10px 0 0; background: #f2f8f4; padding: 8px 12px; z-index: 2 }
+.reply-preview div { min-width: 0; display: grid; gap: 2px }
+.reply-preview b { color: #196443; font-size: 12px }
+.reply-preview button { border: 0; background: transparent; color: #527467; cursor: pointer; font-size: 22px; line-height: 1 }
+
 .shell.pipeline-mode {
     grid-template-columns: 220px minmax(0, 1fr);
     background: #f4f7f5

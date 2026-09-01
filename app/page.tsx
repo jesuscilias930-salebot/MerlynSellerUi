@@ -32,6 +32,7 @@ export default function Home() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [chat, setChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
   const [modalChat, setModalChat] = useState<Chat | null>(null);
   const [modalMessages, setModalMessages] = useState<Message[]>([]);
   const [pipeline, setPipeline] = useState<LeadColumn[]>([]);
@@ -99,6 +100,7 @@ export default function Home() {
   const openInbox = async (item: Chat) => {
     setMessages([]);
     setChat(item);
+    setReplyToMessage(null);
     const [nextMessages] = await Promise.all([loadMessages(item), loadDocumentOptions(item), request(`/conversations/${item.id}/read`, { method: "POST" })]);
     setMessages(nextMessages);
     await Promise.all([loadChats(), loadPipeline()]);
@@ -106,6 +108,7 @@ export default function Home() {
   const openModal = async (item: Chat) => {
     setModalMessages([]);
     setModalChat(item);
+    setReplyToMessage(null);
     setModalDraft("");
     const [nextMessages] = await Promise.all([loadMessages(item), loadDocumentOptions(item), request(`/conversations/${item.id}/read`, { method: "POST" })]);
     setModalMessages(nextMessages);
@@ -261,9 +264,10 @@ export default function Home() {
     try {
       await request(`/conversations/${target.id}/messages/text`, {
         method: "POST",
-        body: JSON.stringify({ body: value }),
+        body: JSON.stringify({ body: value, replyToMessageId: replyToMessage?.id || undefined }),
       });
       clear();
+      setReplyToMessage(null);
       await refreshData();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "No se pudo enviar.");
@@ -643,9 +647,9 @@ export default function Home() {
           onCreate={create}
           onOpen={openInbox}
           onFilterChange={setInboxFilter}
-          onSendText={(event) =>
-            sendText(event, chat, draft, () => setDraft(""))
-          }
+          onSendText={(event) => sendText(event, chat, draft, () => setDraft(""))}
+          replyToMessage={replyToMessage}
+          onReplyToChange={setReplyToMessage}
           onUploadAudio={uploadSelectedAudio(chat)}
           onUploadImage={uploadSelectedMedia(chat, "image")}
           onUploadVideo={uploadSelectedMedia(chat, "video")}
@@ -715,10 +719,10 @@ export default function Home() {
         documentOptions={documentOptions}
         selectedDocumentId={selectedDocumentId}
         documentCaption={documentCaption}
+        replyToMessage={replyToMessage}
         onDraftChange={setModalDraft}
-        onSendText={(event) =>
-          sendText(event, modalChat, modalDraft, () => setModalDraft(""))
-        }
+        onSendText={(event) => sendText(event, modalChat, modalDraft, () => setModalDraft(""))}
+        onReplyToChange={setReplyToMessage}
         onUploadAudio={uploadSelectedAudio(modalChat)}
         onUploadImage={uploadSelectedMedia(modalChat, "image")}
         onUploadVideo={uploadSelectedMedia(modalChat, "video")}

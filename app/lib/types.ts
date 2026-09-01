@@ -23,6 +23,10 @@ export type Message = {
   status: string;
   error_code?: string | null;
   created_at: string;
+  replyToMessageId?: string | null;
+  replyToBody?: string | null;
+  replyToType?: string | null;
+  replyToDirection?: "inbound" | "outbound" | null;
 };
 
 export type LeadColumn = { id: string; name: string; position: number; leads: Chat[] };
