@@ -889,6 +889,9 @@ button {
 .control-login span, .control-panel header span { color: var(--muted); display: block }
 .control-login small { display: block; color: var(--muted); margin-top: 16px; word-break: break-all }
 .control-login form { display: grid; gap: 10px; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 20px }
+.control-auth-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 9px; background: #edf3ef }
+.control-login .control-auth-toggle button { background: transparent; color: var(--muted); padding: 8px; font-size: 13px }
+.control-login .control-auth-toggle button.selected { background: #fff; color: var(--green); box-shadow: 0 1px 3px #193c291a }
 .control-login input, .customer-form input, .customer-form select, .report-controls input { border: 1px solid #dbe3df; border-radius: 8px; padding: 10px; font: inherit }
 .control-login button, .customer-form button, .report-controls button { border: 0; border-radius: 8px; padding: 10px 14px; color: #fff; background: var(--green); font-weight: 700; cursor: pointer }
 .control-login em { color: #a14713; font-style: normal; font-size: 13px }
