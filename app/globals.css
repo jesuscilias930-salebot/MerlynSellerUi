@@ -881,6 +881,32 @@ button {
 .template-actions { display: flex; justify-content: flex-end; gap: 8px }
 .template-actions .danger { background: #fff0ed; color: #a14713 }
 
+.control-login, .control-panel { min-width: 0; height: 100%; overflow-y: auto; padding: 32px clamp(20px, 5vw, 72px); background: #f7faf8 }
+.control-login { display: grid; place-content: center; gap: 24px; min-height: 100%; }
+.control-login > div, .control-login form { width: min(460px, 92vw) }
+.control-login p, .control-panel header p { color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: .13em; margin: 0 }
+.control-login h1, .control-panel h1 { margin: 5px 0; font-size: 30px }
+.control-login span, .control-panel header span { color: var(--muted); display: block }
+.control-login small { display: block; color: var(--muted); margin-top: 16px; word-break: break-all }
+.control-login form { display: grid; gap: 10px; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 20px }
+.control-login input, .customer-form input, .customer-form select, .report-controls input { border: 1px solid #dbe3df; border-radius: 8px; padding: 10px; font: inherit }
+.control-login button, .customer-form button, .report-controls button { border: 0; border-radius: 8px; padding: 10px 14px; color: #fff; background: var(--green); font-weight: 700; cursor: pointer }
+.control-login em { color: #a14713; font-style: normal; font-size: 13px }
+.control-panel > header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; max-width: 1100px }
+.control-panel > header > div:last-child { display: flex; gap: 8px; flex-wrap: wrap }
+.control-tabs { display: flex; gap: 7px; border-bottom: 1px solid var(--line); margin: 26px 0 20px; max-width: 1100px; overflow-x: auto }
+.control-tabs button { border: 0; background: transparent; color: var(--muted); padding: 11px 13px; white-space: nowrap; cursor: pointer; font: inherit }
+.control-tabs button.selected { color: var(--green); font-weight: 800; border-bottom: 3px solid var(--green) }
+.control-notice { max-width: 1100px; border: 1px solid #b9ded0; color: #155c3e; background: #edfff5; padding: 10px 12px; border-radius: 9px; margin-bottom: 14px }
+.control-summary { display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr)); gap: 14px; max-width: 1100px }
+.control-summary > article, .control-summary > section, .control-table, .customer-form { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px }
+.control-summary > article { display: grid; gap: 5px }.control-summary article small { color: var(--muted) }.control-summary article b { font-size: 28px }.warning { color: #b24c15 }
+.control-summary > section { grid-column: 1 / -1 }.control-summary h2, .control-table h2, .customer-form h2 { margin: 0 0 14px; font-size: 18px }
+.stock-row, .control-table > div:not(.report-controls) { display: grid; grid-template-columns: minmax(160px, 1.5fr) repeat(3, minmax(110px, 1fr)); gap: 12px; align-items: center; padding: 11px 0; border-top: 1px solid #edf1ee; font-size: 14px }
+.stock-row { grid-template-columns: 1fr auto }.control-table { max-width: 1100px }.control-table .low b { color: #b24c15 }.control-table span, .control-table small { color: var(--muted) }
+.control-customers { display: grid; grid-template-columns: minmax(250px, 350px) minmax(0, 1fr); gap: 16px; max-width: 1100px }.customer-form { display: grid; align-content: start; gap: 10px }.report-controls { display: flex; gap: 10px; align-items: end; flex-wrap: wrap }.report-controls label { display: grid; gap: 4px; font-size: 12px; color: var(--muted) }
+@media (max-width: 720px) { .control-panel > header, .control-customers { display: grid; grid-template-columns: 1fr }.control-summary { grid-template-columns: repeat(2, minmax(120px, 1fr)) }.stock-row, .control-table > div:not(.report-controls) { grid-template-columns: 1fr auto }.control-table > div:not(.report-controls) span { display: none } }
+
 .pipeline {
     min-width: 0;
     display: grid;

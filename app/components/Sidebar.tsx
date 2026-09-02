@@ -1,6 +1,6 @@
 import type { User } from "../lib/types";
 
-type View = "inbox" | "pipeline" | "remarketing" | "automations";
+type View = "inbox" | "pipeline" | "remarketing" | "automations" | "control";
 type Props = {
   user: User;
   view: View;
@@ -49,8 +49,12 @@ export function Sidebar({ user, view, onViewChange, onLogout }: Props) {
         >
           ⚙ Automatizaciones
         </button>
-        <button type="button" disabled>
-          ◌ Contactos
+        <button
+          type="button"
+          className={view === "control" ? "selected" : ""}
+          onClick={switchView("control")}
+        >
+          ◌ Control de ventas
         </button>
       </nav>
       <div className="profile">

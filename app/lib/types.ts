@@ -1,5 +1,6 @@
 export type Chat = {
   id: string;
+  contactId?: string;
   phone_number: string;
   name: string | null;
   last_message: string | null;

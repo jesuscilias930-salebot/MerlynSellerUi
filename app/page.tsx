@@ -13,8 +13,9 @@ import { LoginScreen } from "./components/LoginScreen";
 import { RemarketingPanel } from "./components/RemarketingPanel";
 import { Sidebar } from "./components/Sidebar";
 import { ScenariosPanel } from "./components/ScenariosPanel";
+import { ControlPanel } from "./components/ControlPanel";
 
-type View = "inbox" | "pipeline" | "remarketing" | "automations";
+type View = "inbox" | "pipeline" | "remarketing" | "automations" | "control";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase =
@@ -709,6 +710,8 @@ export default function Home() {
         />
       ) : view === "automations" ? (
         <div className="automation-workspace"><DocumentTemplatesPanel templates={documentTemplates} onUpload={uploadDocumentTemplate} onSave={saveDocumentTemplate} onDelete={deleteDocumentTemplate} /><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onDelete={async (id) => { if (!window.confirm("¿Eliminar este escenario?")) return; await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
+      ) : view === "control" ? (
+        <ControlPanel chats={chats} />
       ) : null}
       <ConversationModal
         chat={modalChat}
