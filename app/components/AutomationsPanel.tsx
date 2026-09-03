@@ -105,6 +105,16 @@ function AutomationEditor({ initial, onSave, onDelete, onCancel }: EditorProps) 
           />{" "}
           Activa
         </label>
+        <label className="automation-priority">
+          Prioridad
+          <input
+            type="number"
+            min="0"
+            max="1000"
+            value={value.priority}
+            onChange={(event) => setValue({ ...value, priority: Number(event.target.value) || 0 })}
+          />
+        </label>
       </div>
 
       {value.action !== "send_catalog" && (
@@ -124,6 +134,7 @@ function AutomationEditor({ initial, onSave, onDelete, onCancel }: EditorProps) 
         placeholder="Una forma de pedirlo por línea. Incluye errores comunes y variantes."
         required
       />
+      <small className="automation-routing-help">Las consultas de envío tienen prioridad por seguridad. Para otras coincidencias, un número mayor gana. No agregues frases de envío ni de precios a “Enviar catálogo”.</small>
 
       <div className="automation-actions">
         <button type="submit" disabled={saving}>

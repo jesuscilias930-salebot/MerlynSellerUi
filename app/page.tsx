@@ -3,7 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { api, request } from "./lib/api";
-import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, DocumentOption, DocumentTemplate, LeadColumn, Message, RemarketingPreset, User } from "./lib/types";
+import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, RemarketingPreset, User } from "./lib/types";
 import { AutomationsPanel } from "./components/AutomationsPanel";
 import { DocumentTemplatesPanel } from "./components/DocumentTemplatesPanel";
 import { ConversationModal } from "./components/ConversationModal";
@@ -14,6 +14,7 @@ import { RemarketingPanel } from "./components/RemarketingPanel";
 import { Sidebar } from "./components/Sidebar";
 import { ScenariosPanel } from "./components/ScenariosPanel";
 import { ControlPanel } from "./components/ControlPanel";
+import { EntrepreneurPackagesPanel } from "./components/EntrepreneurPackagesPanel";
 
 type View = "inbox" | "pipeline" | "remarketing" | "automations" | "control";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -56,11 +57,13 @@ export default function Home() {
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [documentOptions, setDocumentOptions] = useState<DocumentOption[]>([]);
   const [documentTemplates, setDocumentTemplates] = useState<DocumentTemplate[]>([]);
+  const [entrepreneurPackages, setEntrepreneurPackages] = useState<EntrepreneurPackage[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [documentCaption, setDocumentCaption] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null);
+  const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null);
   const [inboxFilter, setInboxFilter] = useState<ConversationFilter>("all");
   const [dashboardFilter, setDashboardFilter] = useState<ConversationFilter>("all");
   const soundContext = useRef<AudioContext | null>(null);
@@ -85,6 +88,7 @@ export default function Home() {
   const loadAutomations = async () => setAutomationIntents(await request<AutomationIntent[]>("/automations"));
   const loadScenarios = async () => setAutomationScenarios(await request<AutomationScenario[]>("/scenarios"));
   const loadDocumentTemplates = async () => setDocumentTemplates(await request<DocumentTemplate[]>("/settings/document-templates"));
+  const loadEntrepreneurPackages = async () => setEntrepreneurPackages(await request<EntrepreneurPackage[]>("/settings/entrepreneur-packages"));
   const loadPipeline = async () => {
     const columns = await request<LeadColumn[]>("/leads/board");
     setPipeline(columns);
@@ -116,7 +120,7 @@ export default function Home() {
     await Promise.all([loadChats(), loadPipeline()]);
   };
   const refreshData = async () => {
-    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios(), loadDocumentTemplates()]);
+    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
     if (chat) setMessages(await loadMessages(chat));
     if (modalChat) setModalMessages(await loadMessages(modalChat));
   };
@@ -175,7 +179,7 @@ export default function Home() {
     request<{ user: User }>("/auth/me")
       .then(async (session) => {
         setUser(session.user);
-        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios(), loadDocumentTemplates()]);
+        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
       })
       .catch(() => undefined);
   }, []);
@@ -227,7 +231,7 @@ export default function Home() {
       });
       await supabase.auth.signOut();
       setUser(session.user);
-      await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios(), loadDocumentTemplates()]);
+      await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "Error al iniciar sesión.",
@@ -432,6 +436,27 @@ export default function Home() {
     }
   };
 
+  const dropColumn = async (event: DragEvent<HTMLElement>, destinationId: string) => {
+    event.preventDefault();
+    const sourceId = event.dataTransfer.getData("text/merlynsales-column") || draggingColumnId;
+    setDraggingColumnId(null);
+    if (!sourceId || sourceId === destinationId) return;
+    const from = pipeline.findIndex((column) => column.id === sourceId);
+    const to = pipeline.findIndex((column) => column.id === destinationId);
+    if (from < 0 || to < 0) return;
+    const reordered = [...pipeline];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moved);
+    setPipeline(reordered);
+    try {
+      await request("/leads/columns/order", { method: "PUT", body: JSON.stringify({ columnIds: reordered.map((column) => column.id) }) });
+      await loadPipeline();
+    } catch (error) {
+      await loadPipeline();
+      setNotice(error instanceof Error ? error.message : "No se pudo reordenar las columnas.");
+    }
+  };
+
   const uploadRemarketingImage = async (
     event: ChangeEvent<HTMLInputElement>,
   ) => {
@@ -581,6 +606,38 @@ export default function Home() {
     try { await request(`/settings/document-templates/${template.id}`, { method: "DELETE" }); await loadDocumentTemplates(); setNotice("Documento eliminado."); }
     catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible eliminar el documento."); }
   };
+  const uploadEntrepreneurPackage = async (file: File) => {
+    try {
+      const response = await fetch(`${api}/settings/entrepreneur-packages/upload`, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": file.type, "X-Upload-Filename": encodeURIComponent(file.name), "X-Package-Name": encodeURIComponent(file.name.replace(/\.[^.]+$/, "")) },
+        body: file,
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "No fue posible subir la imagen del paquete.");
+      await loadEntrepreneurPackages();
+      setNotice("Paquete emprendedor guardado.");
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible subir la imagen del paquete."); }
+  };
+  const saveEntrepreneurPackage = async (item: EntrepreneurPackage, changes: { name: string; caption: string }) => {
+    try {
+      await request(`/settings/entrepreneur-packages/${item.id}`, { method: "PATCH", body: JSON.stringify(changes) });
+      await loadEntrepreneurPackages();
+      setNotice("Paquete actualizado.");
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible guardar el paquete."); }
+  };
+  const deleteEntrepreneurPackage = async (item: EntrepreneurPackage) => {
+    if (!window.confirm(`¿Eliminar “${item.name}”? Ya no estará disponible en el chat.`)) return;
+    try { await request(`/settings/entrepreneur-packages/${item.id}`, { method: "DELETE" }); await loadEntrepreneurPackages(); setNotice("Paquete eliminado."); }
+    catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible eliminar el paquete."); }
+  };
+  const sendEntrepreneurPackages = async (target: Chat | null, packageIds: string[]) => {
+    if (!target || !packageIds.length) return;
+    try {
+      await request(`/conversations/${target.id}/messages/entrepreneur-packages`, { method: "POST", body: JSON.stringify({ packageIds }) });
+      await refreshData();
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar los paquetes."); }
+  };
   const saveScenario = async (value: Omit<AutomationScenario, "id" | "key" | "updatedAt">, id?: string) => {
     try {
       await request(id ? `/scenarios/${id}` : "/scenarios", { method: id ? "PUT" : "POST", body: JSON.stringify(value) });
@@ -643,6 +700,7 @@ export default function Home() {
           documentOptions={documentOptions}
           selectedDocumentId={selectedDocumentId}
           documentCaption={documentCaption}
+          entrepreneurPackages={entrepreneurPackages}
           onNumberChange={setNumber}
           onDraftChange={setDraft}
           onCreate={create}
@@ -661,6 +719,7 @@ export default function Home() {
           }}
           onDocumentCaptionChange={setDocumentCaption}
           onSendDocument={() => sendDocument(chat)}
+          onSendEntrepreneurPackages={(packageIds) => sendEntrepreneurPackages(chat, packageIds)}
           onRecordAudio={(audio, filename) =>
             uploadAudio(chat, audio, filename)
           }
@@ -676,6 +735,7 @@ export default function Home() {
           canEdit={canEditPipeline}
           columnName={columnName}
           draggingLeadId={draggingLeadId}
+          draggingColumnId={draggingColumnId}
           onColumnNameChange={setColumnName}
           onFilterChange={setDashboardFilter}
           onAddColumn={addColumn}
@@ -688,6 +748,13 @@ export default function Home() {
           }}
           onDragEnd={() => setDraggingLeadId(null)}
           onDrop={dropLead}
+          onColumnDragStart={(event, columnId) => {
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/merlynsales-column", columnId);
+            setDraggingColumnId(columnId);
+          }}
+          onColumnDragEnd={() => setDraggingColumnId(null)}
+          onColumnDrop={dropColumn}
         />
       ) : view === "remarketing" ? (
         <RemarketingPanel
@@ -709,7 +776,7 @@ export default function Home() {
           onSend={sendRemarketing}
         />
       ) : view === "automations" ? (
-        <div className="automation-workspace"><DocumentTemplatesPanel templates={documentTemplates} onUpload={uploadDocumentTemplate} onSave={saveDocumentTemplate} onDelete={deleteDocumentTemplate} /><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onDelete={async (id) => { if (!window.confirm("¿Eliminar este escenario?")) return; await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
+        <div className="automation-workspace"><DocumentTemplatesPanel templates={documentTemplates} onUpload={uploadDocumentTemplate} onSave={saveDocumentTemplate} onDelete={deleteDocumentTemplate} /><EntrepreneurPackagesPanel packages={entrepreneurPackages} onUpload={uploadEntrepreneurPackage} onSave={saveEntrepreneurPackage} onDelete={deleteEntrepreneurPackage} /><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onDelete={async (id) => { if (!window.confirm("¿Eliminar este escenario?")) return; await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
       ) : view === "control" ? (
         <ControlPanel chats={chats} />
       ) : null}
@@ -722,6 +789,7 @@ export default function Home() {
         documentOptions={documentOptions}
         selectedDocumentId={selectedDocumentId}
         documentCaption={documentCaption}
+        entrepreneurPackages={entrepreneurPackages}
         replyToMessage={replyToMessage}
         onDraftChange={setModalDraft}
         onSendText={(event) => sendText(event, modalChat, modalDraft, () => setModalDraft(""))}
@@ -736,6 +804,7 @@ export default function Home() {
         }}
         onDocumentCaptionChange={setDocumentCaption}
         onSendDocument={() => sendDocument(modalChat)}
+        onSendEntrepreneurPackages={(packageIds) => sendEntrepreneurPackages(modalChat, packageIds)}
         onRecordAudio={(audio, filename) =>
           uploadAudio(modalChat, audio, filename)
         }

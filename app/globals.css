@@ -47,6 +47,33 @@
   .intent-learner { flex-wrap:wrap; }
 }
 
+/* Pipeline ordering and reusable entrepreneur-package picker. */
+.column-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.column-drag-handle { border: 0; background: transparent; color: var(--muted); cursor: grab; font-size: 20px; letter-spacing: -4px; padding: 2px 5px; }
+.column-drag-handle:active { cursor: grabbing; }
+.lead-column.column-dragging { opacity: .55; outline: 2px dashed var(--green); }
+.quick-packages { margin: 0 18px 10px; border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: #fff; }
+.quick-packages summary { cursor: pointer; color: var(--deep); font-weight: 700; }
+.quick-package-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin: 10px 0; }
+.quick-package-list label { border: 1px solid var(--line); border-radius: 9px; padding: 6px; display: grid; gap: 5px; font-size: 12px; cursor: pointer; overflow: hidden; }
+.quick-package-list label.selected { border-color: var(--green); background: #effbf4; }
+.quick-package-list img { width: 100%; height: 76px; object-fit: cover; border-radius: 6px; }
+.quick-package-list input { justify-self: end; }
+.quick-packages > button { border: 0; border-radius: 8px; padding: 8px 12px; background: var(--green); color: white; font-weight: 700; }
+.package-template-list { display: grid; gap: 12px; }
+.package-template-card { display: grid; grid-template-columns: 120px 1fr; gap: 14px; border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: #fff; }
+.package-template-card > img { width: 120px; height: 110px; border-radius: 9px; object-fit: cover; }
+.package-template-card header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.package-template-editor { display: grid; gap: 9px; margin-top: 10px; }
+.package-template-editor label { display: grid; gap: 4px; font-size: 13px; font-weight: 700; }
+.purchase-form { max-width: 690px; }
+.purchase-form fieldset { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; padding: 11px; }
+.purchase-form fieldset legend { color: var(--deep); font-weight: 700; }
+.purchase-form fieldset select, .purchase-form fieldset input { min-width: 0; }
+.purchase-form .check { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; }
+.compact { padding: 7px 9px; }
+@media (max-width: 580px) { .package-template-card { grid-template-columns: 82px 1fr; } .package-template-card > img { width: 82px; height: 82px; } .quick-packages { margin: 0 8px 8px; } .purchase-form fieldset { grid-template-columns: 1fr; } }
+
 /* Guided-sales scenarios */
 .scenarios {
     min-width: 0;
@@ -933,6 +960,9 @@ button {
 .automation-editor input, .automation-editor select, .automation-editor textarea { width: 100%; border: 1px solid #dbe3df; border-radius: 8px; padding: 9px; font: inherit; font-size: 13px }
 .automation-editor textarea { min-height: 70px; resize: vertical }
 .automation-active { display: flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 12px }
+.automation-priority { display: grid; gap: 3px; color: var(--muted); font-size: 11px; font-weight: 700 }
+.automation-priority input { min-width: 70px; padding: 6px }
+.automation-routing-help { color: var(--muted); font-size: 12px; line-height: 1.4 }
 .automation-actions { display: flex; gap: 8px; justify-content: flex-end }
 .automation-actions .danger { background: #fff0ed; color: #a14713 }
 

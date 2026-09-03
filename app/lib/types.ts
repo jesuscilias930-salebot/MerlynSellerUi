@@ -35,6 +35,7 @@ export type User = { email: string; role: string };
 export type RemarketingPreset = { id: string; name: string; body: string | null; mediaId: string | null; filename: string | null; updated_at: string };
 export type DocumentOption = { mediaId: string; filename: string; caption: string | null; created_at: string };
 export type DocumentTemplate = { id: string; mediaId: string; filename: string; caption: string | null; isCatalog: boolean; created_at: string; updated_at: string };
+export type EntrepreneurPackage = { id: string; name: string; mediaId: string; filename: string | null; caption: string | null; position: number; created_at: string; updated_at: string };
 export type ConversationFilter = "all" | "unread" | "needs-response" | `column:${string}`;
 export type ScenarioBranch = { id: string; name: string; examples: string[]; nextStepId: string };
 export type ScenarioMedia = { mediaId: string; filename?: string; caption?: string; type?: "image" | "document" };
