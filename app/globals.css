@@ -73,7 +73,16 @@
 .purchase-form fieldset select, .purchase-form fieldset input { min-width: 0; }
 .purchase-form .check { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; }
 .compact { padding: 7px 9px; }
-@media (max-width: 580px) { .package-template-card { grid-template-columns: 82px 1fr; } .package-template-card > img { width: 82px; height: 82px; } .quick-packages { margin: 0 8px 8px; } .purchase-form fieldset { grid-template-columns: 1fr; } }
+.inventory-workspace { grid-template-columns: minmax(300px, 430px) minmax(0, 1fr); }
+.product-form { gap: 14px; }
+.product-form label { display: grid; gap: 5px; color: #355247; font-size: 12px; font-weight: 700; }
+.product-form input, .product-form select { width: 100%; }
+.form-kicker { color: var(--green); font-size: 10px; letter-spacing: .12em; font-weight: 800; margin: 0 0 3px; }
+.form-description { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; }
+.form-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.product-cost-section { display: grid; gap: 10px; border: 1px solid #dbe8e1; border-radius: 10px; padding: 12px; background: linear-gradient(180deg, #f9fcfa, #f0f7f3); }
+.product-cost-section > b { color: var(--deep); font-size: 12px; }
+@media (max-width: 580px) { .package-template-card { grid-template-columns: 82px 1fr; } .package-template-card > img { width: 82px; height: 82px; } .quick-packages { margin: 0 8px 8px; } .purchase-form fieldset, .form-pair { grid-template-columns: 1fr; } }
 
 /* Automations workspace: grouped cards make the long configuration screen
    easier to scan without changing the individual automation flows. */
