@@ -59,9 +59,9 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
         >
           ◌ Control de ventas
         </button>
-        {view === "control" && <div className="control-aside-menu" aria-label="Opciones de control de ventas">
+        <div className="control-aside-menu" aria-label="Opciones de control de ventas">
           {([['summary', 'Resumen'], ['customers', 'Clientes'], ['categories', 'Categorías'], ['inventory', 'Inventario'], ['sales', 'Ventas'], ['purchases', 'Compras'], ['reports', 'Reportes']] as [ControlTab, string][]).map(([tab, label]) => <button key={tab} type="button" className={controlTab === tab ? "selected" : ""} onClick={() => onControlTabChange(tab)}>{label}</button>)}
-        </div>}
+        </div>
       </nav>
       <div className="profile">
         <b>{user.email[0].toUpperCase()}</b>
