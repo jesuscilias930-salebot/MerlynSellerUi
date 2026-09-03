@@ -1,14 +1,17 @@
 import type { User } from "../lib/types";
 
 type View = "inbox" | "pipeline" | "remarketing" | "automations" | "control";
+type ControlTab = "summary" | "customers" | "categories" | "inventory" | "sales" | "purchases" | "reports";
 type Props = {
   user: User;
   view: View;
+  controlTab: ControlTab;
   onViewChange: (view: View) => void;
+  onControlTabChange: (tab: ControlTab) => void;
   onLogout: () => void;
 };
 
-export function Sidebar({ user, view, onViewChange, onLogout }: Props) {
+export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChange, onLogout }: Props) {
   const switchView =
     (nextView: View) => (event: React.MouseEvent<HTMLButtonElement>) => {
       event.preventDefault();
@@ -56,6 +59,9 @@ export function Sidebar({ user, view, onViewChange, onLogout }: Props) {
         >
           ◌ Control de ventas
         </button>
+        {view === "control" && <div className="control-aside-menu" aria-label="Opciones de control de ventas">
+          {([['summary', 'Resumen'], ['customers', 'Clientes'], ['categories', 'Categorías'], ['inventory', 'Inventario'], ['sales', 'Ventas'], ['purchases', 'Compras'], ['reports', 'Reportes']] as [ControlTab, string][]).map(([tab, label]) => <button key={tab} type="button" className={controlTab === tab ? "selected" : ""} onClick={() => onControlTabChange(tab)}>{label}</button>)}
+        </div>}
       </nav>
       <div className="profile">
         <b>{user.email[0].toUpperCase()}</b>

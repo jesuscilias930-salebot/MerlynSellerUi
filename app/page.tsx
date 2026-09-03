@@ -17,6 +17,7 @@ import { ControlPanel } from "./components/ControlPanel";
 import { EntrepreneurPackagesPanel } from "./components/EntrepreneurPackagesPanel";
 
 type View = "inbox" | "pipeline" | "remarketing" | "automations" | "control";
+type ControlTab = "summary" | "customers" | "categories" | "inventory" | "sales" | "purchases" | "reports";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase =
@@ -31,6 +32,7 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<View>("inbox");
+  const [controlTab, setControlTab] = useState<ControlTab>("summary");
   const [chats, setChats] = useState<Chat[]>([]);
   const [chat, setChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -683,7 +685,9 @@ export default function Home() {
       <Sidebar
         user={user}
         view={view}
-        onViewChange={setView}
+        controlTab={controlTab}
+        onViewChange={(nextView) => setView(nextView)}
+        onControlTabChange={(tab) => { setControlTab(tab); setView("control"); }}
         onLogout={logout}
       />
       {view === "inbox" ? (
@@ -778,7 +782,7 @@ export default function Home() {
       ) : view === "automations" ? (
         <div className="automation-workspace"><DocumentTemplatesPanel templates={documentTemplates} onUpload={uploadDocumentTemplate} onSave={saveDocumentTemplate} onDelete={deleteDocumentTemplate} /><EntrepreneurPackagesPanel packages={entrepreneurPackages} onUpload={uploadEntrepreneurPackage} onSave={saveEntrepreneurPackage} onDelete={deleteEntrepreneurPackage} /><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onDelete={async (id) => { if (!window.confirm("¿Eliminar este escenario?")) return; await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
       ) : view === "control" ? (
-        <ControlPanel chats={chats} />
+        <ControlPanel chats={chats} tab={controlTab} onTabChange={setControlTab} />
       ) : null}
       <ConversationModal
         chat={modalChat}

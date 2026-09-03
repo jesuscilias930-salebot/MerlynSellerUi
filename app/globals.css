@@ -982,6 +982,10 @@ button {
 .control-tabs { display: flex; gap: 7px; border-bottom: 1px solid var(--line); margin: 26px 0 20px; max-width: 1100px; overflow-x: auto }
 .control-tabs button { border: 0; background: transparent; color: var(--muted); padding: 11px 13px; white-space: nowrap; cursor: pointer; font: inherit }
 .control-tabs button.selected { color: var(--green); font-weight: 800; border-bottom: 3px solid var(--green) }
+.control-aside-menu { display: grid; gap: 2px; margin: -2px 0 8px 16px; padding-left: 9px; border-left: 1px solid #4b7a69; }
+.shell > aside .control-aside-menu button { text-align: left; font-size: 12px; padding: 7px 9px; color: #bfdbcf; border-radius: 7px; }
+.shell > aside .control-aside-menu button:hover { background: #1c5944; color: #fff; }
+.shell > aside .control-aside-menu button.selected { background: #2b6f56; color: #fff; font-weight: 700; }
 .control-notice { max-width: 1100px; border: 1px solid #b9ded0; color: #155c3e; background: #edfff5; padding: 10px 12px; border-radius: 9px; margin-bottom: 14px }
 .control-summary { display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr)); gap: 14px; max-width: 1100px }
 .control-summary > article, .control-summary > section, .control-table, .customer-form { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px }
@@ -1654,6 +1658,8 @@ button {
     .shell > aside .brand, .shell > aside .profile { display: none; }
     .shell nav { display: flex; align-items: center; gap: 4px; margin: 0; }
     .shell nav button { display: block; padding: 9px 10px; font-size: 12px; white-space: nowrap; }
+    .shell > aside .control-aside-menu { display: flex; margin: 0; padding: 0 0 0 4px; border-left: 1px solid #4b7a69; gap: 2px; }
+    .shell > aside .control-aside-menu button { padding: 9px 8px; font-size: 11px; white-space: nowrap; }
     .shell nav button::first-letter { font-size: 12px; }
     .list { display: flex; min-height: 260px; max-height: 42dvh; border-right: 0; border-bottom: 1px solid var(--line); }
     .panel { min-height: calc(58dvh - 58px); height: calc(58dvh - 58px); }
