@@ -82,7 +82,18 @@
 .form-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .product-cost-section { display: grid; gap: 10px; border: 1px solid #dbe8e1; border-radius: 10px; padding: 12px; background: linear-gradient(180deg, #f9fcfa, #f0f7f3); }
 .product-cost-section > b { color: var(--deep); font-size: 12px; }
-@media (max-width: 580px) { .package-template-card { grid-template-columns: 82px 1fr; } .package-template-card > img { width: 82px; height: 82px; } .quick-packages { margin: 0 8px 8px; } .purchase-form fieldset, .form-pair { grid-template-columns: 1fr; } }
+.category-workspace { grid-template-columns: minmax(290px, 400px) minmax(0, 1fr); }
+.category-form { align-content: start; }
+.category-form label { display: grid; gap: 5px; color: #355247; font-size: 12px; font-weight: 700; }
+.category-form-actions { display: flex; align-items: center; gap: 10px; }
+.category-table > header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid #edf1ee; }
+.category-table > header h2 { margin-bottom: 0; }
+.category-table > header > b { display: grid; place-items: center; min-width: 30px; height: 30px; border-radius: 50%; background: #e3f6eb; color: var(--green); font-size: 13px; }
+.control-table.category-table > div { grid-template-columns: 34px minmax(150px, 1fr) auto auto; }
+.category-initial { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: #e8f4ed; color: var(--green) !important; font-weight: 800; }
+.category-actions { display: flex; justify-content: end; gap: 10px; }
+.danger-link { border: 0; background: transparent; color: #b24129; font: inherit; cursor: pointer; }
+@media (max-width: 580px) { .package-template-card { grid-template-columns: 82px 1fr; } .package-template-card > img { width: 82px; height: 82px; } .quick-packages { margin: 0 8px 8px; } .purchase-form fieldset, .form-pair { grid-template-columns: 1fr; } .control-table.category-table > div { grid-template-columns: 34px 1fr auto; } .category-table > div > small { display: none; } }
 
 /* Automations workspace: grouped cards make the long configuration screen
    easier to scan without changing the individual automation flows. */
