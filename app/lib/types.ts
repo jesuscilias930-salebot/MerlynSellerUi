@@ -38,6 +38,7 @@ export type DocumentTemplate = { id: string; mediaId: string; filename: string; 
 export type EntrepreneurPackageImage = { id: string; mediaId: string; filename: string | null; caption: string | null; position: number };
 export type EntrepreneurPackage = { id: string; name: string; mediaId: string | null; filename: string | null; caption: string | null; position: number; created_at: string; updated_at: string; images: EntrepreneurPackageImage[] };
 export type QuickReply = { id: string; shortcut: string; name: string; body: string; created_at: string; updated_at: string };
+export type SavedSticker = { id: string; name: string; mediaId: string; filename: string | null; position: number; created_at: string };
 export type ConversationFilter = "all" | "unread" | "needs-response" | `column:${string}`;
 export type ScenarioBranch = { id: string; name: string; examples: string[]; nextStepId: string };
 export type ScenarioMedia = { mediaId: string; filename?: string; caption?: string; type?: "image" | "document" };

@@ -3,7 +3,7 @@
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { initials } from "../lib/format";
-import type { AutomationIntent, Chat, DocumentOption, EntrepreneurPackage, Message, QuickReply } from "../lib/types";
+import type { AutomationIntent, Chat, DocumentOption, EntrepreneurPackage, Message, QuickReply, SavedSticker } from "../lib/types";
 import { AudioRecorder } from "./AudioRecorder";
 import { QuoteNoteGenerator } from "./QuoteNoteGenerator";
 
@@ -29,7 +29,9 @@ type Props = {
   onSendDocument: () => void;
   entrepreneurPackages: EntrepreneurPackage[];
   quickReplies: QuickReply[];
+  stickers: SavedSticker[];
   onSendEntrepreneurPackages: (packageIds: string[]) => Promise<void>;
+  onSendSticker: (stickerId: string) => Promise<void>;
   onRecordAudio: (audio: Blob, filename: string) => Promise<void>;
   onAutoReplyChange: (enabled: boolean) => void;
   automationIntents: AutomationIntent[];
@@ -45,7 +47,7 @@ function IntentLearner({ message, intents, onLearn }: { message: Message; intent
   return <div className="intent-learner"><select value={intentId} onChange={(event) => setIntentId(event.target.value)}><option value="">Este mensaje corresponde a…</option>{intents.map((intent) => <option key={intent.id} value={intent.id}>{intent.name}</option>)}</select><button type="button" disabled={!intentId || saving} onClick={async () => { setSaving(true); try { await onLearn(message.id, intentId); setIntentId(""); } finally { setSaving(false); } }}>{saving ? "Guardando…" : "Aprender"}</button></div>;
 }
 
-export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploadingMedia, documentOptions, selectedDocumentId, documentCaption, onDraftChange, onSendText, replyToMessage, onReplyToChange, onUploadAudio, onUploadImage, onUploadVideo, onUploadDocument, onDocumentChange, onDocumentCaptionChange, onSendDocument, entrepreneurPackages, quickReplies, onSendEntrepreneurPackages, onRecordAudio, onAutoReplyChange, automationIntents, onLearnIntent, onDeleteConversation, onClose }: Props) {
+export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploadingMedia, documentOptions, selectedDocumentId, documentCaption, onDraftChange, onSendText, replyToMessage, onReplyToChange, onUploadAudio, onUploadImage, onUploadVideo, onUploadDocument, onDocumentChange, onDocumentCaptionChange, onSendDocument, entrepreneurPackages, quickReplies, stickers, onSendEntrepreneurPackages, onSendSticker, onRecordAudio, onAutoReplyChange, automationIntents, onLearnIntent, onDeleteConversation, onClose }: Props) {
   const threadRef = useRef<HTMLDivElement>(null);
   const scrolledConversationId = useRef<string | null>(null);
   const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>([]);
@@ -86,6 +88,7 @@ export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploa
         <button type="button" onClick={async () => { if (!selectedPackageIds.length) return; setSendingPackages(true); try { await onSendEntrepreneurPackages(selectedPackageIds); setSelectedPackageIds([]); } finally { setSendingPackages(false); } }} disabled={!chat || !selectedPackageIds.length || sendingPackages}>{sendingPackages ? "Enviando…" : `Enviar ${selectedPackageIds.length} paquete${selectedPackageIds.length === 1 ? "" : "s"}`}</button>
       </>}
     </details>
+    {stickers.length > 0 && <details className="saved-stickers"><summary>🙂 Stickers</summary><div>{stickers.map((sticker) => <button key={sticker.id} type="button" title={sticker.name} disabled={!chat} onClick={() => void onSendSticker(sticker.id)}><img src={`${api}/settings/stickers/${sticker.id}/media`} alt={sticker.name} /></button>)}</div></details>}
     <QuoteNoteGenerator disabled={!chat} onUseNote={onDraftChange} />
     <form className="composer" onSubmit={onSendText}>
       {replyToMessage && <div className="reply-preview"><div><b>Respondiendo a {replyToMessage.direction === "inbound" ? chat?.name || "cliente" : "ti"}</b><span>{replyToMessage.body || `[${replyToMessage.type}]`}</span></div><button type="button" onClick={() => onReplyToChange(null)} aria-label="Cancelar respuesta">×</button></div>}

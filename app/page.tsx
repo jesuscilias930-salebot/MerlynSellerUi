@@ -3,7 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { api, request } from "./lib/api";
-import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, QuickReply, RemarketingPreset, User } from "./lib/types";
+import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, QuickReply, RemarketingPreset, SavedSticker, User } from "./lib/types";
 import { AutomationsPanel } from "./components/AutomationsPanel";
 import { DocumentTemplatesPanel } from "./components/DocumentTemplatesPanel";
 import { ConversationModal } from "./components/ConversationModal";
@@ -16,6 +16,7 @@ import { ScenariosPanel } from "./components/ScenariosPanel";
 import { ControlPanel } from "./components/ControlPanel";
 import { EntrepreneurPackagesPanel } from "./components/EntrepreneurPackagesPanel";
 import { QuickRepliesPanel } from "./components/QuickRepliesPanel";
+import { StickersPanel } from "./components/StickersPanel";
 
 type View = "inbox" | "pipeline" | "remarketing" | "automations" | "control";
 type ControlTab = "summary" | "customers" | "categories" | "inventory" | "prices" | "bundles" | "sales" | "purchases" | "reports";
@@ -55,6 +56,7 @@ export default function Home() {
   const [automationIntents, setAutomationIntents] = useState<AutomationIntent[]>([]);
   const [automationScenarios, setAutomationScenarios] = useState<AutomationScenario[]>([]);
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
+  const [stickers, setStickers] = useState<SavedSticker[]>([]);
   const [presetName, setPresetName] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingAudio, setUploadingAudio] = useState(false);
@@ -91,6 +93,7 @@ export default function Home() {
     setPresets(await request<RemarketingPreset[]>("/remarketing/presets"));
   const loadAutomations = async () => setAutomationIntents(await request<AutomationIntent[]>("/automations"));
   const loadQuickReplies = async () => setQuickReplies(await request<QuickReply[]>("/quick-replies"));
+  const loadStickers = async () => setStickers(await request<SavedSticker[]>("/settings/stickers"));
   const loadScenarios = async () => setAutomationScenarios(await request<AutomationScenario[]>("/scenarios"));
   const loadDocumentTemplates = async () => setDocumentTemplates(await request<DocumentTemplate[]>("/settings/document-templates"));
   const loadEntrepreneurPackages = async () => setEntrepreneurPackages(await request<EntrepreneurPackage[]>("/settings/entrepreneur-packages"));
@@ -125,7 +128,7 @@ export default function Home() {
     await Promise.all([loadChats(), loadPipeline()]);
   };
   const refreshData = async () => {
-    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
+    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadStickers(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
     if (chat) setMessages(await loadMessages(chat));
     if (modalChat) setModalMessages(await loadMessages(modalChat));
   };
@@ -184,7 +187,7 @@ export default function Home() {
     request<{ user: User }>("/auth/me")
       .then(async (session) => {
         setUser(session.user);
-        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
+        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadStickers(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
       })
       .catch(() => undefined);
   }, []);
@@ -236,7 +239,7 @@ export default function Home() {
       });
       await supabase.auth.signOut();
       setUser(session.user);
-      await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
+      await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadStickers(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "Error al iniciar sesión.",
@@ -596,6 +599,12 @@ export default function Home() {
     await request(`/quick-replies/${id}`, { method: "DELETE" });
     await loadQuickReplies();
   };
+  const uploadSticker = async (file: File, name: string) => {
+    const response = await fetch(`${api}/settings/stickers/upload`, { method: "POST", credentials: "include", headers: { "Content-Type": "image/webp", "X-Upload-Filename": encodeURIComponent(file.name), "X-Sticker-Name": encodeURIComponent(name) }, body: file });
+    const result = await response.json().catch(() => ({})); if (!response.ok) throw new Error(result.error || "No fue posible subir el sticker.");
+    await loadStickers();
+  };
+  const deleteSticker = async (sticker: SavedSticker) => { if (!window.confirm(`¿Eliminar el sticker “${sticker.name}”?`)) return; await request(`/settings/stickers/${sticker.id}`, { method: "DELETE" }); await loadStickers(); };
   const uploadDocumentTemplate = async (file: File) => {
     try {
       const response = await fetch(`${api}/settings/document-templates/upload`, {
@@ -797,7 +806,7 @@ export default function Home() {
           onSend={sendRemarketing}
         />
       ) : view === "automations" ? (
-        <div className="automation-workspace"><QuickRepliesPanel replies={quickReplies} onSave={saveQuickReply} onDelete={deleteQuickReply} /><DocumentTemplatesPanel templates={documentTemplates} onUpload={uploadDocumentTemplate} onSave={saveDocumentTemplate} onDelete={deleteDocumentTemplate} /><EntrepreneurPackagesPanel packages={entrepreneurPackages} onCreate={createEntrepreneurPackage} onUpload={uploadEntrepreneurPackage} onSave={saveEntrepreneurPackage} onDelete={deleteEntrepreneurPackage} /><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onDelete={async (id) => { if (!window.confirm("¿Eliminar este escenario?")) return; await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
+        <div className="automation-workspace"><QuickRepliesPanel replies={quickReplies} onSave={saveQuickReply} onDelete={deleteQuickReply} /><StickersPanel stickers={stickers} onUpload={uploadSticker} onDelete={deleteSticker} /><DocumentTemplatesPanel templates={documentTemplates} onUpload={uploadDocumentTemplate} onSave={saveDocumentTemplate} onDelete={deleteDocumentTemplate} /><EntrepreneurPackagesPanel packages={entrepreneurPackages} onCreate={createEntrepreneurPackage} onUpload={uploadEntrepreneurPackage} onSave={saveEntrepreneurPackage} onDelete={deleteEntrepreneurPackage} /><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onDelete={async (id) => { if (!window.confirm("¿Eliminar este escenario?")) return; await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
       ) : view === "control" ? (
         <ControlPanel chats={chats} tab={controlTab} onTabChange={setControlTab} />
       ) : null}
