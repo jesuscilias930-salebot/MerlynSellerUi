@@ -216,8 +216,11 @@
 .scenario-steps { display: grid; gap: 12px }
 .scenario-section-title { display: grid; gap: 3px }
 .scenario-section-title small { color: var(--muted) }
-.scenario-step { display: grid; gap: 10px; padding: 13px; border: 1px solid #dce7e1; border-radius: 11px; background: #fcfefd }
-.scenario-step-heading { display: grid; grid-template-columns: auto minmax(110px, 1fr) minmax(145px, .6fr) auto; gap: 8px; align-items: center }
+.scenario-step { display: grid; gap: 10px; padding: 13px; border: 1px solid #dce7e1; border-radius: 11px; background: #fcfefd; transition: opacity .15s ease, border-color .15s ease }
+.scenario-step.dragging { opacity:.55; border-color:#63bf90 }
+.scenario-step-heading { display: grid; grid-template-columns: auto auto minmax(110px, 1fr) minmax(145px, .6fr) auto; gap: 8px; align-items: center }
+.step-drag-handle { color:#668176; font-size:19px; line-height:1; cursor:grab; user-select:none; }
+.step-drag-handle:active { cursor:grabbing; }
 .scenario-step-heading>b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--mint); color: var(--deep) }
 .scenario-step-heading input, .scenario-step-heading select, .scenario-branch input, .scenario-branch textarea, .scenario-branch select, .scenario-toolbar select { min-width: 0; border: 1px solid #d7e3dc; border-radius: 8px; padding: 8px; font: inherit; font-size: 12px; background: #fff }
 .scenario-branches { display: grid; gap: 8px }
