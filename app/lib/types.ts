@@ -43,5 +43,5 @@ export type SavedSticker = { id: string; name: string; mediaId: string; filename
 export type ConversationFilter = "all" | "unread" | "needs-response" | `column:${string}`;
 export type ScenarioBranch = { id: string; name: string; examples: string[]; nextStepId: string };
 export type ScenarioMedia = { mediaId: string; filename?: string; caption?: string; type?: "image" | "document" };
-export type ScenarioStep = { id: string; type: "send_text" | "send_catalog" | "send_media" | "wait_reply" | "move_column" | "end"; label: string; body?: string; caption?: string; items?: ScenarioMedia[]; branches?: ScenarioBranch[]; fallbackStepId?: string; nextStepId?: string; columnId?: string };
+export type ScenarioStep = { id: string; type: "send_text" | "send_catalog" | "send_media" | "wait_reply" | "move_column" | "end"; label: string; body?: string; caption?: string; fallbackBody?: string; resendCatalog?: boolean; items?: ScenarioMedia[]; branches?: ScenarioBranch[]; fallbackStepId?: string; nextStepId?: string; columnId?: string };
 export type AutomationScenario = { id: string; key: string; name: string; isActive: boolean; triggerExamples: string[]; aiDescription?: string | null; priority: number; canInterrupt: boolean; position: number; steps: ScenarioStep[]; updatedAt: string };
