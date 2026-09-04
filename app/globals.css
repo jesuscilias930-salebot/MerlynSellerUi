@@ -342,10 +342,33 @@
 .flow-map-node strong { margin-top: 3px; color: var(--ink); font-size: 13px; }
 .flow-map-node em { margin-top: 4px; color: var(--muted); font-size: 10px; font-style: normal; }
 .flow-map-node .flow-node-edit { grid-column: 3; justify-self: start; padding: 2px 0; }
+.flow-builder-layout { grid-template-columns: minmax(0, 1fr); }
+.flow-inspector-modal[data-open="false"] { display: none; }
+.flow-inspector-modal[data-open="true"] { position: fixed; z-index: 70; top: 50%; left: 50%; width: min(620px, calc(100vw - 28px)); max-height: min(82dvh, 780px); overflow: auto; transform: translate(-50%, -50%); border: 0; border-radius: 16px; box-shadow: 0 0 0 100vmax rgba(17, 35, 25, .38), 0 18px 54px rgba(10, 34, 21, .28); }
+.flow-inspector-actions { display: flex; align-items: center; gap: 8px; }
+.scenario-modal-close { display: grid; width: 29px; height: 29px; padding: 0; place-items: center; border: 1px solid #cbd9d0; border-radius: 8px; background: #fff; color: #426254; cursor: pointer; font-size: 21px; line-height: 1; }
+.flow-settings-trigger { width: fit-content; padding: 10px 13px; border: 1px solid #c9ddd0; border-radius: 9px; background: #f8fcf9; color: var(--deep); cursor: pointer; font: inherit; font-size: 13px; font-weight: 800; }
+.scenario-modal { position: fixed; z-index: 75; inset: 0; display: grid; place-items: center; padding: 14px; }
+.scenario-modal-backdrop { position: absolute; inset: 0; border: 0; background: rgba(17, 35, 25, .42); cursor: default; }
+.scenario-modal-card { position: relative; z-index: 1; width: min(660px, 100%); max-height: min(84dvh, 800px); overflow: auto; box-sizing: border-box; padding: 18px; border: 1px solid #d5e2d9; border-radius: 16px; background: #fff; box-shadow: 0 18px 55px rgba(10, 34, 21, .28); }
+.scenario-modal-card > header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 15px; }
+.scenario-modal-card > header p { margin: 0 0 4px; color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: .1em; }
+.scenario-modal-card h2 { margin: 0; font-size: 22px; }
+.flow-settings-modal-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+.flow-settings-modal-fields label { display: grid; gap: 5px; color: #355247; font-size: 12px; font-weight: 700; }
+.flow-settings-modal-fields label:nth-child(2), .flow-settings-modal-fields label:nth-child(3), .flow-settings-modal-fields label:last-child { grid-column: span 2; }
+.flow-settings-modal-fields input, .flow-settings-modal-fields textarea { width: 100%; min-width: 0; box-sizing: border-box; padding: 10px; border: 1px solid #d7e3dc; border-radius: 8px; color: var(--ink); font: inherit; }
+.flow-settings-modal-fields textarea { min-height: 90px; resize: vertical; }
+.scenario-modal-card > footer { display: flex; justify-content: flex-end; margin-top: 16px; }
+.scenario-library-toggle { white-space: nowrap; }
+.scenario-studio-header .scenario-library-toggle { margin-left: auto; }
+.scenario-studio-layout[data-library-open="false"] { grid-template-columns: minmax(0, 1fr); }
 
 @media (max-width: 760px) {
   .flow-map-viewport { min-height: 420px; max-height: 58vh; }
   .flow-map { transform-origin: top left; }
+  .flow-settings-modal-fields { grid-template-columns: 1fr; }
+  .flow-settings-modal-fields label:nth-child(2), .flow-settings-modal-fields label:nth-child(3), .flow-settings-modal-fields label:last-child { grid-column: auto; }
 }
 
 @media (max-width: 1080px) {
