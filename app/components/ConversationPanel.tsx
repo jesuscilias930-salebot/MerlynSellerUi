@@ -3,7 +3,7 @@
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { initials } from "../lib/format";
-import type { AutomationIntent, Chat, DocumentOption, EntrepreneurPackage, Message } from "../lib/types";
+import type { AutomationIntent, Chat, DocumentOption, EntrepreneurPackage, Message, QuickReply } from "../lib/types";
 import { AudioRecorder } from "./AudioRecorder";
 import { QuoteNoteGenerator } from "./QuoteNoteGenerator";
 
@@ -28,6 +28,7 @@ type Props = {
   onDocumentCaptionChange: (caption: string) => void;
   onSendDocument: () => void;
   entrepreneurPackages: EntrepreneurPackage[];
+  quickReplies: QuickReply[];
   onSendEntrepreneurPackages: (packageIds: string[]) => Promise<void>;
   onRecordAudio: (audio: Blob, filename: string) => Promise<void>;
   onAutoReplyChange: (enabled: boolean) => void;
@@ -44,11 +45,13 @@ function IntentLearner({ message, intents, onLearn }: { message: Message; intent
   return <div className="intent-learner"><select value={intentId} onChange={(event) => setIntentId(event.target.value)}><option value="">Este mensaje corresponde a…</option>{intents.map((intent) => <option key={intent.id} value={intent.id}>{intent.name}</option>)}</select><button type="button" disabled={!intentId || saving} onClick={async () => { setSaving(true); try { await onLearn(message.id, intentId); setIntentId(""); } finally { setSaving(false); } }}>{saving ? "Guardando…" : "Aprender"}</button></div>;
 }
 
-export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploadingMedia, documentOptions, selectedDocumentId, documentCaption, onDraftChange, onSendText, replyToMessage, onReplyToChange, onUploadAudio, onUploadImage, onUploadVideo, onUploadDocument, onDocumentChange, onDocumentCaptionChange, onSendDocument, entrepreneurPackages, onSendEntrepreneurPackages, onRecordAudio, onAutoReplyChange, automationIntents, onLearnIntent, onDeleteConversation, onClose }: Props) {
+export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploadingMedia, documentOptions, selectedDocumentId, documentCaption, onDraftChange, onSendText, replyToMessage, onReplyToChange, onUploadAudio, onUploadImage, onUploadVideo, onUploadDocument, onDocumentChange, onDocumentCaptionChange, onSendDocument, entrepreneurPackages, quickReplies, onSendEntrepreneurPackages, onRecordAudio, onAutoReplyChange, automationIntents, onLearnIntent, onDeleteConversation, onClose }: Props) {
   const threadRef = useRef<HTMLDivElement>(null);
   const scrolledConversationId = useRef<string | null>(null);
   const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>([]);
   const [sendingPackages, setSendingPackages] = useState(false);
+  const quickReplyQuery = draft.trim().startsWith("/") ? draft.trim().toLowerCase() : "";
+  const matchingQuickReplies = quickReplyQuery ? quickReplies.filter((reply) => reply.shortcut.includes(quickReplyQuery) || reply.name.toLowerCase().includes(quickReplyQuery.slice(1))).slice(0, 6) : [];
   useEffect(() => {
     if (!chat?.id || messages.length === 0 || scrolledConversationId.current === chat.id) return;
     const frame = requestAnimationFrame(() => {
@@ -77,9 +80,9 @@ export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploa
     </div>
     <div className="chat-attachments"><div className="catalog-picker"><select value={selectedDocumentId} onChange={(event) => onDocumentChange(event.target.value)} disabled={!chat || documentOptions.length === 0}>{documentOptions.length === 0 ? <option>No hay catálogo disponible</option> : documentOptions.map((document) => <option key={document.mediaId} value={document.mediaId}>{document.filename}</option>)}</select><input value={documentCaption} onChange={(event) => onDocumentCaptionChange(event.target.value)} maxLength={1024} placeholder="Mensaje que acompaña el catálogo (opcional)" disabled={!chat || !selectedDocumentId || uploadingMedia} aria-label="Mensaje que acompaña el catálogo" /><button type="button" onClick={onSendDocument} disabled={!chat || !selectedDocumentId || uploadingMedia}>Enviar catálogo</button></div><label className="media-button">▤ PDF<input type="file" accept="application/pdf,.pdf" onChange={onUploadDocument} disabled={!chat || uploadingMedia} /></label><label className="media-button">▧ Imagen<input type="file" accept="image/jpeg,image/png,image/webp" onChange={onUploadImage} disabled={!chat || uploadingMedia} /></label><label className="media-button">▸ Video<input type="file" accept="video/mp4,video/3gpp" onChange={onUploadVideo} disabled={!chat || uploadingMedia} /></label>{uploadingMedia && <span>Subiendo…</span>}</div>
     <details className="quick-packages">
-      <summary>🎁 Enviar paquetes emprendedores</summary>
-      {entrepreneurPackages.length === 0 ? <p className="quick-packages-empty">Aún no hay paquetes con imágenes configurados. Agrégalos desde Automatizaciones para enviarlos rápidamente aquí.</p> : <>
-        <div className="quick-package-list">{entrepreneurPackages.map((item) => <label key={item.id} className={selectedPackageIds.includes(item.id) ? "selected" : ""}><img src={`${api}/settings/entrepreneur-packages/${item.id}/media`} alt="" /><span>{item.name}</span><input type="checkbox" checked={selectedPackageIds.includes(item.id)} onChange={() => setSelectedPackageIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])} /></label>)}</div>
+      <summary>🖼️ Imágenes guardadas</summary>
+      {entrepreneurPackages.length === 0 ? <p className="quick-packages-empty">Aún no hay conjuntos de imágenes configurados. Agrégalos desde Automatizaciones para enviarlos rápidamente aquí.</p> : <>
+        <div className="quick-package-list">{entrepreneurPackages.map((item) => { const images = item.images || []; return <label key={item.id} className={selectedPackageIds.includes(item.id) ? "selected" : ""}>{images[0] ? <img src={`${api}/settings/entrepreneur-packages/images/${images[0].id}/media`} alt="" /> : <b className="image-set-placeholder">▧</b>}<span><strong>{item.name}</strong><small>{images.length} imagen{images.length === 1 ? "" : "es"}</small></span><input type="checkbox" checked={selectedPackageIds.includes(item.id)} onChange={() => setSelectedPackageIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])} /></label>; })}</div>
         <button type="button" onClick={async () => { if (!selectedPackageIds.length) return; setSendingPackages(true); try { await onSendEntrepreneurPackages(selectedPackageIds); setSelectedPackageIds([]); } finally { setSendingPackages(false); } }} disabled={!chat || !selectedPackageIds.length || sendingPackages}>{sendingPackages ? "Enviando…" : `Enviar ${selectedPackageIds.length} paquete${selectedPackageIds.length === 1 ? "" : "s"}`}</button>
       </>}
     </details>
@@ -88,6 +91,7 @@ export function ConversationPanel({ chat, messages, draft, uploadingAudio, uploa
       {replyToMessage && <div className="reply-preview"><div><b>Respondiendo a {replyToMessage.direction === "inbound" ? chat?.name || "cliente" : "ti"}</b><span>{replyToMessage.body || `[${replyToMessage.type}]`}</span></div><button type="button" onClick={() => onReplyToChange(null)} aria-label="Cancelar respuesta">×</button></div>}
       <label className={uploadingAudio ? "audio-upload loading" : "audio-upload"} aria-label="Seleccionar audio">{uploadingAudio ? "…" : "♫"}<input type="file" accept="audio/aac,audio/mp4,audio/mpeg,audio/amr,audio/ogg,audio/opus" onChange={onUploadAudio} disabled={!chat || uploadingAudio} /></label>
       <textarea disabled={!chat} value={draft} onChange={(event) => onDraftChange(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && draft.trim()) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={chat ? "Escribe un mensaje…" : "Selecciona una conversación"} />
+      {matchingQuickReplies.length > 0 && <div className="quick-reply-suggestions">{matchingQuickReplies.map((reply) => <button key={reply.id} type="button" onClick={() => onDraftChange(reply.body)}><code>{reply.shortcut}</code><span><b>{reply.name}</b><small>{reply.body}</small></span></button>)}</div>}
       <button disabled={!chat || !draft.trim()} className="send">↑</button>
     </form>
     <AudioRecorder disabled={!chat || uploadingAudio} onSend={onRecordAudio} />

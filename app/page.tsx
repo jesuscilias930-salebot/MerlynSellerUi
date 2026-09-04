@@ -3,7 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { api, request } from "./lib/api";
-import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, RemarketingPreset, User } from "./lib/types";
+import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, QuickReply, RemarketingPreset, User } from "./lib/types";
 import { AutomationsPanel } from "./components/AutomationsPanel";
 import { DocumentTemplatesPanel } from "./components/DocumentTemplatesPanel";
 import { ConversationModal } from "./components/ConversationModal";
@@ -15,6 +15,7 @@ import { Sidebar } from "./components/Sidebar";
 import { ScenariosPanel } from "./components/ScenariosPanel";
 import { ControlPanel } from "./components/ControlPanel";
 import { EntrepreneurPackagesPanel } from "./components/EntrepreneurPackagesPanel";
+import { QuickRepliesPanel } from "./components/QuickRepliesPanel";
 
 type View = "inbox" | "pipeline" | "remarketing" | "automations" | "control";
 type ControlTab = "summary" | "customers" | "categories" | "inventory" | "prices" | "bundles" | "sales" | "purchases" | "reports";
@@ -53,6 +54,7 @@ export default function Home() {
   const [presets, setPresets] = useState<RemarketingPreset[]>([]);
   const [automationIntents, setAutomationIntents] = useState<AutomationIntent[]>([]);
   const [automationScenarios, setAutomationScenarios] = useState<AutomationScenario[]>([]);
+  const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [presetName, setPresetName] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingAudio, setUploadingAudio] = useState(false);
@@ -88,6 +90,7 @@ export default function Home() {
   const loadPresets = async () =>
     setPresets(await request<RemarketingPreset[]>("/remarketing/presets"));
   const loadAutomations = async () => setAutomationIntents(await request<AutomationIntent[]>("/automations"));
+  const loadQuickReplies = async () => setQuickReplies(await request<QuickReply[]>("/quick-replies"));
   const loadScenarios = async () => setAutomationScenarios(await request<AutomationScenario[]>("/scenarios"));
   const loadDocumentTemplates = async () => setDocumentTemplates(await request<DocumentTemplate[]>("/settings/document-templates"));
   const loadEntrepreneurPackages = async () => setEntrepreneurPackages(await request<EntrepreneurPackage[]>("/settings/entrepreneur-packages"));
@@ -122,7 +125,7 @@ export default function Home() {
     await Promise.all([loadChats(), loadPipeline()]);
   };
   const refreshData = async () => {
-    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
+    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
     if (chat) setMessages(await loadMessages(chat));
     if (modalChat) setModalMessages(await loadMessages(modalChat));
   };
@@ -181,7 +184,7 @@ export default function Home() {
     request<{ user: User }>("/auth/me")
       .then(async (session) => {
         setUser(session.user);
-        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
+        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
       })
       .catch(() => undefined);
   }, []);
@@ -233,7 +236,7 @@ export default function Home() {
       });
       await supabase.auth.signOut();
       setUser(session.user);
-      await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
+      await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "Error al iniciar sesión.",
@@ -584,6 +587,15 @@ export default function Home() {
     if (!window.confirm("¿Eliminar esta automatización?")) return;
     try { await request(`/automations/${id}`, { method: "DELETE" }); await loadAutomations(); } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudo eliminar la automatización."); }
   };
+  const saveQuickReply = async (reply: Omit<QuickReply, "id" | "created_at" | "updated_at">, id?: string) => {
+    await request(id ? `/quick-replies/${id}` : "/quick-replies", { method: id ? "PUT" : "POST", body: JSON.stringify(reply) });
+    await loadQuickReplies();
+  };
+  const deleteQuickReply = async (id: string) => {
+    if (!window.confirm("¿Eliminar esta respuesta rápida?")) return;
+    await request(`/quick-replies/${id}`, { method: "DELETE" });
+    await loadQuickReplies();
+  };
   const uploadDocumentTemplate = async (file: File) => {
     try {
       const response = await fetch(`${api}/settings/document-templates/upload`, {
@@ -608,18 +620,22 @@ export default function Home() {
     try { await request(`/settings/document-templates/${template.id}`, { method: "DELETE" }); await loadDocumentTemplates(); setNotice("Documento eliminado."); }
     catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible eliminar el documento."); }
   };
-  const uploadEntrepreneurPackage = async (file: File) => {
+  const createEntrepreneurPackage = async (name: string) => {
+    const group = await request<EntrepreneurPackage>("/settings/entrepreneur-packages", { method: "POST", body: JSON.stringify({ name }) });
+    await loadEntrepreneurPackages(); setNotice("Conjunto creado. Ahora agrega sus imágenes."); return group;
+  };
+  const uploadEntrepreneurPackage = async (packageId: string, file: File) => {
     try {
       const response = await fetch(`${api}/settings/entrepreneur-packages/upload`, {
         method: "POST", credentials: "include",
-        headers: { "Content-Type": file.type, "X-Upload-Filename": encodeURIComponent(file.name), "X-Package-Name": encodeURIComponent(file.name.replace(/\.[^.]+$/, "")) },
+        headers: { "Content-Type": file.type, "X-Upload-Filename": encodeURIComponent(file.name), "X-Package-Id": packageId },
         body: file,
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "No fue posible subir la imagen del paquete.");
       await loadEntrepreneurPackages();
-      setNotice("Paquete emprendedor guardado.");
-    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible subir la imagen del paquete."); }
+      setNotice("Imagen agregada al conjunto.");
+    } catch (error) { const message = error instanceof Error ? error.message : "No fue posible subir la imagen del conjunto."; setNotice(message); throw new Error(message); }
   };
   const saveEntrepreneurPackage = async (item: EntrepreneurPackage, changes: { name: string; caption: string }) => {
     try {
@@ -705,6 +721,7 @@ export default function Home() {
           selectedDocumentId={selectedDocumentId}
           documentCaption={documentCaption}
           entrepreneurPackages={entrepreneurPackages}
+          quickReplies={quickReplies}
           onNumberChange={setNumber}
           onDraftChange={setDraft}
           onCreate={create}
@@ -780,7 +797,7 @@ export default function Home() {
           onSend={sendRemarketing}
         />
       ) : view === "automations" ? (
-        <div className="automation-workspace"><DocumentTemplatesPanel templates={documentTemplates} onUpload={uploadDocumentTemplate} onSave={saveDocumentTemplate} onDelete={deleteDocumentTemplate} /><EntrepreneurPackagesPanel packages={entrepreneurPackages} onUpload={uploadEntrepreneurPackage} onSave={saveEntrepreneurPackage} onDelete={deleteEntrepreneurPackage} /><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onDelete={async (id) => { if (!window.confirm("¿Eliminar este escenario?")) return; await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
+        <div className="automation-workspace"><QuickRepliesPanel replies={quickReplies} onSave={saveQuickReply} onDelete={deleteQuickReply} /><DocumentTemplatesPanel templates={documentTemplates} onUpload={uploadDocumentTemplate} onSave={saveDocumentTemplate} onDelete={deleteDocumentTemplate} /><EntrepreneurPackagesPanel packages={entrepreneurPackages} onCreate={createEntrepreneurPackage} onUpload={uploadEntrepreneurPackage} onSave={saveEntrepreneurPackage} onDelete={deleteEntrepreneurPackage} /><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onDelete={async (id) => { if (!window.confirm("¿Eliminar este escenario?")) return; await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
       ) : view === "control" ? (
         <ControlPanel chats={chats} tab={controlTab} onTabChange={setControlTab} />
       ) : null}
@@ -794,6 +811,7 @@ export default function Home() {
         selectedDocumentId={selectedDocumentId}
         documentCaption={documentCaption}
         entrepreneurPackages={entrepreneurPackages}
+        quickReplies={quickReplies}
         replyToMessage={replyToMessage}
         onDraftChange={setModalDraft}
         onSendText={(event) => sendText(event, modalChat, modalDraft, () => setModalDraft(""))}
