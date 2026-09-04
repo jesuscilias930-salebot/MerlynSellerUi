@@ -1,6 +1,6 @@
 import type { User } from "../lib/types";
 
-type View = "inbox" | "pipeline" | "remarketing" | "automations" | "control";
+type View = "inbox" | "pipeline" | "remarketing" | "automations" | "scenarios" | "control";
 type ControlTab = "summary" | "customers" | "categories" | "inventory" | "prices" | "bundles" | "sales" | "purchases" | "reports";
 type Props = {
   user: User;
@@ -51,6 +51,13 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
           onClick={switchView("automations")}
         >
           ⚙ Automatizaciones
+        </button>
+        <button
+          type="button"
+          className={view === "scenarios" ? "selected" : ""}
+          onClick={switchView("scenarios")}
+        >
+          ◇ Escenarios
         </button>
         <button
           type="button"
