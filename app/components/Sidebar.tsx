@@ -1,7 +1,7 @@
 import type { User } from "../lib/types";
 
 type View = "inbox" | "pipeline" | "remarketing" | "automations" | "control";
-type ControlTab = "summary" | "customers" | "categories" | "inventory" | "sales" | "purchases" | "reports";
+type ControlTab = "summary" | "customers" | "categories" | "inventory" | "prices" | "bundles" | "sales" | "purchases" | "reports";
 type Props = {
   user: User;
   view: View;
@@ -60,7 +60,7 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
           ◌ Control de ventas
         </button>
         <div className="control-aside-menu" aria-label="Opciones de control de ventas">
-          {([['summary', 'Resumen'], ['customers', 'Clientes'], ['categories', 'Categorías'], ['inventory', 'Inventario'], ['sales', 'Ventas'], ['purchases', 'Compras'], ['reports', 'Reportes']] as [ControlTab, string][]).map(([tab, label]) => <button key={tab} type="button" className={controlTab === tab ? "selected" : ""} onClick={() => onControlTabChange(tab)}>{label}</button>)}
+          {([['summary', 'Resumen'], ['customers', 'Clientes'], ['categories', 'Categorías'], ['inventory', 'Inventario'], ['prices', 'Precios'], ['bundles', 'Bundles'], ['sales', 'Ventas'], ['purchases', 'Compras'], ['reports', 'Reportes']] as [ControlTab, string][]).map(([tab, label]) => <button key={tab} type="button" className={controlTab === tab ? "selected" : ""} onClick={() => onControlTabChange(tab)}>{label}</button>)}
         </div>
       </nav>
       <div className="profile">

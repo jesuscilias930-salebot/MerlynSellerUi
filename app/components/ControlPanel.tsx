@@ -3,6 +3,8 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { controlApi, controlRequest, controlSession } from "../lib/control-api";
 import type { Chat } from "../lib/types";
+import { PriceRulesPanel } from "./PriceRulesPanel";
+import { BundlesPanel } from "./BundlesPanel";
 
 type Customer = {
   id: number;
@@ -64,6 +66,8 @@ export type ControlTab =
   | "customers"
   | "categories"
   | "inventory"
+  | "prices"
+  | "bundles"
   | "sales"
   | "purchases"
   | "reports";
@@ -870,6 +874,8 @@ export function ControlPanel({
           </section>
         </div>
       )}
+      {tab === "prices" && <PriceRulesPanel products={products} />}
+      {tab === "bundles" && <BundlesPanel products={products} />}
       {tab === "sales" && (
         <div className="control-customers">
           <form className="customer-form" onSubmit={createSale}>

@@ -17,7 +17,7 @@ import { ControlPanel } from "./components/ControlPanel";
 import { EntrepreneurPackagesPanel } from "./components/EntrepreneurPackagesPanel";
 
 type View = "inbox" | "pipeline" | "remarketing" | "automations" | "control";
-type ControlTab = "summary" | "customers" | "categories" | "inventory" | "sales" | "purchases" | "reports";
+type ControlTab = "summary" | "customers" | "categories" | "inventory" | "prices" | "bundles" | "sales" | "purchases" | "reports";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase =
