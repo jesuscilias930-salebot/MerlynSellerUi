@@ -10,9 +10,10 @@ export type Chat = {
   lastDirection?: "inbound" | "outbound" | null;
   needsResponse?: boolean;
   autoReplyEnabled?: boolean;
+  scenarioEnabled?: boolean;
+};
 
 export type AutomationIntent = { id: string; key: string; name: string; responseBody: string | null; action: "text" | "send_catalog" | "send_shipping_info"; examples: string[]; isActive: boolean; priority: number };
-};
 
 export type Message = {
   id: string;
@@ -43,4 +44,4 @@ export type ConversationFilter = "all" | "unread" | "needs-response" | `column:$
 export type ScenarioBranch = { id: string; name: string; examples: string[]; nextStepId: string };
 export type ScenarioMedia = { mediaId: string; filename?: string; caption?: string; type?: "image" | "document" };
 export type ScenarioStep = { id: string; type: "send_text" | "send_catalog" | "send_media" | "wait_reply" | "move_column" | "end"; label: string; body?: string; caption?: string; items?: ScenarioMedia[]; branches?: ScenarioBranch[]; fallbackStepId?: string; nextStepId?: string; columnId?: string };
-export type AutomationScenario = { id: string; key: string; name: string; isActive: boolean; triggerExamples: string[]; steps: ScenarioStep[]; updatedAt: string };
+export type AutomationScenario = { id: string; key: string; name: string; isActive: boolean; triggerExamples: string[]; aiDescription?: string | null; priority: number; canInterrupt: boolean; position: number; steps: ScenarioStep[]; updatedAt: string };

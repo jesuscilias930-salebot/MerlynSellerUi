@@ -168,6 +168,13 @@
     gap: 18px;
     max-width: 980px
 }
+.scenario-drag-item { position:relative; }
+.scenario-drag-item.dragging { opacity:.55; }
+.scenario-drag-handle { position:absolute; left:-19px; top:26px; z-index:2; color:#668176; font-size:21px; line-height:1; cursor:grab; user-select:none; }
+.scenario-drag-handle:active { cursor:grabbing; }
+.scenario-order-saving { display:block; margin:8px 0; color:var(--muted); }
+.chat-controls { display:flex; gap:6px; margin-left:auto; }
+.scenario-toggle { white-space:nowrap; }
 
 .scenario-editor {
     display: grid;

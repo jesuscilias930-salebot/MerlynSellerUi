@@ -143,6 +143,17 @@ export default function Home() {
       if (modalChat?.id === target.id) setModalChat({ ...modalChat, autoReplyEnabled: enabled });
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible actualizar el bot."); }
   };
+  const setScenarioEnabled = async (target: Chat | null, enabled: boolean) => {
+    if (!target) return;
+    try {
+      await request(`/conversations/${target.id}/scenarios`, { method: "PATCH", body: JSON.stringify({ enabled }) });
+      const update = (item: Chat) => item.id === target.id ? { ...item, scenarioEnabled: enabled } : item;
+      setChats((items) => items.map(update));
+      setPipeline((columns) => columns.map((column) => ({ ...column, leads: column.leads.map(update) })));
+      if (chat?.id === target.id) setChat({ ...chat, scenarioEnabled: enabled });
+      if (modalChat?.id === target.id) setModalChat({ ...modalChat, scenarioEnabled: enabled });
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible actualizar los escenarios."); }
+  };
   const deleteConversation = async (target: Chat | null) => {
     if (!target || !window.confirm(`¿Borrar la conversación de ${target.name || target.phone_number}? Esta acción elimina sus mensajes y el progreso de escenarios para poder hacer pruebas.`)) return;
     try {
@@ -665,12 +676,29 @@ export default function Home() {
       await refreshData();
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar los paquetes."); }
   };
-  const saveScenario = async (value: Omit<AutomationScenario, "id" | "key" | "updatedAt">, id?: string) => {
+  const sendSticker = async (target: Chat | null, stickerId: string) => {
+    if (!target) return;
+    try {
+      await request(`/conversations/${target.id}/messages/sticker`, { method: "POST", body: JSON.stringify({ stickerId }) });
+      await refreshData();
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar el sticker."); }
+  };
+  const saveScenario = async (value: Omit<AutomationScenario, "id" | "key" | "updatedAt" | "position">, id?: string) => {
     try {
       await request(id ? `/scenarios/${id}` : "/scenarios", { method: id ? "PUT" : "POST", body: JSON.stringify(value) });
       await loadScenarios();
       setNotice("Escenario guardado.");
     } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudo guardar el escenario."); }
+  };
+  const reorderScenarios = async (scenarioIds: string[]) => {
+    try {
+      await request("/scenarios/order", { method: "PUT", body: JSON.stringify({ scenarioIds }) });
+      await loadScenarios();
+    } catch (error) {
+      await loadScenarios();
+      setNotice(error instanceof Error ? error.message : "No se pudo reordenar los escenarios.");
+      throw error;
+    }
   };
   const learnIntent = async (target: Chat | null, messageId: string, intentId: string) => {
     if (!target) return;
@@ -731,6 +759,7 @@ export default function Home() {
           documentCaption={documentCaption}
           entrepreneurPackages={entrepreneurPackages}
           quickReplies={quickReplies}
+          stickers={stickers}
           onNumberChange={setNumber}
           onDraftChange={setDraft}
           onCreate={create}
@@ -750,10 +779,12 @@ export default function Home() {
           onDocumentCaptionChange={setDocumentCaption}
           onSendDocument={() => sendDocument(chat)}
           onSendEntrepreneurPackages={(packageIds) => sendEntrepreneurPackages(chat, packageIds)}
+          onSendSticker={(stickerId) => sendSticker(chat, stickerId)}
           onRecordAudio={(audio, filename) =>
             uploadAudio(chat, audio, filename)
           }
           onAutoReplyChange={(enabled) => setAutoReply(chat, enabled)}
+          onScenarioChange={(enabled) => setScenarioEnabled(chat, enabled)}
           automationIntents={automationIntents}
           onLearnIntent={(messageId, intentId) => learnIntent(chat, messageId, intentId)}
           onDeleteConversation={() => deleteConversation(chat)}
@@ -806,7 +837,7 @@ export default function Home() {
           onSend={sendRemarketing}
         />
       ) : view === "automations" ? (
-        <div className="automation-workspace"><QuickRepliesPanel replies={quickReplies} onSave={saveQuickReply} onDelete={deleteQuickReply} /><StickersPanel stickers={stickers} onUpload={uploadSticker} onDelete={deleteSticker} /><DocumentTemplatesPanel templates={documentTemplates} onUpload={uploadDocumentTemplate} onSave={saveDocumentTemplate} onDelete={deleteDocumentTemplate} /><EntrepreneurPackagesPanel packages={entrepreneurPackages} onCreate={createEntrepreneurPackage} onUpload={uploadEntrepreneurPackage} onSave={saveEntrepreneurPackage} onDelete={deleteEntrepreneurPackage} /><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onDelete={async (id) => { if (!window.confirm("¿Eliminar este escenario?")) return; await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
+        <div className="automation-workspace"><QuickRepliesPanel replies={quickReplies} onSave={saveQuickReply} onDelete={deleteQuickReply} /><StickersPanel stickers={stickers} onUpload={uploadSticker} onDelete={deleteSticker} /><DocumentTemplatesPanel templates={documentTemplates} onUpload={uploadDocumentTemplate} onSave={saveDocumentTemplate} onDelete={deleteDocumentTemplate} /><EntrepreneurPackagesPanel packages={entrepreneurPackages} onCreate={createEntrepreneurPackage} onUpload={uploadEntrepreneurPackage} onSave={saveEntrepreneurPackage} onDelete={deleteEntrepreneurPackage} /><ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { if (!window.confirm("¿Eliminar este escenario?")) return; await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
       ) : view === "control" ? (
         <ControlPanel chats={chats} tab={controlTab} onTabChange={setControlTab} />
       ) : null}
@@ -821,6 +852,7 @@ export default function Home() {
         documentCaption={documentCaption}
         entrepreneurPackages={entrepreneurPackages}
         quickReplies={quickReplies}
+        stickers={stickers}
         replyToMessage={replyToMessage}
         onDraftChange={setModalDraft}
         onSendText={(event) => sendText(event, modalChat, modalDraft, () => setModalDraft(""))}
@@ -836,10 +868,12 @@ export default function Home() {
         onDocumentCaptionChange={setDocumentCaption}
         onSendDocument={() => sendDocument(modalChat)}
         onSendEntrepreneurPackages={(packageIds) => sendEntrepreneurPackages(modalChat, packageIds)}
+        onSendSticker={(stickerId) => sendSticker(modalChat, stickerId)}
         onRecordAudio={(audio, filename) =>
           uploadAudio(modalChat, audio, filename)
         }
         onAutoReplyChange={(enabled) => setAutoReply(modalChat, enabled)}
+        onScenarioChange={(enabled) => setScenarioEnabled(modalChat, enabled)}
         automationIntents={automationIntents}
         onLearnIntent={(messageId, intentId) => learnIntent(modalChat, messageId, intentId)}
         onDeleteConversation={() => deleteConversation(modalChat)}
