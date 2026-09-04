@@ -35,7 +35,7 @@ type Sale = {
 type PurchaseItem = {
   id?: number;
   productId?: number;
-  product?: { name?: string };
+  product?: { id?: number; name?: string };
   isBulk?: boolean;
   unitsPerBulk?: number;
   bulksReceived?: number;
@@ -53,6 +53,18 @@ type Purchase = {
   purchaseDate?: string;
   purchaseItemsRequest?: PurchaseItem[];
 };
+type PurchaseDraftItem = {
+  id?: number;
+  productId: string;
+  isBulk: boolean;
+  bulksReceived: string;
+  unitsPerBulk: string;
+  individualUnitsReceived: string;
+  unitCostNet: string;
+  isTaxed: boolean;
+  pricePerBulk: string;
+};
+type PurchaseDraft = { supplierName: string; totalInvoiceAmount: string; items: PurchaseDraftItem[] };
 type Page<T> = { content: T[]; totalElements: number };
 type Report = {
   productId: number;
@@ -81,6 +93,8 @@ const monthStart = () =>
     .toISOString()
     .slice(0, 10);
 const today = () => new Date().toISOString().slice(0, 10);
+const emptyPurchaseItem = (): PurchaseDraftItem => ({ productId: "", isBulk: false, bulksReceived: "1", unitsPerBulk: "", individualUnitsReceived: "0", unitCostNet: "", isTaxed: false, pricePerBulk: "" });
+const emptyPurchaseDraft = (): PurchaseDraft => ({ supplierName: "", totalInvoiceAmount: "", items: [emptyPurchaseItem()] });
 
 export function ControlPanel({
   chats,
@@ -124,26 +138,13 @@ export function ControlPanel({
     gender: "Hombre",
     minStockAlert: "12",
   });
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [categoryName, setCategoryName] = useState("");
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(
     null,
   );
-  const [purchaseDraft, setPurchaseDraft] = useState({
-    supplierName: "",
-    totalInvoiceAmount: "",
-    items: [
-      {
-        productId: "",
-        isBulk: false,
-        bulksReceived: "1",
-        unitsPerBulk: "",
-        individualUnitsReceived: "0",
-        unitCostNet: "",
-        isTaxed: false,
-        pricePerBulk: "",
-      },
-    ],
-  });
+  const [editingPurchaseId, setEditingPurchaseId] = useState<number | null>(null);
+  const [purchaseDraft, setPurchaseDraft] = useState<PurchaseDraft>(emptyPurchaseDraft);
 
   const load = async () => {
     setLoading(true);
@@ -280,37 +281,49 @@ export function ControlPanel({
       );
     }
   };
-  const createProduct = async (event: FormEvent) => {
+  const resetProductEditor = () => {
+    setEditingProductId(null);
+    setProductDraft({ name: "", categoryId: "", gender: "Hombre", minStockAlert: "12" });
+  };
+  const saveProduct = async (event: FormEvent) => {
     event.preventDefault();
     try {
-      await controlRequest<Product[]>("/products", {
-        method: "POST",
-        body: JSON.stringify([
-          {
-            name: productDraft.name.trim(),
-            category: { id: Number(productDraft.categoryId) },
-            gender: productDraft.gender,
-            minStockAlert: Number(productDraft.minStockAlert),
-            currentStock: 0,
-          },
-        ]),
+      const product = {
+        name: productDraft.name.trim(),
+        category: { id: Number(productDraft.categoryId) },
+        gender: productDraft.gender,
+        minStockAlert: Number(productDraft.minStockAlert),
+        currentStock: 0,
+      };
+      await controlRequest<Product | Product[]>(editingProductId ? `/products/${editingProductId}` : "/products", {
+        method: editingProductId ? "PUT" : "POST",
+        body: JSON.stringify(editingProductId ? product : [product]),
       });
-      setProductDraft({
-        name: "",
-        categoryId: "",
-        gender: "Hombre",
-        minStockAlert: "12",
-      });
+      const wasEditing = Boolean(editingProductId);
+      resetProductEditor();
       await load();
-      setNotice(
-        "Producto guardado. Registra una compra para agregar existencias.",
-      );
+      setNotice(wasEditing ? "Producto actualizado." : "Producto guardado. Registra una compra para agregar existencias.");
     } catch (error) {
       setNotice(
         error instanceof Error
           ? error.message
           : "No fue posible guardar el producto.",
       );
+    }
+  };
+  const editProduct = (product: Product) => {
+    setEditingProductId(product.id);
+    setProductDraft({ name: product.name, categoryId: String(product.category?.id || ""), gender: product.gender || "Unisex", minStockAlert: String(product.minStockAlert ?? 0) });
+  };
+  const deleteProduct = async (product: Product) => {
+    if (!window.confirm(`¿Eliminar el producto “${product.name}”? Esta acción puede fallar si está vinculado a compras, ventas o precios.`)) return;
+    try {
+      await controlRequest<void>(`/products/${product.id}`, { method: "DELETE" });
+      if (editingProductId === product.id) resetProductEditor();
+      await load();
+      setNotice("Producto eliminado.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "No fue posible eliminar el producto.");
     }
   };
   const saveCategory = async (event: FormEvent) => {
@@ -366,7 +379,11 @@ export function ControlPanel({
       );
     }
   };
-  const createPurchase = async (event: FormEvent) => {
+  const resetPurchaseEditor = () => {
+    setEditingPurchaseId(null);
+    setPurchaseDraft(emptyPurchaseDraft());
+  };
+  const savePurchase = async (event: FormEvent) => {
     event.preventDefault();
     try {
       const items = purchaseDraft.items.map((item) => {
@@ -383,6 +400,7 @@ export function ControlPanel({
           bulksReceived * unitsPerBulk + individualUnitsReceived;
 
         return {
+          ...(item.id ? { id: item.id } : {}),
           productId: Number(item.productId),
           isBulk: item.isBulk,
           isTaxed: item.isTaxed,
@@ -410,8 +428,8 @@ export function ControlPanel({
         throw new Error(
           "Completa producto, cantidades y costo de cada compra.",
         );
-      await controlRequest<Purchase>("/purchase", {
-        method: "POST",
+      await controlRequest<Purchase>(editingPurchaseId ? `/purchase/${editingPurchaseId}` : "/purchase", {
+        method: editingPurchaseId ? "PUT" : "POST",
         body: JSON.stringify({
           supplierName: purchaseDraft.supplierName || null,
           totalInvoiceAmount: purchaseDraft.totalInvoiceAmount
@@ -420,30 +438,45 @@ export function ControlPanel({
           purchaseItemsRequest: items,
         }),
       });
-      setPurchaseDraft({
-        supplierName: "",
-        totalInvoiceAmount: "",
-        items: [
-          {
-            productId: "",
-            isBulk: false,
-            bulksReceived: "1",
-            unitsPerBulk: "",
-            individualUnitsReceived: "0",
-            unitCostNet: "",
-            isTaxed: false,
-            pricePerBulk: "",
-          },
-        ],
-      });
+      const wasEditing = Boolean(editingPurchaseId);
+      resetPurchaseEditor();
       await load();
-      setNotice("Compra registrada e inventario actualizado.");
+      setNotice(wasEditing ? "Compra actualizada e inventario recalculado." : "Compra registrada e inventario actualizado.");
     } catch (error) {
       setNotice(
         error instanceof Error
           ? error.message
           : "No fue posible registrar la compra.",
       );
+    }
+  };
+  const editPurchase = (purchase: Purchase) => {
+    setEditingPurchaseId(purchase.id);
+    setPurchaseDraft({
+      supplierName: purchase.supplierName || "",
+      totalInvoiceAmount: purchase.totalInvoiceAmount == null ? "" : String(purchase.totalInvoiceAmount),
+      items: (purchase.purchaseItemsRequest?.length ? purchase.purchaseItemsRequest : [undefined]).map((item) => ({
+        ...(item?.id ? { id: item.id } : {}),
+        productId: String(item?.productId || item?.product?.id || ""),
+        isBulk: Boolean(item?.isBulk),
+        bulksReceived: String(item?.bulksReceived ?? 0),
+        unitsPerBulk: String(item?.unitsPerBulk ?? ""),
+        individualUnitsReceived: String(item?.individualUnitsReceived ?? 0),
+        unitCostNet: String(item?.unitCostNet ?? ""),
+        isTaxed: Boolean(item?.isTaxed),
+        pricePerBulk: String(item?.pricePerBulk ?? ""),
+      })),
+    });
+  };
+  const deletePurchase = async (purchase: Purchase) => {
+    if (!window.confirm(`¿Eliminar la compra #${purchase.id}? Úsalo solo si fue un registro equivocado; verifica el inventario después.`)) return;
+    try {
+      await controlRequest<void>(`/purchase/${purchase.id}`, { method: "DELETE" });
+      if (editingPurchaseId === purchase.id) resetPurchaseEditor();
+      await load();
+      setNotice("Compra eliminada.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "No fue posible eliminar la compra.");
     }
   };
   const lowStock = useMemo(
@@ -770,10 +803,10 @@ export function ControlPanel({
       )}
       {tab === "inventory" && (
         <div className="control-customers inventory-workspace">
-          <form className="customer-form product-form" onSubmit={createProduct}>
+          <form className="customer-form product-form" onSubmit={saveProduct}>
             <div>
               <p className="form-kicker">CATÁLOGO</p>
-              <h2>Nuevo producto</h2>
+              <h2>{editingProductId ? "Editar producto" : "Nuevo producto"}</h2>
               <span className="form-description">
                 Crea el artículo antes de registrar sus compras y existencias.
               </span>
@@ -849,11 +882,11 @@ export function ControlPanel({
                 />
               </label>
             </div>
-            <button disabled={!categories.length}>
+            <div className="category-form-actions"><button disabled={!categories.length}>
               {categories.length
-                ? "Guardar producto"
+                ? editingProductId ? "Actualizar producto" : "Guardar producto"
                 : "Primero crea una categoría"}
-            </button>
+            </button>{editingProductId && <button type="button" className="plain-button" onClick={resetProductEditor}>Cancelar</button>}</div>
           </form>
           <section className="control-table">
             <h2>Inventario</h2>
@@ -869,6 +902,7 @@ export function ControlPanel({
               >
                 <strong>{`${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}`}</strong>
                 <b>{product.currentStock} disponibles</b>
+                <span className="category-actions"><button type="button" className="plain-button" onClick={() => editProduct(product)}>Editar</button><button type="button" className="danger-link" onClick={() => void deleteProduct(product)}>Eliminar</button></span>
               </div>
             ))}
           </section>
@@ -953,9 +987,9 @@ export function ControlPanel({
         <div className="control-customers">
           <form
             className="customer-form purchase-form"
-            onSubmit={createPurchase}
+            onSubmit={savePurchase}
           >
-            <h2>Registrar compra</h2>
+            <header><div><p className="form-kicker">INVENTARIO</p><h2>{editingPurchaseId ? `Editar compra #${editingPurchaseId}` : "Registrar compra"}</h2></div>{editingPurchaseId && <button type="button" className="plain-button" onClick={resetPurchaseEditor}>Cancelar edición</button>}</header>
             <input
               value={purchaseDraft.supplierName}
               onChange={(event) =>
@@ -1203,7 +1237,7 @@ export function ControlPanel({
             >
               ＋ Agregar producto
             </button>
-            <button>Registrar compra</button>
+            <button>{editingPurchaseId ? "Actualizar compra" : "Registrar compra"}</button>
           </form>
           <section className="control-table">
             <h2>Compras recientes</h2>
@@ -1229,6 +1263,7 @@ export function ControlPanel({
                       ),
                   )}
                 </b>
+                <span className="category-actions"><button type="button" className="plain-button" onClick={() => editPurchase(purchase)}>Editar</button><button type="button" className="danger-link" onClick={() => void deletePurchase(purchase)}>Eliminar</button></span>
               </div>
             ))}
           </section>
