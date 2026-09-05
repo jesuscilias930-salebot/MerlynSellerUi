@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { controlRequest } from "../lib/control-api";
+import { request } from "../lib/api";
 import type { Chat } from "../lib/types";
 
 type Product = { id: number; name: string; currentStock: number; category?: { name?: string | null } | null; gender?: string | null };
 type Bundle = { id: number; name: string; fixedPrice: number; items: { productId: number; quantity: number }[] };
-type SaleSummary = { id: number; customer?: { externalId?: string | null; name?: string | null } | null };
+type SaleSummary = { id: number; grandTotal?: number | null; subtotal?: number | null; saleItemDtoList?: unknown[]; customer?: { externalId?: string | null; name?: string | null } | null };
 type Line = { id: string; kind: "product" | "bundle"; itemId: string; quantity: string };
 const blankLine = (kind: Line["kind"] = "product"): Line => ({ id: crypto.randomUUID(), kind, itemId: "", quantity: "1" });
 const money = (value: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(Number(value || 0));
@@ -23,7 +24,20 @@ export function ChatSaleModal({ chat, onClose, onSaved }: { chat: Chat; onClose:
     if (!filled.length || filled.some((line) => Number(line.quantity) <= 0)) return setNotice("Selecciona cada artículo y captura una cantidad válida.");
     setSaving(true); setNotice("");
     try {
-      await controlRequest("/sales", { method: "POST", body: JSON.stringify({ customerExternalId: chat.id, customerName: chat.name || chat.phone_number, customerPhone: chat.phone_number, productsSold: filled.filter((line) => line.kind === "product").map((line) => ({ productId: Number(line.itemId), quantity: Number(line.quantity) })), bundlesSold: filled.filter((line) => line.kind === "bundle").map((line) => ({ bundleId: Number(line.itemId), quantity: Number(line.quantity) })) }) });
+      const sale = await controlRequest<SaleSummary>("/sales", { method: "POST", body: JSON.stringify({ customerExternalId: chat.id, customerName: chat.name || chat.phone_number, customerPhone: chat.phone_number, productsSold: filled.filter((line) => line.kind === "product").map((line) => ({ productId: Number(line.itemId), quantity: Number(line.quantity) })), bundlesSold: filled.filter((line) => line.kind === "bundle").map((line) => ({ bundleId: Number(line.itemId), quantity: Number(line.quantity) })) }) });
+      // Recording the sale must never depend on an advertising provider. The
+      // conversion report is a best-effort, idempotent notification afterwards.
+      const value = Number(sale.grandTotal ?? sale.subtotal ?? 0);
+      if (sale.id && value > 0) {
+        try {
+          await request(`/conversations/${chat.id}/meta/purchase`, {
+            method: "POST",
+            body: JSON.stringify({ saleId: sale.id, value, currency: "MXN", itemCount: filled.reduce((sum, line) => sum + Number(line.quantity || 0), 0) }),
+          });
+        } catch (reportError) {
+          setNotice(reportError instanceof Error ? `La venta se registró, pero Meta no recibió la conversión: ${reportError.message}` : "La venta se registró, pero Meta no recibió la conversión.");
+        }
+      }
       await onSaved(); onClose();
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible registrar la venta."); }
     finally { setSaving(false); }
