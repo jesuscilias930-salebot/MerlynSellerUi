@@ -1232,6 +1232,47 @@ button {
 
 /* Bundles / package catalog. */
 .bundles-workspace { display: grid; gap: 16px; width: min(1100px, 100%); }
+.bundle-shipping-data { margin: 0; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.bundle-shipping-data legend { padding: 0 5px; font-weight: 800; color: var(--deep); }
+.bundle-shipping-data small { display: block; color: var(--muted); margin-bottom: 10px; }
+.bundle-shipping-data > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.bundle-shipping-data label { display: grid; gap: 4px; font-size: 12px; font-weight: 700; color: var(--deep); }
+.bundle-shipping-summary { margin: 8px 0; padding: 7px 9px; border-radius: 7px; background: #edf8f1; color: #225d42; font-size: 13px; font-weight: 700; }
+@media (max-width: 680px) { .bundle-shipping-data > div { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Bundle photos are stored in SalesBot so they can be sent through Meta, while
+   the bundle composition itself continues to live in Sock Control. */
+.bundle-image-manager { width: min(1100px, 100%); padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: #fff; display: grid; gap: 16px; }
+.bundle-image-manager header p, .bundle-picker-modal header p { margin: 0 0 4px; font-size: 11px; letter-spacing: .12em; font-weight: 800; color: var(--green); }
+.bundle-image-manager h2, .bundle-image-manager h3, .bundle-picker-modal h2, .bundle-picker-modal h3 { margin: 0; color: var(--deep); }
+.bundle-image-manager header span { display: block; margin-top: 5px; color: var(--muted); }
+.bundle-media-create { display: grid; grid-template-columns: 1fr 1fr auto; align-items: end; gap: 10px; }
+.bundle-media-create label { display: grid; gap: 5px; font-size: 13px; font-weight: 700; color: var(--deep); }
+.bundle-media-create input, .bundle-media-create select { min-height: 42px; }
+.bundle-media-create button, .bundle-picker-modal footer button, .send-bundle-button { border: 0; border-radius: 9px; min-height: 42px; padding: 0 14px; background: var(--green); color: #fff; font-weight: 800; }
+.bundle-image-groups { display: grid; gap: 18px; }
+.bundle-image-groups > section { border-top: 1px solid var(--line); padding-top: 14px; }
+.bundle-image-groups > section > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 10px; }
+.bundle-image-groups article { border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.bundle-image-groups article header { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.bundle-image-groups article small { display: block; color: var(--muted); margin-top: 2px; }
+.bundle-image-previews { display: flex; gap: 6px; overflow-x: auto; padding-top: 10px; color: var(--muted); font-size: 13px; }
+.bundle-image-previews img { width: 70px; height: 70px; flex: 0 0 auto; object-fit: cover; border-radius: 8px; }
+.send-bundle-button { margin: 0 18px 10px; background: #885a1a; }
+.bundle-picker-backdrop { position: fixed; z-index: 60; inset: 0; display: grid; place-items: center; padding: 20px; background: #12251bcc; }
+.bundle-picker-modal { width: min(660px, 100%); max-height: min(720px, 90vh); overflow: auto; border-radius: 18px; padding: 22px; background: #fff; box-shadow: 0 24px 70px #0007; }
+.bundle-picker-modal > header { display: flex; justify-content: space-between; gap: 16px; }
+.bundle-picker-modal > header span { display: block; color: var(--muted); margin-top: 5px; }
+.bundle-picker-modal > header button { border: 0; background: transparent; font-size: 28px; color: var(--muted); }
+.bundle-picker-groups { display: grid; gap: 16px; margin-top: 18px; }
+.bundle-picker-groups section { display: grid; gap: 7px; }
+.bundle-picker-groups label { display: grid; grid-template-columns: 48px 1fr auto; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.bundle-picker-groups label.selected { border-color: var(--green); background: #eafff1; }
+.bundle-picker-groups img, .bundle-picker-groups label > b { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; background: #e1eee7; display: grid; place-items: center; }
+.bundle-picker-groups small { display: block; color: var(--muted); margin-top: 2px; }
+.bundle-picker-modal footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.bundle-picker-modal footer .plain-button { background: #eef4f0; color: var(--deep); }
+@media (max-width: 680px) { .bundle-media-create { grid-template-columns: 1fr; } .send-bundle-button { margin: 0 8px 8px; } .bundle-picker-backdrop { padding: 8px; } .bundle-picker-modal { padding: 16px; } }
 .bundles-header, .bundle-editor > header, .bundle-list > header, .bundle-list article > header, .bundle-list article footer { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
 .bundles-header p, .bundle-editor > header p, .bundle-list > header p { color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: .13em; margin: 0 0 4px; }.bundles-header h2, .bundle-editor h3, .bundle-list h3 { margin: 0; }.bundles-header span { color: var(--muted); display: block; margin-top: 5px; font-size: 13px; }
 .bundles-layout { display: grid; grid-template-columns: minmax(360px, .9fr) minmax(360px, 1.1fr); gap: 16px; align-items: start; }

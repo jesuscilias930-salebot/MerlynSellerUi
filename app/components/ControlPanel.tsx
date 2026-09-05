@@ -2,9 +2,10 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { controlApi, controlRequest, controlSession } from "../lib/control-api";
-import type { Chat } from "../lib/types";
+import type { Chat, EntrepreneurPackage } from "../lib/types";
 import { PriceRulesPanel } from "./PriceRulesPanel";
 import { BundlesPanel } from "./BundlesPanel";
+import { BundleImageManager } from "./BundleImageManager";
 
 type Customer = {
   id: number;
@@ -21,6 +22,7 @@ type Product = {
   minStockAlert: number;
     category: Category;
   gender?: string | null;
+  size?: string | null;
 
 };
 type Sale = {
@@ -100,10 +102,16 @@ export function ControlPanel({
   chats,
   tab,
   onTabChange,
+  entrepreneurPackages,
+  onCreateBundleImageSet,
+  onUploadBundleImage,
 }: {
   chats: Chat[];
   tab: ControlTab;
   onTabChange: (tab: ControlTab) => void;
+  entrepreneurPackages: EntrepreneurPackage[];
+  onCreateBundleImageSet: (name: string, bundleType: string, controlBundleId: number) => Promise<EntrepreneurPackage>;
+  onUploadBundleImage: (packageId: string, file: File) => Promise<void>;
 }) {
   const [token, setToken] = useState<string | null>(null);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
@@ -136,6 +144,7 @@ export function ControlPanel({
     name: "",
     categoryId: "",
     gender: "Hombre",
+    size: "",
     minStockAlert: "12",
   });
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
@@ -283,13 +292,14 @@ export function ControlPanel({
   };
   const resetProductEditor = () => {
     setEditingProductId(null);
-    setProductDraft({ name: "", categoryId: "", gender: "Hombre", minStockAlert: "12" });
+    setProductDraft({ name: "", categoryId: "", gender: "Hombre", size: "", minStockAlert: "12" });
   };
   const saveProduct = async (event: FormEvent) => {
     event.preventDefault();
     try {
       const product = {
         name: productDraft.name.trim(),
+        size: productDraft.size.trim() || null,
         category: { id: Number(productDraft.categoryId) },
         gender: productDraft.gender,
         minStockAlert: Number(productDraft.minStockAlert),
@@ -313,7 +323,7 @@ export function ControlPanel({
   };
   const editProduct = (product: Product) => {
     setEditingProductId(product.id);
-    setProductDraft({ name: product.name, categoryId: String(product.category?.id || ""), gender: product.gender || "Unisex", minStockAlert: String(product.minStockAlert ?? 0) });
+    setProductDraft({ name: product.name, categoryId: String(product.category?.id || ""), gender: product.gender || "Unisex", size: product.size || "", minStockAlert: String(product.minStockAlert ?? 0) });
   };
   const deleteProduct = async (product: Product) => {
     if (!window.confirm(`¿Eliminar el producto “${product.name}”? Esta acción puede fallar si está vinculado a compras, ventas o precios.`)) return;
@@ -863,6 +873,10 @@ export function ControlPanel({
                   )}
                 </select>
               </label>
+              <label>
+                Tamaño / talla
+                <input value={productDraft.size} onChange={(event) => setProductDraft({ ...productDraft, size: event.target.value })} placeholder="Ej. Unitalla, 22–25" maxLength={80} />
+              </label>
             </div>
             <div className="product-cost-section">
               <b>Control de existencias</b>
@@ -900,7 +914,7 @@ export function ControlPanel({
                   product.currentStock <= product.minStockAlert ? "low" : ""
                 }
               >
-                <strong>{`${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}`}</strong>
+                <strong>{`${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}${product.size ? ` - ${product.size}` : ""}`}</strong>
                 <b>{product.currentStock} disponibles</b>
                 <span className="category-actions"><button type="button" className="plain-button" onClick={() => editProduct(product)}>Editar</button><button type="button" className="danger-link" onClick={() => void deleteProduct(product)}>Eliminar</button></span>
               </div>
@@ -909,7 +923,7 @@ export function ControlPanel({
         </div>
       )}
       {tab === "prices" && <PriceRulesPanel products={products} />}
-      {tab === "bundles" && <BundlesPanel products={products} />}
+      {tab === "bundles" && <><BundlesPanel products={products} /><BundleImageManager packages={entrepreneurPackages} onCreate={onCreateBundleImageSet} onUpload={onUploadBundleImage} /></>}
       {tab === "sales" && (
         <div className="control-customers">
           <form className="customer-form" onSubmit={createSale}>

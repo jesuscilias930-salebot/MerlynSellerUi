@@ -644,6 +644,12 @@ export default function Home() {
     const group = await request<EntrepreneurPackage>("/settings/entrepreneur-packages", { method: "POST", body: JSON.stringify({ name }) });
     await loadEntrepreneurPackages(); setNotice("Conjunto creado. Ahora agrega sus imágenes."); return group;
   };
+  const createBundleImageSet = async (name: string, bundleType: string, controlBundleId: number) => {
+    const group = await request<EntrepreneurPackage>("/settings/entrepreneur-packages", { method: "POST", body: JSON.stringify({ name, bundleType, controlBundleId }) });
+    await loadEntrepreneurPackages();
+    setNotice("Bundle listo. Ahora agrega sus fotografías.");
+    return group;
+  };
   const uploadEntrepreneurPackage = async (packageId: string, file: File) => {
     try {
       const response = await fetch(`${api}/settings/entrepreneur-packages/upload`, {
@@ -841,7 +847,7 @@ export default function Home() {
       ) : view === "scenarios" ? (
         <ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} />
       ) : view === "control" ? (
-        <ControlPanel chats={chats} tab={controlTab} onTabChange={setControlTab} />
+        <ControlPanel chats={chats} tab={controlTab} onTabChange={setControlTab} entrepreneurPackages={entrepreneurPackages} onCreateBundleImageSet={createBundleImageSet} onUploadBundleImage={uploadEntrepreneurPackage} />
       ) : null}
       <ConversationModal
         chat={modalChat}

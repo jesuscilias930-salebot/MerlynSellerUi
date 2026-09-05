@@ -13,7 +13,7 @@ type Product = {
 };
 type PriceRule = { id: number; ruleName: string; minQuantity: number; maxQuantity: number; pricePerUnit: number };
 type BundleItem = { id?: number; productId: number; productName?: string; quantity: number; assignedUnitPrice: number };
-type Bundle = { id?: number; name: string; fixedPrice: number; items: BundleItem[] };
+type Bundle = { id?: number; name: string; fixedPrice: number; boxLengthCm?: number | null; boxWidthCm?: number | null; boxHeightCm?: number | null; boxWeightKg?: number | null; items: BundleItem[] };
 type DraftItem = { id?: number; productId: string; quantity: string; assignedUnitPrice: string };
 type FinancialReport = { totalOrderSale?: number; totalOrderProfit?: number; totalOrderTax?: number; totalIsr?: number };
 
@@ -25,6 +25,10 @@ export function BundlesPanel({ products }: { products: Product[] }) {
   const [bundles, setBundles] = useState<Bundle[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [name, setName] = useState("");
+  const [boxLengthCm, setBoxLengthCm] = useState("");
+  const [boxWidthCm, setBoxWidthCm] = useState("");
+  const [boxHeightCm, setBoxHeightCm] = useState("");
+  const [boxWeightKg, setBoxWeightKg] = useState("");
   const [items, setItems] = useState<DraftItem[]>([blankItem()]);
   const [rulesByItem, setRulesByItem] = useState<Record<number, PriceRule[]>>({});
   const [report, setReport] = useState<FinancialReport | null>(null);
@@ -56,10 +60,14 @@ export function BundlesPanel({ products }: { products: Product[] }) {
     if (change.productId !== undefined) void loadRules(change.productId, index);
     setReport(null);
   };
-  const resetEditor = () => { setEditingId(null); setName(""); setItems([blankItem()]); setRulesByItem({}); setReport(null); setNotice(""); };
+  const resetEditor = () => { setEditingId(null); setName(""); setBoxLengthCm(""); setBoxWidthCm(""); setBoxHeightCm(""); setBoxWeightKg(""); setItems([blankItem()]); setRulesByItem({}); setReport(null); setNotice(""); };
   const editBundle = (bundle: Bundle) => {
     setEditingId(bundle.id || null);
     setName(bundle.name);
+    setBoxLengthCm(bundle.boxLengthCm == null ? "" : String(bundle.boxLengthCm));
+    setBoxWidthCm(bundle.boxWidthCm == null ? "" : String(bundle.boxWidthCm));
+    setBoxHeightCm(bundle.boxHeightCm == null ? "" : String(bundle.boxHeightCm));
+    setBoxWeightKg(bundle.boxWeightKg == null ? "" : String(bundle.boxWeightKg));
     const nextItems = bundle.items.map((item) => ({ id: item.id, productId: String(item.productId), quantity: String(item.quantity), assignedUnitPrice: String(item.assignedUnitPrice) }));
     setItems(nextItems.length ? nextItems : [blankItem()]);
     setRulesByItem({}); setReport(null); setNotice("");
@@ -72,6 +80,10 @@ export function BundlesPanel({ products }: { products: Product[] }) {
     setSaving(true); setNotice("");
     const payload = {
       name: name.trim(), fixedPrice,
+      boxLengthCm: boxLengthCm === "" ? null : Number(boxLengthCm),
+      boxWidthCm: boxWidthCm === "" ? null : Number(boxWidthCm),
+      boxHeightCm: boxHeightCm === "" ? null : Number(boxHeightCm),
+      boxWeightKg: boxWeightKg === "" ? null : Number(boxWeightKg),
       items: items.map((item) => ({ ...(item.id ? { id: item.id } : {}), product: { id: Number(item.productId) }, quantity: Number(item.quantity), assignedUnitPrice: Number(item.assignedUnitPrice) })),
     };
     try {
@@ -102,13 +114,14 @@ export function BundlesPanel({ products }: { products: Product[] }) {
       <form className="bundle-editor" onSubmit={save}>
         <header><div><p>CONFIGURACIÓN</p><h3>{editingId ? "Editar bundle" : "Nuevo bundle"}</h3></div>{editingId && <button type="button" className="plain-button" onClick={resetEditor}>Cancelar edición</button>}</header>
         <label>Nombre del paquete<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej. Pack Mayorista Platinum" minLength={3} required /></label>
+        <fieldset className="bundle-shipping-data"><legend>Medidas para cotizar envío</legend><small>Esta información aplica a cualquier caja de este bundle; no se repite por fotografía.</small><div><label>Largo (cm)<input type="number" min="0" step="0.1" value={boxLengthCm} onChange={(event) => setBoxLengthCm(event.target.value)} placeholder="Ej. 40" /></label><label>Ancho (cm)<input type="number" min="0" step="0.1" value={boxWidthCm} onChange={(event) => setBoxWidthCm(event.target.value)} placeholder="Ej. 30" /></label><label>Alto (cm)<input type="number" min="0" step="0.1" value={boxHeightCm} onChange={(event) => setBoxHeightCm(event.target.value)} placeholder="Ej. 25" /></label><label>Peso (kg)<input type="number" min="0" step="0.01" value={boxWeightKg} onChange={(event) => setBoxWeightKg(event.target.value)} placeholder="Ej. 8.5" /></label></div></fieldset>
         <div className="bundle-items-heading"><div><b>Productos en el paquete</b><small>El precio final se calcula con los precios unitarios asignados.</small></div><button type="button" className="plain-button" onClick={() => { setItems((current) => [...current, blankItem()]); setReport(null); }}>＋ Agregar producto</button></div>
         <div className="bundle-items">{items.map((item, index) => <fieldset key={`${item.id || "new"}-${index}`}><legend>Producto {index + 1}</legend><label>Producto<select value={item.productId} onChange={(event) => changeItem(index, { productId: event.target.value })} required><option value="">Selecciona un producto</option>{products.map((product) => <option key={product.id} value={product.id}>{productLabel(product)}</option>)}</select></label><label>Cantidad<input type="number" min="1" value={item.quantity} onChange={(event) => changeItem(index, { quantity: event.target.value })} required /></label><label>Precio unitario asignado<input type="number" min="0" step="0.01" value={item.assignedUnitPrice} onChange={(event) => changeItem(index, { assignedUnitPrice: event.target.value })} required /></label><button type="button" className="danger-link" disabled={items.length === 1} onClick={() => { setItems((current) => current.filter((_, itemIndex) => itemIndex !== index)); setReport(null); }}>Quitar</button>{rulesByItem[index]?.length > 0 && <div className="bundle-rules-hint"><b>Escalas de mayoreo disponibles</b>{rulesByItem[index].map((rule) => <span key={rule.id}>{rule.ruleName}: {rule.minQuantity}–{rule.maxQuantity} pzas · {money(rule.pricePerUnit)}</span>)}</div>}</fieldset>)}</div>
         <div className="bundle-summary"><span>Precio final de venta</span><b>{money(fixedPrice)}</b><small>Subtotal de productos: {money(fixedPrice)}</small></div>
         {report && <div className="bundle-financial-report"><b>Ganancia estimada</b><span>Venta: {money(report.totalOrderSale)}</span><span>IVA neto: {money(report.totalOrderTax)}</span><span>ISR estimado: {money(report.totalIsr)}</span><strong className={(report.totalOrderProfit || 0) <= 0 ? "negative" : ""}>Ganancia neta: {money(report.totalOrderProfit)}</strong></div>}
         <div className="bundle-editor-actions"><button type="button" className="plain-button" onClick={() => void preview()} disabled={analyzing || !validItems}>{analyzing ? "Analizando…" : "Ver ganancia estimada"}</button><button disabled={saving || !products.length}>{saving ? "Guardando…" : "Guardar bundle"}</button></div>
       </form>
-      <section className="bundle-list"><header><div><p>CATÁLOGO</p><h3>Bundles guardados</h3></div><b>{bundles.length}</b></header>{!loading && bundles.length === 0 && <div className="bundles-empty">Aún no hay paquetes. Crea tu primer bundle.</div>}{bundles.map((bundle) => <article key={bundle.id}><header><div><small>Bundle #{bundle.id}</small><h3>{bundle.name}</h3></div><strong>{money(bundle.fixedPrice)}</strong></header><ul>{bundle.items.map((item) => <li key={item.id || `${item.productId}-${item.quantity}`}><span>{item.quantity}× {item.productName || `Producto #${item.productId}`}</span><b>{money(item.assignedUnitPrice)} c/u</b></li>)}</ul><footer><span>{bundle.items.reduce((total, item) => total + Number(item.quantity || 0), 0)} piezas · {bundle.items.length} productos</span><div><button type="button" className="plain-button" onClick={() => editBundle(bundle)}>Editar</button><button type="button" className="danger-link" onClick={() => void deleteBundle(bundle)}>Eliminar</button></div></footer></article>)}</section>
+      <section className="bundle-list"><header><div><p>CATÁLOGO</p><h3>Bundles guardados</h3></div><b>{bundles.length}</b></header>{!loading && bundles.length === 0 && <div className="bundles-empty">Aún no hay paquetes. Crea tu primer bundle.</div>}{bundles.map((bundle) => <article key={bundle.id}><header><div><small>Bundle #{bundle.id}</small><h3>{bundle.name}</h3></div><strong>{money(bundle.fixedPrice)}</strong></header>{[bundle.boxLengthCm, bundle.boxWidthCm, bundle.boxHeightCm, bundle.boxWeightKg].some((value) => value != null) && <p className="bundle-shipping-summary">Caja: {[bundle.boxLengthCm, bundle.boxWidthCm, bundle.boxHeightCm].every((value) => value != null) ? `${bundle.boxLengthCm} × ${bundle.boxWidthCm} × ${bundle.boxHeightCm} cm` : "medidas incompletas"}{bundle.boxWeightKg != null ? ` · ${bundle.boxWeightKg} kg` : ""}</p>}<ul>{bundle.items.map((item) => <li key={item.id || `${item.productId}-${item.quantity}`}><span>{item.quantity}× {item.productName || `Producto #${item.productId}`}</span><b>{money(item.assignedUnitPrice)} c/u</b></li>)}</ul><footer><span>{bundle.items.reduce((total, item) => total + Number(item.quantity || 0), 0)} piezas · {bundle.items.length} productos</span><div><button type="button" className="plain-button" onClick={() => editBundle(bundle)}>Editar</button><button type="button" className="danger-link" onClick={() => void deleteBundle(bundle)}>Eliminar</button></div></footer></article>)}</section>
     </div>
   </section>;
 }
