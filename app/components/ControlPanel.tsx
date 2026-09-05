@@ -325,6 +325,19 @@ export function ControlPanel({
     setEditingProductId(product.id);
     setProductDraft({ name: product.name, categoryId: String(product.category?.id || ""), gender: product.gender || "Unisex", size: product.size || "", minStockAlert: String(product.minStockAlert ?? 0) });
   };
+  const duplicateProduct = (product: Product) => {
+    // Do not copy id or stock: this intentionally starts a new catalog record.
+    setEditingProductId(null);
+    setProductDraft({
+      name: `${product.name} (copia)`,
+      categoryId: String(product.category?.id || ""),
+      gender: product.gender || "Unisex",
+      size: product.size || "",
+      minStockAlert: String(product.minStockAlert ?? 12),
+    });
+    setNotice("Se copiaron los datos. Ajusta lo necesario y guarda como producto nuevo.");
+    document.querySelector(".product-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const deleteProduct = async (product: Product) => {
     if (!window.confirm(`¿Eliminar el producto “${product.name}”? Esta acción puede fallar si está vinculado a compras, ventas o precios.`)) return;
     try {
@@ -916,7 +929,7 @@ export function ControlPanel({
               >
                 <strong>{`${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}${product.size ? ` - ${product.size}` : ""}`}</strong>
                 <b>{product.currentStock} disponibles</b>
-                <span className="category-actions"><button type="button" className="plain-button" onClick={() => editProduct(product)}>Editar</button><button type="button" className="danger-link" onClick={() => void deleteProduct(product)}>Eliminar</button></span>
+                <span className="category-actions"><button type="button" className="plain-button" onClick={() => editProduct(product)}>Editar</button><button type="button" className="plain-button" onClick={() => duplicateProduct(product)}>Duplicar</button><button type="button" className="danger-link" onClick={() => void deleteProduct(product)}>Eliminar</button></span>
               </div>
             ))}
           </section>

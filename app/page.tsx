@@ -680,7 +680,7 @@ export default function Home() {
     try {
       await request(`/conversations/${target.id}/messages/entrepreneur-packages`, { method: "POST", body: JSON.stringify({ packageIds }) });
       await refreshData();
-    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar los paquetes."); }
+    } catch (error) { const message = error instanceof Error ? error.message : "No fue posible enviar los paquetes."; setNotice(message); throw error; }
   };
   const sendSticker = async (target: Chat | null, stickerId: string) => {
     if (!target) return;
