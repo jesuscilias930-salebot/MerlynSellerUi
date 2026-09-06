@@ -529,8 +529,7 @@ button {
     overflow: hidden
 }
 
-.shell>aside {
-    background: var(--deep);
+.sidebarMain {
     color: #e9fff5;
     padding: 20px 14px;
     display: flex;
@@ -561,7 +560,6 @@ button {
     border: 0;
     border-radius: 9px;
     background: none;
-    color: #b9d7c9;
     padding: 11px 12px;
     text-align: left
 }

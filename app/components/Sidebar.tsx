@@ -18,7 +18,7 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
       onViewChange(nextView);
     };
   return (
-    <aside>
+    <aside className="sidebarMain">
       <div className="brand">
         <b className="mark">M</b>
         <strong>Merlyn Sales</strong>
