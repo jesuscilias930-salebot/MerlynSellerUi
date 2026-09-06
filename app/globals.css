@@ -530,7 +530,9 @@ button {
 }
 
 .sidebarMain {
-    color: #e9fff5;
+    color: #256147;
+    border: 1px solid #256147;
+    border-radius: 8px;
     padding: 20px 14px;
     display: flex;
     flex-direction: column
