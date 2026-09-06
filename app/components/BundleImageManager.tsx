@@ -71,10 +71,10 @@ export function BundleImageManager({ packages, onCreate, onUpload }: Props) {
   };
 
   return <section className="bundle-image-manager">
-    <header><div><p>FOTOS PARA CHAT</p><h2>Imágenes de bundles</h2><span>Relaciona un bundle existente con un tipo, sube sus fotos y después envíalas desde cualquier conversación.</span></div></header>
+    <header><div><p>FOTOS PARA CHAT</p><h2>Imágenes de bundles</h2><span>Relaciona un bundle existente con una categoría, sube sus fotos y después envíalas desde cualquier conversación.</span></div></header>
     {notice && <div className="control-notice">{notice}</div>}
     <div className="bundle-media-create">
-      <label>Tipo de bundle<input value={bundleType} onChange={(event) => setBundleType(event.target.value)} placeholder="Ej. Caja más vendida" maxLength={120} /></label>
+      <label>Categoría del bundle<input value={bundleType} onChange={(event) => setBundleType(event.target.value)} placeholder="Ej. Caja más vendida" maxLength={120} /></label>
       <label>Bundle existente<select value={bundleId} onChange={(event) => setBundleId(event.target.value)}><option value="">Selecciona un bundle</option>{availableBundles.map((bundle) => <option key={bundle.id} value={bundle.id}>{bundle.name}</option>)}</select></label>
       <button type="button" onClick={() => void create()} disabled={saving || !bundleType.trim() || !bundleId}>＋ Agregar bundle</button>
     </div>

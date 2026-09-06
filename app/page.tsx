@@ -640,8 +640,8 @@ export default function Home() {
     try { await request(`/settings/document-templates/${template.id}`, { method: "DELETE" }); await loadDocumentTemplates(); setNotice("Documento eliminado."); }
     catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible eliminar el documento."); }
   };
-  const createEntrepreneurPackage = async (name: string) => {
-    const group = await request<EntrepreneurPackage>("/settings/entrepreneur-packages", { method: "POST", body: JSON.stringify({ name }) });
+  const createEntrepreneurPackage = async (name: string, imageCategory: string) => {
+    const group = await request<EntrepreneurPackage>("/settings/entrepreneur-packages", { method: "POST", body: JSON.stringify({ name, imageCategory }) });
     await loadEntrepreneurPackages(); setNotice("Conjunto creado. Ahora agrega sus imágenes."); return group;
   };
   const createBundleImageSet = async (name: string, bundleType: string, controlBundleId: number) => {
@@ -663,7 +663,7 @@ export default function Home() {
       setNotice("Imagen agregada al conjunto.");
     } catch (error) { const message = error instanceof Error ? error.message : "No fue posible subir la imagen del conjunto."; setNotice(message); throw new Error(message); }
   };
-  const saveEntrepreneurPackage = async (item: EntrepreneurPackage, changes: { name: string; caption: string }) => {
+  const saveEntrepreneurPackage = async (item: EntrepreneurPackage, changes: { name: string; caption: string; imageCategory: string }) => {
     try {
       await request(`/settings/entrepreneur-packages/${item.id}`, { method: "PATCH", body: JSON.stringify(changes) });
       await loadEntrepreneurPackages();
