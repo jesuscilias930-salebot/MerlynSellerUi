@@ -1290,6 +1290,13 @@ button {
 /* Inbox: a focused three-column workspace with the chat actions always handy. */
 .shell { grid-template-columns: 220px minmax(280px, 330px) minmax(0, 1fr) minmax(320px, 360px); }
 .chat-tools-panel { min-width: 0; overflow-y: auto; border-left: 1px solid var(--line); background: #f8fbf9; }
+.chat-tools-panel { position: relative; background: linear-gradient(180deg, #f8fbf9 0%, #f3f8f5 100%); transition: width .2s ease, min-width .2s ease; }
+.shell:has(.chat-tools-panel.collapsed) { grid-template-columns: 220px minmax(280px, 330px) minmax(0, 1fr) 54px; }
+.chat-tools-panel.collapsed { min-width: 54px; overflow: hidden; background: #f6faf7; }
+.chat-tools-panel.collapsed > header { justify-content: center; padding: 14px 6px; border-left: 3px solid var(--green); }
+.chat-tools-panel.collapsed > header > div { display: none; }
+.chat-tools-toggle { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid #cce1d4; border-radius: 8px; background: #fff; color: var(--green); font-size: 24px; line-height: 1; cursor: pointer; }
+.chat-tools-toggle:hover { background: #eaf7ef; }
 .chat-tools-panel > header { display: flex; align-items: flex-start; justify-content: space-between; padding: 19px 18px 12px; background: #fff; border-bottom: 1px solid var(--line); }
 .chat-tools-panel header p { margin: 0 0 3px; color: var(--green); font-size: 10px; font-weight: 800; letter-spacing: .12em; }
 .chat-tools-panel h2 { margin: 0; color: var(--deep); font-size: 17px; }
@@ -1297,7 +1304,7 @@ button {
 .chat-tools-tabs button { padding: 10px 5px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
 .chat-tools-tabs button.selected { border-color: var(--green); color: var(--green); }
 .chat-tools-body { display: grid; gap: 11px; padding: 12px; }
-.tool-card { display: grid; gap: 9px; padding: 12px; border: 1px solid #dce7e0; border-radius: 12px; background: #fff; }
+.tool-card { display: grid; gap: 9px; padding: 12px; border: 1px solid #dce7e0; border-radius: 12px; background: #fff; box-shadow: 0 4px 14px #173f2b08; }
 .tool-card > header { display: flex; align-items: flex-start; gap: 8px; }
 .tool-card > header > span { display: grid; place-items: center; width: 28px; height: 28px; flex: 0 0 auto; border-radius: 8px; background: #e8f6ed; color: var(--green); font-weight: 800; }
 .tool-card h3 { margin: 0; color: var(--deep); font-size: 13px; }.tool-card p { margin: 3px 0 0; color: var(--muted); font-size: 11px; line-height: 1.35; }
