@@ -1320,6 +1320,27 @@ button {
 .compact-chat-panel .intent-learner { position: absolute; z-index: 5; top: 5px; right: 6px; display: block; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }.intent-learner-trigger { border: 0; border-radius: 6px; padding: 1px 6px; background: #ffffffd9; color: #577367; font-size: 16px; opacity: 0; cursor: pointer; }.compact-chat-panel article:hover .intent-learner-trigger, .compact-chat-panel article:focus-within .intent-learner-trigger { opacity: 1; }.intent-learner-menu { position: absolute; z-index: 6; top: 26px; right: 0; display: flex; gap: 5px; min-width: 235px; padding: 6px; border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: 0 9px 24px #0e30201e; }.intent-learner-menu select { min-width: 0; flex: 1; border: 1px solid var(--line); border-radius: 6px; padding: 5px; font-size: 11px; }.intent-learner-menu button { border: 0; border-radius: 6px; padding: 5px 7px; background: var(--green); color: #fff; font-size: 11px; font-weight: 800; }
 @media (max-width: 1180px) { .shell { grid-template-columns: 190px minmax(260px, 300px) minmax(0, 1fr); }.chat-tools-panel { display: none; } }
 @media (max-width: 620px) { .compact-composer { grid-template-columns: 32px minmax(0, 1fr) 32px 34px; }.intent-learner-menu { right: -5px; min-width: 220px; }.compact-chat-panel .intent-learner { display: block; position: absolute; margin: 0; }.chat-statuses { display: none; } }
+
+/* Visual treatment for the chat tools panel. Mirrors the compact product mockup. */
+.chat-tools-panel { background: #f1f4f7; border-left: 0; padding: 18px 20px 24px; }
+.chat-tools-panel > header { min-height: 104px; align-items: center; padding: 22px 26px; border: 0; background: #fff; box-shadow: 0 2px 14px #1f29370a; }
+.chat-tools-panel header p { margin-bottom: 9px; color: #087647; font-size: 11px; letter-spacing: .14em; }
+.chat-tools-panel h2 { color: #101816; font-size: 23px; font-weight: 500; letter-spacing: -.02em; }
+.chat-tools-toggle { width: 45px; height: 45px; border-color: #e2e7e5; border-radius: 7px; box-shadow: 0 3px 10px #14231b18; color: #087647; font-size: 30px; font-weight: 300; }
+.chat-tools-tabs { gap: 0; margin-top: 60px; padding: 10px 14px 0; border: 0; background: #dfe3e7; }
+.chat-tools-tabs button { padding: 15px 12px; border: 0; border-radius: 12px 12px 0 0; color: #70767c; font-size: 13px; font-weight: 700; }
+.chat-tools-tabs button.selected { border: 0; background: #fff; color: #086f42; box-shadow: 0 1px 3px #1d2a2420; }
+.chat-tools-body { gap: 15px; padding: 18px 4px 0; }
+.tool-card { gap: 15px; padding: 16px; border-color: #cdd3d6; border-radius: 14px; box-shadow: none; }
+.tool-card > header { gap: 12px; }.tool-card > header > span { width: 40px; height: 40px; border-radius: 11px; background: #e0f5e9; color: #087647; font-size: 20px; }
+.tool-card h3 { color: #101816; font-size: 16px; font-weight: 500; }.tool-card p { margin-top: 1px; color: #101816; font-size: 14px; line-height: 1.35; }
+.tool-card select, .tool-card textarea { border-color: #bfc6c9; border-radius: 12px; padding: 12px 15px; color: #4d5559; font-size: 14px; }.tool-card textarea { min-height: 82px; }
+.tool-primary-button { min-width: 156px; padding: 14px 17px; border-radius: 10px; background: #007b49; box-shadow: inset 0 -2px 0 #00643b; font-size: 14px; }.tool-primary-button:hover { background: #006f42; }
+.tool-file-cards { gap: 10px; }.tool-file-cards label { min-height: 82px; padding: 11px 4px; border-color: #d8dfe0; border-radius: 12px; background: #fff; }.tool-file-cards label:hover { border-color: #9fc9af; background: #fafffc; }.tool-file-cards b { font-size: 23px; font-weight: 500; }.tool-file-cards small { color: #4d5559; font-size: 11px; }
+.tool-gallery-category { gap: 9px; }.tool-gallery-category > strong { color: #101816; font-size: 13px; }.tool-gallery-grid { gap: 8px; }.tool-gallery-grid button { padding: 5px; border-color: #d3d9db; border-radius: 11px; }.tool-gallery-grid img, .tool-gallery-grid b { border-radius: 7px; }.tool-gallery-grid span { font-size: 10px; }.tool-gallery-grid small { display: none; }
+.sale-tool-card > label { color: #323b3a; font-size: 12px; }.tool-secondary-button { border-color: #cbd6d0; border-radius: 10px; background: #eff8f2; color: #087647; font-size: 13px; }
+.chat-tools-panel.collapsed { padding: 0; background: #f1f4f7; }.chat-tools-panel.collapsed > header { min-height: 100%; height: 100%; padding: 13px 5px; border-left: 0; background: #fff; }.chat-tools-panel.collapsed .chat-tools-toggle { width: 38px; height: 45px; }
+@media (max-width: 1180px) { .chat-tools-panel { padding: 0; } }
 .bundles-header, .bundle-editor > header, .bundle-list > header, .bundle-list article > header, .bundle-list article footer { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
 .bundles-header p, .bundle-editor > header p, .bundle-list > header p { color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: .13em; margin: 0 0 4px; }.bundles-header h2, .bundle-editor h3, .bundle-list h3 { margin: 0; }.bundles-header span { color: var(--muted); display: block; margin-top: 5px; font-size: 13px; }
 .bundles-layout { display: grid; grid-template-columns: minmax(360px, .9fr) minmax(360px, 1.1fr); gap: 16px; align-items: start; }
