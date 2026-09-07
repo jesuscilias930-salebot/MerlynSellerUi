@@ -692,10 +692,11 @@ export default function Home() {
     try { await request(`/settings/entrepreneur-packages/${item.id}`, { method: "DELETE" }); await loadEntrepreneurPackages(); setNotice("Paquete eliminado."); }
     catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible eliminar el paquete."); }
   };
-  const sendEntrepreneurPackages = async (target: Chat | null, packageIds: string[]) => {
-    if (!target || !packageIds.length) return;
+  const sendEntrepreneurPackages = async (target: Chat | null, selection: { packageIds?: string[]; imageIds?: string[] }) => {
+    const selectedIds = selection.imageIds || selection.packageIds || [];
+    if (!target || !selectedIds.length) return;
     try {
-      await request(`/conversations/${target.id}/messages/entrepreneur-packages`, { method: "POST", body: JSON.stringify({ packageIds }) });
+      await request(`/conversations/${target.id}/messages/entrepreneur-packages`, { method: "POST", body: JSON.stringify(selection) });
       await refreshData();
     } catch (error) { const message = error instanceof Error ? error.message : "No fue posible enviar los paquetes."; setNotice(message); throw error; }
   };

@@ -9,6 +9,59 @@
     --mint: #d9f7e8
 }
 
+/* Saved image sets: choose only the media to send. */
+.saved-image-set {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+}
+
+.saved-image-set-trigger {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    color: var(--ink);
+    text-align: left;
+}
+
+.saved-image-set-trigger > span:first-child {
+    display: grid;
+    gap: 3px;
+}
+
+.saved-image-set-trigger small {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.saved-image-set-content {
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+    border-top: 1px solid var(--line);
+    background: #f8fbf9;
+}
+
+.select-all-images {
+    justify-self: start;
+    padding: 7px 10px;
+    border: 1px solid #a9c9b9;
+    border-radius: 8px;
+    color: #096a45;
+    background: #fff;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.select-all-images:hover:not(:disabled) {
+    border-color: #087b4f;
+    background: #ecf8f1;
+}
+
 .automations-header {
     display: flex;
     align-items: end;
@@ -7467,5 +7520,52 @@ button {
     .automation-workspace {
         height: auto;
         overflow: visible;
+    }
+}
+
+/*
+ * Inbox layout contract
+ * The platform navigation and the chat-tools rail are independent grid tracks.
+ * Keeping every state combination explicit prevents the fourth grid child from
+ * wrapping below the conversation when the platform navigation is collapsed.
+ */
+@media (min-width: 1181px) {
+    .shell:not(.pipeline-mode) {
+        grid-template-columns: 220px minmax(280px, 330px) minmax(0, 1fr) minmax(320px, 360px);
+    }
+
+    .shell:not(.pipeline-mode):has(.sidebarMain.collapsed) {
+        grid-template-columns: 72px minmax(280px, 330px) minmax(0, 1fr) minmax(320px, 360px);
+    }
+
+    .shell:not(.pipeline-mode):has(.chat-tools-panel.collapsed) {
+        grid-template-columns: 220px minmax(280px, 330px) minmax(0, 1fr) 54px;
+    }
+
+    .shell:not(.pipeline-mode):has(.sidebarMain.collapsed):has(.chat-tools-panel.collapsed) {
+        grid-template-columns: 72px minmax(280px, 330px) minmax(0, 1fr) 54px;
+    }
+
+    .shell:not(.pipeline-mode) > .sidebarMain,
+    .shell:not(.pipeline-mode) > .list,
+    .shell:not(.pipeline-mode) > .panel,
+    .shell:not(.pipeline-mode) > .chat-tools-panel {
+        min-width: 0;
+        min-height: 0;
+    }
+
+    .shell:not(.pipeline-mode) > .sidebarMain {
+        overflow: hidden;
+    }
+
+    .shell:not(.pipeline-mode) > .chat-tools-panel {
+        grid-column: 4;
+        grid-row: 1;
+        width: auto;
+        height: 100%;
+    }
+
+    .shell:not(.pipeline-mode) > .chat-tools-panel.collapsed {
+        width: 54px;
     }
 }
