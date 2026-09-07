@@ -13,8 +13,9 @@ export async function controlRequest<T>(path: string, init?: RequestInit): Promi
     ...init,
     headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers || {}) },
   });
-  const body = await response.json().catch(() => undefined);
-  if (!response.ok) throw new Error(typeof body === "string" ? body : body?.message || body?.error || "No fue posible completar la solicitud de Control.");
+  const body = (await response.json().catch(() => undefined)) as unknown;
+  const errorBody = body && typeof body === "object" ? body as { message?: string; error?: string } : undefined;
+  if (!response.ok) throw new Error(typeof body === "string" ? body : errorBody?.message || errorBody?.error || "No fue posible completar la solicitud de Control.");
   return body as T;
 }
 

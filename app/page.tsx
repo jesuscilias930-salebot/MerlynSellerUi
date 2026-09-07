@@ -20,6 +20,7 @@ import { StickersPanel } from "./components/StickersPanel";
 
 type View = "inbox" | "pipeline" | "remarketing" | "automations" | "scenarios" | "control";
 type ControlTab = "summary" | "customers" | "categories" | "inventory" | "prices" | "bundles" | "sales" | "purchases" | "reports";
+type UploadResponse = { error?: string; mediaId?: string; filename?: string };
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase =
@@ -334,7 +335,7 @@ export default function Home() {
           body: audio,
         },
       );
-      const result = await response.json().catch(() => ({}));
+      const result = (await response.json().catch(() => ({}))) as UploadResponse;
       if (!response.ok)
         throw new Error(result.error || "No fue posible enviar el audio.");
       await refreshData();
@@ -374,7 +375,7 @@ export default function Home() {
         headers: { "Content-Type": isPdf ? "application/pdf" : file.type, "X-Upload-Filename": encodeURIComponent(file.name) },
         body: file,
       });
-      const result = await response.json().catch(() => ({}));
+      const result = (await response.json().catch(() => ({}))) as UploadResponse;
       if (!response.ok) throw new Error(result.error || `No fue posible enviar el ${type === "document" ? "PDF" : type === "image" ? "archivo" : "video"}.`);
       await refreshData();
       if (type === "document") await loadDocumentOptions(target, true);
@@ -498,10 +499,12 @@ export default function Home() {
         },
         body: file,
       });
-      const result = await response.json().catch(() => ({}));
+      const result = (await response.json().catch(() => ({}))) as UploadResponse;
       if (!response.ok)
         throw new Error(result.error || "No fue posible cargar la imagen.");
-      setRemarketingImage(result);
+      if (!result.mediaId || !result.filename)
+        throw new Error("La carga no devolvió la información de la imagen.");
+      setRemarketingImage({ mediaId: result.mediaId, filename: result.filename });
     } catch (error) {
       setNotice(
         error instanceof Error
@@ -612,7 +615,7 @@ export default function Home() {
   };
   const uploadSticker = async (file: File, name: string) => {
     const response = await fetch(`${api}/settings/stickers/upload`, { method: "POST", credentials: "include", headers: { "Content-Type": "image/webp", "X-Upload-Filename": encodeURIComponent(file.name), "X-Sticker-Name": encodeURIComponent(name) }, body: file });
-    const result = await response.json().catch(() => ({})); if (!response.ok) throw new Error(result.error || "No fue posible subir el sticker.");
+    const result = (await response.json().catch(() => ({}))) as UploadResponse; if (!response.ok) throw new Error(result.error || "No fue posible subir el sticker.");
     await loadStickers();
   };
   const deleteSticker = async (sticker: SavedSticker) => { if (!window.confirm(`¿Eliminar el sticker “${sticker.name}”?`)) return; await request(`/settings/stickers/${sticker.id}`, { method: "DELETE" }); await loadStickers(); };
@@ -622,7 +625,7 @@ export default function Home() {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/pdf", "X-Upload-Filename": encodeURIComponent(file.name) }, body: file,
       });
-      const result = await response.json().catch(() => ({}));
+      const result = (await response.json().catch(() => ({}))) as UploadResponse;
       if (!response.ok) throw new Error(result.error || "No fue posible subir el PDF.");
       await loadDocumentTemplates();
       setNotice("Documento guardado. Ahora puedes editar su mensaje predeterminado.");
@@ -657,7 +660,7 @@ export default function Home() {
         headers: { "Content-Type": file.type, "X-Upload-Filename": encodeURIComponent(file.name), "X-Package-Id": packageId },
         body: file,
       });
-      const result = await response.json().catch(() => ({}));
+      const result = (await response.json().catch(() => ({}))) as UploadResponse;
       if (!response.ok) throw new Error(result.error || "No fue posible subir la imagen del paquete.");
       await loadEntrepreneurPackages();
       setNotice("Imagen agregada al conjunto.");

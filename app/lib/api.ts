@@ -7,7 +7,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
+    const body = (await response.json().catch(() => ({}))) as { error?: string };
     throw new Error(body.error || "No fue posible completar la solicitud.");
   }
   return response.status === 204 ? (undefined as T) : response.json();

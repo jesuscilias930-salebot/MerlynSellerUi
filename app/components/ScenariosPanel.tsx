@@ -106,8 +106,9 @@ function FlowBuilder({ initial, columns, reusableMedia, onSave, onDelete, onCanc
     setError("");
     try {
       const response = await fetch(`${api}/scenarios/evidence/upload`, { method: "POST", credentials: "include", headers: { "Content-Type": file.type, "X-Upload-Filename": encodeURIComponent(file.name) }, body: file });
-      const uploaded = await response.json().catch(() => ({}));
+      const uploaded = (await response.json().catch(() => ({}))) as { error?: string; mediaId?: string; filename?: string };
       if (!response.ok) throw new Error(uploaded.error || "No fue posible subir el archivo.");
+      if (!uploaded.mediaId) throw new Error("La carga no devolvió un identificador de archivo.");
       updateStep(step.id, { items: [...(step.items || []), { mediaId: uploaded.mediaId, filename: uploaded.filename, type: file.type === "application/pdf" ? "document" : "image" }] });
     } catch (reason) { setError(reason instanceof Error ? reason.message : "No fue posible subir el archivo."); }
   };
