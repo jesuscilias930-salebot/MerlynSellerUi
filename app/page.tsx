@@ -3,7 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { api, request } from "./lib/api";
-import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, QuickReply, RemarketingPreset, SavedSticker, User } from "./lib/types";
+import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, CtaUrlMessage, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, QuickReply, RemarketingPreset, SavedSticker, User } from "./lib/types";
 import { AutomationsPanel } from "./components/AutomationsPanel";
 import { DocumentTemplatesPanel } from "./components/DocumentTemplatesPanel";
 import { ConversationModal } from "./components/ConversationModal";
@@ -399,6 +399,20 @@ export default function Home() {
       await refreshData();
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar el catálogo."); } finally { setUploadingMedia(false); }
   };
+  const sendCtaUrl = async (target: Chat | null, data: CtaUrlMessage) => {
+    if (!target) throw new Error("Selecciona una conversación antes de enviar la invitación.");
+    try {
+      await request(`/conversations/${target.id}/messages/cta-url`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      await refreshData();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible enviar la invitación.";
+      setNotice(message);
+      throw new Error(message);
+    }
+  };
 
   const addColumn = async (event: FormEvent) => {
     event.preventDefault();
@@ -787,6 +801,7 @@ export default function Home() {
           }}
           onDocumentCaptionChange={setDocumentCaption}
           onSendDocument={() => sendDocument(chat)}
+          onSendCtaUrl={(data) => sendCtaUrl(chat, data)}
           onSendEntrepreneurPackages={(packageIds) => sendEntrepreneurPackages(chat, packageIds)}
           onSendSticker={(stickerId) => sendSticker(chat, stickerId)}
           onRecordAudio={(audio, filename) =>
@@ -878,6 +893,7 @@ export default function Home() {
         }}
         onDocumentCaptionChange={setDocumentCaption}
         onSendDocument={() => sendDocument(modalChat)}
+        onSendCtaUrl={(data) => sendCtaUrl(modalChat, data)}
         onSendEntrepreneurPackages={(packageIds) => sendEntrepreneurPackages(modalChat, packageIds)}
         onSendSticker={(stickerId) => sendSticker(modalChat, stickerId)}
         onRecordAudio={(audio, filename) =>

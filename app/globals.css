@@ -386,6 +386,62 @@ select:focus-visible {
     transform: translateY(-1px);
 }
 
+.cta-url-card>label {
+    display: grid;
+    gap: 5px;
+    color: #405149;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.cta-url-card input {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid #bfc6c9;
+    border-radius: 12px;
+    padding: 12px 15px;
+    background: #fff;
+    color: #4d5559;
+    font: inherit;
+    font-size: 14px;
+}
+
+.cta-url-card input:focus {
+    border-color: #59af83;
+    outline: none;
+    box-shadow: 0 0 0 3px #66bd9230;
+}
+
+.cta-url-help,
+.cta-url-notice {
+    margin: -5px 0 0;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.cta-url-notice {
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #e7f7ed;
+    color: #176f46;
+}
+
+.interactive-cta-preview {
+    display: grid;
+    gap: 8px;
+}
+
+.interactive-cta-preview span {
+    width: fit-content;
+    padding: 6px 9px;
+    border-radius: 7px;
+    background: #ffffffa8;
+    color: #086f42;
+    font-size: 12px;
+    font-weight: 800;
+}
+
 /* Automation editor: split dense controls into clear, responsive blocks. */
 .automations {
     padding: 34px clamp(20px, 5vw, 72px) 56px;
