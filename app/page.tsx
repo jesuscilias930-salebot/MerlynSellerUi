@@ -18,7 +18,7 @@ import { EntrepreneurPackagesPanel } from "./components/EntrepreneurPackagesPane
 import { QuickRepliesPanel } from "./components/QuickRepliesPanel";
 import { StickersPanel } from "./components/StickersPanel";
 
-type View = "inbox" | "pipeline" | "remarketing" | "automations" | "scenarios" | "control";
+type View = "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "scenarios" | "control";
 type ControlTab = "summary" | "customers" | "categories" | "inventory" | "prices" | "bundles" | "sales" | "purchases" | "reports";
 type UploadResponse = { error?: string; mediaId?: string; filename?: string };
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -862,7 +862,15 @@ export default function Home() {
           onSend={sendRemarketing}
         />
       ) : view === "automations" ? (
-        <div className="automation-workspace"><QuickRepliesPanel replies={quickReplies} onSave={saveQuickReply} onDelete={deleteQuickReply} /><StickersPanel stickers={stickers} onUpload={uploadSticker} onDelete={deleteSticker} /><DocumentTemplatesPanel templates={documentTemplates} onUpload={uploadDocumentTemplate} onSave={saveDocumentTemplate} onDelete={deleteDocumentTemplate} /><EntrepreneurPackagesPanel packages={entrepreneurPackages} onCreate={createEntrepreneurPackage} onUpload={uploadEntrepreneurPackage} onSave={saveEntrepreneurPackage} onDelete={deleteEntrepreneurPackage} /><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
+        <div className="automation-workspace"><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
+      ) : view === "quick-replies" ? (
+        <div className="automation-workspace"><QuickRepliesPanel replies={quickReplies} onSave={saveQuickReply} onDelete={deleteQuickReply} /></div>
+      ) : view === "stickers" ? (
+        <div className="automation-workspace"><StickersPanel stickers={stickers} onUpload={uploadSticker} onDelete={deleteSticker} /></div>
+      ) : view === "documents" ? (
+        <div className="automation-workspace"><DocumentTemplatesPanel templates={documentTemplates} onUpload={uploadDocumentTemplate} onSave={saveDocumentTemplate} onDelete={deleteDocumentTemplate} /></div>
+      ) : view === "collections" ? (
+        <div className="automation-workspace"><EntrepreneurPackagesPanel packages={entrepreneurPackages} onCreate={createEntrepreneurPackage} onUpload={uploadEntrepreneurPackage} onSave={saveEntrepreneurPackage} onDelete={deleteEntrepreneurPackage} /></div>
       ) : view === "scenarios" ? (
         <ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} />
       ) : view === "control" ? (

@@ -7569,3 +7569,12 @@ button {
         width: 54px;
     }
 }
+
+@media (min-width: 581px) {
+    .sidebarMain nav {
+        min-height: 0;
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding-bottom: 8px;
+    }
+}

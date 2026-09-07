@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { User } from "../lib/types";
 
-type View = "inbox" | "pipeline" | "remarketing" | "automations" | "scenarios" | "control";
+type View = "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "scenarios" | "control";
 type ControlTab = "summary" | "customers" | "categories" | "inventory" | "prices" | "bundles" | "sales" | "purchases" | "reports";
 type Props = {
   user: User;
@@ -53,7 +53,35 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
           className={view === "automations" ? "selected" : ""}
           onClick={switchView("automations")}
         >
-          <span aria-hidden="true">⚙</span><span className="sidebar-label">Automatizaciones</span>
+          <span aria-hidden="true">⚙</span><span className="sidebar-label">Respuestas automáticas</span>
+        </button>
+        <button
+          type="button"
+          className={view === "quick-replies" ? "selected" : ""}
+          onClick={switchView("quick-replies")}
+        >
+          <span aria-hidden="true">↯</span><span className="sidebar-label">Respuestas rápidas</span>
+        </button>
+        <button
+          type="button"
+          className={view === "stickers" ? "selected" : ""}
+          onClick={switchView("stickers")}
+        >
+          <span aria-hidden="true">☺</span><span className="sidebar-label">Stickers</span>
+        </button>
+        <button
+          type="button"
+          className={view === "documents" ? "selected" : ""}
+          onClick={switchView("documents")}
+        >
+          <span aria-hidden="true">▤</span><span className="sidebar-label">Plantillas de documentos</span>
+        </button>
+        <button
+          type="button"
+          className={view === "collections" ? "selected" : ""}
+          onClick={switchView("collections")}
+        >
+          <span aria-hidden="true">▦</span><span className="sidebar-label">Conjuntos reutilizables</span>
         </button>
         <button
           type="button"
@@ -69,9 +97,9 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
         >
           <span aria-hidden="true">◌</span><span className="sidebar-label">Control de ventas</span>
         </button>
-        <div className="control-aside-menu" aria-label="Opciones de control de ventas">
+        {view === "control" && <div className="control-aside-menu" aria-label="Opciones de control de ventas">
           {([['summary', 'Resumen'], ['customers', 'Clientes'], ['categories', 'Categorías'], ['inventory', 'Inventario'], ['prices', 'Precios'], ['bundles', 'Bundles'], ['sales', 'Ventas'], ['purchases', 'Compras'], ['reports', 'Reportes']] as [ControlTab, string][]).map(([tab, label]) => <button key={tab} type="button" className={controlTab === tab ? "selected" : ""} onClick={() => onControlTabChange(tab)}><span className="sidebar-label">{label}</span></button>)}
-        </div>
+        </div>}
       </nav>
       <div className="profile">
         <b>{user.email[0].toUpperCase()}</b>
