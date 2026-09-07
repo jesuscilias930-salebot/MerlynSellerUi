@@ -613,6 +613,169 @@ select:focus-visible {
     }
 }
 
+/* Collapsible platform navigation. */
+.shell,
+.shell.pipeline-mode {
+    transition: grid-template-columns .22s ease;
+}
+
+.shell:has(.sidebarMain.collapsed) {
+    grid-template-columns: 72px 355px minmax(0, 1fr);
+}
+
+.shell.pipeline-mode:has(.sidebarMain.collapsed) {
+    grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.sidebarMain {
+    min-width: 0;
+    transition: padding .22s ease;
+}
+
+.sidebarMain .brand {
+    position: relative;
+    min-height: 38px;
+}
+
+.sidebar-collapse-toggle {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    margin-left: auto;
+    border: 1px solid #ffffff2e;
+    border-radius: 8px;
+    background: #ffffff12;
+    color: #ddf4e7;
+    font-size: 21px;
+    line-height: 1;
+}
+
+.sidebar-collapse-toggle:hover {
+    background: #ffffff24;
+    color: #fff;
+}
+
+.sidebarMain nav button {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.sidebarMain nav button>span:first-child {
+    display: inline-grid;
+    width: 17px;
+    place-items: center;
+    flex: 0 0 17px;
+    font-size: 15px;
+}
+
+.sidebar-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: opacity .12s ease;
+}
+
+.sidebarMain.collapsed {
+    align-items: center;
+    padding-right: 10px;
+    padding-left: 10px;
+}
+
+.sidebarMain.collapsed .brand {
+    width: 100%;
+    justify-content: center;
+}
+
+.sidebarMain.collapsed .brand .mark {
+    width: 36px;
+    height: 36px;
+}
+
+.sidebarMain.collapsed .sidebar-label,
+.sidebarMain.collapsed .control-aside-menu {
+    display: none;
+}
+
+.sidebarMain.collapsed .sidebar-collapse-toggle {
+    position: absolute;
+    right: -3px;
+    bottom: -24px;
+    z-index: 2;
+    width: 24px;
+    height: 24px;
+    background: #145540;
+}
+
+.sidebarMain.collapsed nav {
+    width: 100%;
+    margin-top: 42px;
+}
+
+.sidebarMain.collapsed nav button {
+    justify-content: center;
+    padding: 12px 6px;
+}
+
+.sidebarMain.collapsed .profile {
+    justify-content: center;
+    width: 100%;
+    padding-right: 0;
+    padding-left: 0;
+}
+
+.sidebarMain.collapsed .profile button {
+    position: absolute;
+    bottom: 11px;
+    left: 23px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.sidebarMain.collapsed .profile:hover button,
+.sidebarMain.collapsed .profile:focus-within button {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+@media (max-width: 1180px) {
+    .shell:has(.sidebarMain.collapsed) {
+        grid-template-columns: 72px minmax(260px, 300px) minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 580px) {
+    .shell:has(.sidebarMain.collapsed),
+    .shell.pipeline-mode:has(.sidebarMain.collapsed) {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebarMain.collapsed {
+        align-items: center;
+        padding: 7px 8px;
+    }
+
+    .sidebarMain.collapsed .brand,
+    .sidebarMain.collapsed .sidebar-collapse-toggle {
+        display: none;
+    }
+
+    .sidebarMain.collapsed nav {
+        margin: 0;
+    }
+
+    .sidebarMain.collapsed nav button {
+        width: auto;
+        padding: 9px 10px;
+    }
+
+    .sidebarMain.collapsed .sidebar-label {
+        display: inline;
+    }
+}
+
 /* Pipeline ordering and reusable entrepreneur-package picker. */
 .column-title {
     display: flex;
