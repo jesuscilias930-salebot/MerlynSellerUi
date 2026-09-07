@@ -63,78 +63,30 @@ function AutomationEditor({ initial, onSave, onDelete, onCancel }: EditorProps) 
         <div><strong>{initial ? initial.name : "Nueva automatización"}</strong><small>{initial ? initial.key : "Crea una respuesta o acción automática"}</small></div>
         <div className="collapsible-actions"><button className="collapse-toggle" type="button" onClick={() => setExpanded((current) => !current)} aria-expanded={expanded}>{expanded ? "⌃ Ocultar" : "⌄ Editar"}</button>{onCancel && <button className="plain-button" type="button" onClick={onCancel}>Cancelar</button>}</div>
       </div>
-      {expanded && <>
-      <div className="automation-grid">
-        <input
-          value={value.name}
-          onChange={(event) => setValue({ ...value, name: event.target.value })}
-          placeholder="Nombre"
-          required
-        />
-        <input
-          value={value.key}
-          onChange={(event) =>
-            setValue({
-              ...value,
-              key: event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"),
-            })
-          }
-          placeholder="clave_interna"
-          required
-        />
-        <select
-          value={value.action}
-          onChange={(event) =>
-            setValue({
-              ...value,
-              action: event.target.value as AutomationIntent["action"],
-            })
-          }
-        >
-          <option value="text">Responder texto</option>
-          <option value="send_catalog">Enviar catálogo</option>
-          <option value="send_shipping_info">Costo de envío + catálogo si falta</option>
-        </select>
-        <label className="automation-active">
-          <input
-            type="checkbox"
-            checked={value.isActive}
-            onChange={(event) =>
-              setValue({ ...value, isActive: event.target.checked })
-            }
-          />{" "}
-          Activa
-        </label>
-        <label className="automation-priority">
-          Prioridad
-          <input
-            type="number"
-            min="0"
-            max="1000"
-            value={value.priority}
-            onChange={(event) => setValue({ ...value, priority: Number(event.target.value) || 0 })}
-          />
-        </label>
-      </div>
+      {expanded && <div className="automation-editor-body">
+      <section className="automation-form-section">
+        <div className="automation-section-heading"><span>1</span><div><strong>Identificación</strong><small>Un nombre visible y una clave técnica única.</small></div></div>
+        <div className="automation-grid automation-grid-identity">
+          <label>Nombre de la automatización<input value={value.name} onChange={(event) => setValue({ ...value, name: event.target.value })} placeholder="Ej. Enviar catálogo" required /></label>
+          <label>Clave interna<input value={value.key} onChange={(event) => setValue({ ...value, key: event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_") })} placeholder="enviar_catalogo" required /></label>
+        </div>
+      </section>
 
-      {value.action !== "send_catalog" && (
-        <textarea
-          value={value.responseBody || ""}
-          onChange={(event) =>
-            setValue({ ...value, responseBody: event.target.value })
-          }
-          placeholder={value.action === "send_shipping_info" ? "Mensaje para solicitar mercancía, código postal, calle y colonia" : "Respuesta aprobada que recibirá el cliente"}
-          required
-        />
-      )}
+      <section className="automation-form-section">
+        <div className="automation-section-heading"><span>2</span><div><strong>Comportamiento</strong><small>Define qué acción realizará el bot.</small></div></div>
+        <div className="automation-grid automation-grid-behavior">
+          <label className="automation-field">Acción<select value={value.action} onChange={(event) => setValue({ ...value, action: event.target.value as AutomationIntent["action"] })}><option value="text">Responder texto</option><option value="send_catalog">Enviar catálogo</option><option value="send_shipping_info">Costo de envío + catálogo si falta</option></select></label>
+          <label className="automation-priority">Prioridad<input type="number" min="0" max="1000" value={value.priority} onChange={(event) => setValue({ ...value, priority: Number(event.target.value) || 0 })} /></label>
+          <label className="automation-active"><input type="checkbox" checked={value.isActive} onChange={(event) => setValue({ ...value, isActive: event.target.checked })} /><span><b>Automatización activa</b><small>Puede responder mensajes nuevos.</small></span></label>
+        </div>
+        {value.action !== "send_catalog" && <label className="automation-field automation-response-field">Respuesta que recibirá el cliente<textarea value={value.responseBody || ""} onChange={(event) => setValue({ ...value, responseBody: event.target.value })} placeholder={value.action === "send_shipping_info" ? "Mensaje para solicitar mercancía, código postal, calle y colonia" : "Respuesta aprobada que recibirá el cliente"} required /></label>}
+      </section>
 
-      <textarea
-        value={examplesText}
-        onChange={(event) => setExamplesText(event.target.value)}
-        placeholder="Una forma de pedirlo por línea. Incluye errores comunes y variantes."
-        required
-      />
-      <small className="automation-routing-help">Las consultas de envío tienen prioridad por seguridad. Para otras coincidencias, un número mayor gana. No agregues frases de envío ni de precios a “Enviar catálogo”.</small>
+      <section className="automation-form-section automation-training-section">
+        <div className="automation-section-heading"><span>3</span><div><strong>Frases que reconoce</strong><small>Agrega una variante por línea, incluyendo errores comunes.</small></div></div>
+        <textarea value={examplesText} onChange={(event) => setExamplesText(event.target.value)} placeholder="Quiero el catálogo\nMándame información\n¿Qué productos tienes?" required />
+        <small className="automation-routing-help">Las consultas de envío tienen prioridad por seguridad. Para otras coincidencias, un número mayor gana. No agregues frases de envío ni de precios a “Enviar catálogo”.</small>
+      </section>
 
       <div className="automation-actions">
         <button type="submit" disabled={saving}>
@@ -151,7 +103,7 @@ function AutomationEditor({ initial, onSave, onDelete, onCancel }: EditorProps) 
           </button>
         )}
       </div>
-      </>}
+      </div>}
     </form>
   );
 }

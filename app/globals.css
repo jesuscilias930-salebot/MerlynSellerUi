@@ -386,6 +386,233 @@ select:focus-visible {
     transform: translateY(-1px);
 }
 
+/* Automation editor: split dense controls into clear, responsive blocks. */
+.automations {
+    padding: 34px clamp(20px, 5vw, 72px) 56px;
+    background: linear-gradient(145deg, #f7faf8 0%, #eef5f1 100%);
+}
+
+.automations-header {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 4px 0 21px;
+    border-bottom: 1px solid #dce7e0;
+}
+
+.automation-list {
+    max-width: 980px;
+    margin: 22px auto 0;
+    gap: 16px;
+}
+
+.automation-editor {
+    gap: 0;
+    overflow: hidden;
+    padding: 0;
+    border-color: #d7e3dc;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px #123c290c;
+}
+
+.automation-card-header {
+    align-items: center;
+    padding: 17px 20px;
+    background: #fff;
+}
+
+.automation-card-header>div:first-child {
+    min-width: 0;
+}
+
+.automation-card-header strong {
+    color: var(--deep);
+    font-size: 15px;
+}
+
+.automation-card-header small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.automation-editor-body {
+    display: grid;
+    gap: 16px;
+    padding: 18px 20px 20px;
+    border-top: 1px solid #edf2ef;
+    background: #fbfdfc;
+}
+
+.automation-form-section {
+    display: grid;
+    gap: 12px;
+    padding: 15px;
+    border: 1px solid #e0e9e4;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.automation-section-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+}
+
+.automation-section-heading>span {
+    display: grid;
+    place-items: center;
+    width: 23px;
+    height: 23px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: #e1f4e9;
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.automation-section-heading div {
+    display: grid;
+    gap: 2px;
+}
+
+.automation-section-heading strong {
+    color: var(--deep);
+    font-size: 13px;
+}
+
+.automation-section-heading small {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.automation-grid {
+    gap: 12px;
+}
+
+.automation-grid-identity {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+}
+
+.automation-grid-behavior {
+    grid-template-columns: minmax(0, 1fr) 105px minmax(190px, .9fr);
+    align-items: end;
+}
+
+.automation-grid label,
+.automation-field {
+    display: grid;
+    gap: 6px;
+    color: #405149;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.automation-editor input,
+.automation-editor select,
+.automation-editor textarea {
+    border-color: #d2ded7;
+    border-radius: 9px;
+    background: #fff;
+    color: var(--ink);
+    padding: 10px 11px;
+}
+
+.automation-editor input:focus,
+.automation-editor select:focus,
+.automation-editor textarea:focus {
+    border-color: #65b68a;
+    outline: none;
+    box-shadow: 0 0 0 3px #5fbe9030;
+}
+
+.automation-priority input {
+    min-width: 0;
+    height: 40px;
+}
+
+.automation-active {
+    min-height: 40px;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    padding: 7px 10px;
+    border: 1px solid #d8e5dd;
+    border-radius: 9px;
+    background: #f7fbf8;
+}
+
+.automation-active input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--green);
+}
+
+.automation-active span {
+    display: grid;
+    gap: 1px;
+}
+
+.automation-active b {
+    color: var(--deep);
+    font-size: 12px;
+}
+
+.automation-active small {
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.25;
+}
+
+.automation-response-field textarea,
+.automation-training-section textarea {
+    min-height: 88px;
+}
+
+.automation-routing-help {
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: #f1f7f3;
+    color: #5d7066;
+}
+
+.automation-actions {
+    padding-top: 2px;
+}
+
+.automation-actions button {
+    min-width: 105px;
+    border-radius: 9px;
+    padding: 10px 14px;
+    font-weight: 800;
+}
+
+@media (max-width: 720px) {
+    .automations {
+        padding: 22px 14px 40px;
+    }
+
+    .automations-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .automation-grid-identity,
+    .automation-grid-behavior {
+        grid-template-columns: 1fr;
+    }
+
+    .automation-card-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .collapsible-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
 /* Pipeline ordering and reusable entrepreneur-package picker. */
 .column-title {
     display: flex;
