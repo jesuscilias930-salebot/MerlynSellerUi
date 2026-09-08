@@ -56,6 +56,7 @@ type Props = {
   onLearnIntent: (messageId: string, intentId: string) => Promise<void>;
   onReact: (messageId: string, emoji: string) => Promise<void>;
   onMoveLead: (columnId: string) => Promise<void>;
+  onOpenShipping: () => void;
   onDeleteConversation: () => void;
 };
 
@@ -101,6 +102,7 @@ export function Inbox({
   onLearnIntent,
   onReact,
   onMoveLead,
+  onOpenShipping,
   onDeleteConversation,
 }: Props) {
   return (
@@ -204,6 +206,7 @@ export function Inbox({
         onReact={onReact}
         columns={columns}
         onMoveLead={onMoveLead}
+        onOpenShipping={onOpenShipping}
         onDeleteConversation={onDeleteConversation}
       />
     </>

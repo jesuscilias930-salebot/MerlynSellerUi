@@ -907,6 +907,7 @@ export default function Home() {
           onLearnIntent={(messageId, intentId) => learnIntent(chat, messageId, intentId)}
           onReact={(messageId, emoji) => reactToMessage(chat, messageId, emoji)}
           onMoveLead={(columnId) => moveLeadToColumn(chat, columnId)}
+          onOpenShipping={() => setView("shipping")}
           onDeleteConversation={() => deleteConversation(chat)}
         />
       ) : view === "pipeline" ? (
@@ -1018,6 +1019,7 @@ export default function Home() {
         onReact={(messageId, emoji) => reactToMessage(modalChat, messageId, emoji)}
         columns={pipeline}
         onMoveLead={(columnId) => moveLeadToColumn(modalChat, columnId)}
+        onOpenShipping={() => { setModalChat(null); setView("shipping"); }}
         onDeleteConversation={() => deleteConversation(modalChat)}
         onClose={() => {
           setModalChat(null);

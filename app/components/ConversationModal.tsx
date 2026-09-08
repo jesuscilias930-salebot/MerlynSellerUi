@@ -17,6 +17,7 @@ type Props = {
   onAutoReplyChange: (enabled: boolean) => void; onScenarioChange: (enabled: boolean) => void;
   automationIntents: AutomationIntent[]; onLearnIntent: (messageId: string, intentId: string) => Promise<void>;
   onReact: (messageId: string, emoji: string) => Promise<void>; onMoveLead: (columnId: string) => Promise<void>;
+  onOpenShipping: () => void;
   onDeleteConversation: () => void; onClose: () => void;
 };
 
