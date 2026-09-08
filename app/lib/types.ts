@@ -29,6 +29,7 @@ export type Message = {
   replyToBody?: string | null;
   replyToType?: string | null;
   replyToDirection?: "inbound" | "outbound" | null;
+  reactions?: { emoji: string; actorDirection: "inbound" | "outbound" }[];
 };
 
 export type CtaUrlMessage = {

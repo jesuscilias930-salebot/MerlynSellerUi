@@ -53,6 +53,7 @@ type Props = {
   onScenarioChange: (enabled: boolean) => void;
   automationIntents: AutomationIntent[];
   onLearnIntent: (messageId: string, intentId: string) => Promise<void>;
+  onReact: (messageId: string, emoji: string) => Promise<void>;
   onDeleteConversation: () => void;
 };
 
@@ -95,6 +96,7 @@ export function Inbox({
   onScenarioChange,
   automationIntents,
   onLearnIntent,
+  onReact,
   onDeleteConversation,
 }: Props) {
   return (
@@ -194,6 +196,7 @@ export function Inbox({
         onScenarioChange={onScenarioChange}
         automationIntents={automationIntents}
         onLearnIntent={onLearnIntent}
+        onReact={onReact}
         onDeleteConversation={onDeleteConversation}
       />
     </>

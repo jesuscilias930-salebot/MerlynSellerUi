@@ -770,6 +770,17 @@ export default function Home() {
       setNotice(`Ejemplo guardado para “${result.intentName}”.`);
     } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudo guardar el ejemplo."); }
   };
+  const reactToMessage = async (target: Chat | null, messageId: string, emoji: string) => {
+    if (!target) return;
+    try {
+      await request(`/conversations/${target.id}/messages/${messageId}/reaction`, { method: "POST", body: JSON.stringify({ emoji }) });
+      await refreshData();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible enviar la reacción.";
+      setNotice(message);
+      throw error;
+    }
+  };
   const logout = async () => {
     await request("/auth/session", { method: "DELETE" });
     setUser(null);
@@ -850,6 +861,7 @@ export default function Home() {
           onScenarioChange={(enabled) => setScenarioEnabled(chat, enabled)}
           automationIntents={automationIntents}
           onLearnIntent={(messageId, intentId) => learnIntent(chat, messageId, intentId)}
+          onReact={(messageId, emoji) => reactToMessage(chat, messageId, emoji)}
           onDeleteConversation={() => deleteConversation(chat)}
         />
       ) : view === "pipeline" ? (
@@ -954,6 +966,7 @@ export default function Home() {
         onScenarioChange={(enabled) => setScenarioEnabled(modalChat, enabled)}
         automationIntents={automationIntents}
         onLearnIntent={(messageId, intentId) => learnIntent(modalChat, messageId, intentId)}
+        onReact={(messageId, emoji) => reactToMessage(modalChat, messageId, emoji)}
         onDeleteConversation={() => deleteConversation(modalChat)}
         onClose={() => {
           setModalChat(null);

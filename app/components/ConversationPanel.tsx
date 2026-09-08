@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { initials } from "../lib/format";
 import type { AutomationIntent, Chat, CtaUrlMessage, DocumentOption, EntrepreneurPackage, Message, QuickReply, SavedSticker } from "../lib/types";
@@ -25,10 +25,13 @@ type Props = {
   onSendSticker: (id: string) => Promise<void>; onRecordAudio: (audio: Blob, filename: string) => Promise<void>;
   onAutoReplyChange: (enabled: boolean) => void; onScenarioChange: (enabled: boolean) => void;
   automationIntents: AutomationIntent[]; onLearnIntent: (messageId: string, intentId: string) => Promise<void>;
+  onReact: (messageId: string, emoji: string) => Promise<void>;
   onDeleteConversation: () => void; onClose?: () => void;
 };
 
 type ToolTab = "share" | "sale";
+const reactionEmojis = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+const composerEmojis = ["😀", "😊", "😍", "😂", "😉", "👍", "❤️", "🔥", "✨", "🙏", "🎉", "📦"];
 
 function IntentLearner({ message, intents, onLearn }: { message: Message; intents: AutomationIntent[]; onLearn: (messageId: string, intentId: string) => Promise<void> }) {
   const [intentId, setIntentId] = useState("");
@@ -40,7 +43,7 @@ function IntentLearner({ message, intents, onLearn }: { message: Message; intent
 }
 
 export function ConversationPanel(props: Props) {
-  const { chat, messages, draft, uploadingAudio, uploadingMedia, documentOptions, selectedDocumentId, documentCaption, onDraftChange, onSendText, replyToMessage, onReplyToChange, onUploadAudio, onUploadImage, onUploadVideo, onUploadDocument, onDocumentChange, onDocumentCaptionChange, onSendDocument, onSendCtaUrl, entrepreneurPackages, quickReplies, stickers, onSendEntrepreneurPackages, onSendSticker, onRecordAudio, onAutoReplyChange, onScenarioChange, automationIntents, onLearnIntent, onDeleteConversation, onClose } = props;
+  const { chat, messages, draft, uploadingAudio, uploadingMedia, documentOptions, selectedDocumentId, documentCaption, onDraftChange, onSendText, replyToMessage, onReplyToChange, onUploadAudio, onUploadImage, onUploadVideo, onUploadDocument, onDocumentChange, onDocumentCaptionChange, onSendDocument, onSendCtaUrl, entrepreneurPackages, quickReplies, stickers, onSendEntrepreneurPackages, onSendSticker, onRecordAudio, onAutoReplyChange, onScenarioChange, automationIntents, onLearnIntent, onReact, onDeleteConversation, onClose } = props;
   const threadRef = useRef<HTMLDivElement>(null);
   const scrolled = useRef<string | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -54,6 +57,7 @@ export function ConversationPanel(props: Props) {
   const [openImageSets, setOpenImageSets] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState("");
+  const [reactingMessageId, setReactingMessageId] = useState<string | null>(null);
 
   const quickRepliesMatch = draft.trim().startsWith("/") ? quickReplies.filter(reply => reply.shortcut.includes(draft.trim().toLowerCase()) || reply.name.toLowerCase().includes(draft.trim().slice(1).toLowerCase())).slice(0, 6) : [];
   const bundles = useMemo(() => entrepreneurPackages.filter(item => item.controlBundleId != null).reduce<Record<string, EntrepreneurPackage[]>>((all, item) => { const key = item.bundleType || "Sin categoría"; all[key] = [...(all[key] || []), item]; return all; }, {}), [entrepreneurPackages]);
@@ -68,18 +72,32 @@ export function ConversationPanel(props: Props) {
   const selectAllImages = (items: EntrepreneurPackage["images"]) => setSelectedImageIds(current => [...new Set([...current, ...items.map(image => image.id)])]);
   const sendSelectedImages = async () => { if (!selectedImageIds.length) return; setSending(true); setNotice(""); try { await onSendEntrepreneurPackages({ imageIds: selectedImageIds }); setSelectedImageIds([]); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar las imágenes."); } finally { setSending(false); } };
   const sendPackages = async () => { if (!selectedBundleIds.length) return; setSending(true); setNotice(""); try { await onSendEntrepreneurPackages({ packageIds: selectedBundleIds }); setSelectedBundleIds([]); setBundlePickerOpen(false); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar los paquetes."); } finally { setSending(false); } };
+  const react = async (message: Message, emoji: string) => {
+    const existing = message.reactions?.find((reaction) => reaction.actorDirection === "outbound");
+    setReactingMessageId(message.id);
+    try { await onReact(message.id, existing?.emoji === emoji ? "" : emoji); }
+    catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar la reacción."); }
+    finally { setReactingMessageId(null); }
+  };
+  const insertEmoji = (emoji: string) => {
+    onDraftChange(`${draft}${emoji}`);
+    setToolsOpen(false);
+  };
   const mediaUrl = (message: Message) => `${api}/conversations/${chat?.id}/messages/${message.id}/media`;
   const content = (message: Message) => {
-    if (message.type === "audio" && message.media_id) return <audio controls src={mediaUrl(message)} />;
-    if (message.type === "sticker" && message.media_id) return <img className="sticker" src={mediaUrl(message)} alt="Sticker" />;
-    if (message.type === "image" && message.media_id) return <img className="chat-image" src={mediaUrl(message)} alt="Imagen" />;
-    if (message.type === "video" && message.media_id) return <video className="chat-video" controls src={mediaUrl(message)} />;
-    if (message.type === "document" && message.media_id) return <a className="document-card" href={mediaUrl(message)} target="_blank" rel="noreferrer"><b className="document-icon">PDF</b><span><strong>{message.filename || "Documento adjunto"}</strong><small>Abrir documento</small></span></a>;
-    if (message.type === "interactive") { try { const interactive = JSON.parse(message.body || "{}") as CtaUrlMessage; return <div className="interactive-cta-preview"><p>{interactive.body || "Mensaje interactivo"}</p><span>{interactive.buttonText || "Abrir enlace"} ↗</span></div>; } catch { return <p>[Mensaje interactivo]</p>; } }
-    if (message.type === "template") { try { const template = JSON.parse(message.body || "{}") as { templateName?: string; components?: { parameters?: { text?: string }[] }[] }; return <div className="interactive-cta-preview"><p>Plantilla: {template.templateName || "WhatsApp"}</p><span>{template.components?.flatMap(component => component.parameters || []).map(parameter => parameter.text).filter(Boolean).join(" · ") || "Enviada mediante plantilla oficial"}</span></div>; } catch { return <p>[Plantilla oficial]</p>; } }
-    return <p>{message.body || `[${message.type}]`}</p>;
+    let body: ReactNode;
+    if (message.type === "audio" && message.media_id) body = <audio controls src={mediaUrl(message)} />;
+    else if (message.type === "sticker" && message.media_id) body = <img className="sticker" src={mediaUrl(message)} alt="Sticker" />;
+    else if (message.type === "image" && message.media_id) body = <img className="chat-image" src={mediaUrl(message)} alt="Imagen" />;
+    else if (message.type === "video" && message.media_id) body = <video className="chat-video" controls src={mediaUrl(message)} />;
+    else if (message.type === "document" && message.media_id) body = <a className="document-card" href={mediaUrl(message)} target="_blank" rel="noreferrer"><b className="document-icon">PDF</b><span><strong>{message.filename || "Documento adjunto"}</strong><small>Abrir documento</small></span></a>;
+    else if (message.type === "interactive") { try { const interactive = JSON.parse(message.body || "{}") as CtaUrlMessage; body = <div className="interactive-cta-preview"><p>{interactive.body || "Mensaje interactivo"}</p><span>{interactive.buttonText || "Abrir enlace"} ↗</span></div>; } catch { body = <p>[Mensaje interactivo]</p>; } }
+    else if (message.type === "template") { try { const template = JSON.parse(message.body || "{}") as { templateName?: string; components?: { parameters?: { text?: string }[] }[] }; body = <div className="interactive-cta-preview"><p>Plantilla: {template.templateName || "WhatsApp"}</p><span>{template.components?.flatMap(component => component.parameters || []).map(parameter => parameter.text).filter(Boolean).join(" · ") || "Enviada mediante plantilla oficial"}</span></div>; } catch { body = <p>[Plantilla oficial]</p>; } }
+    else body = <p>{message.body || `[${message.type}]`}</p>;
+    const ownReaction = message.reactions?.find((reaction) => reaction.actorDirection === "outbound");
+    return <>{body}{message.reactions?.length ? <div className="message-reactions">{message.reactions.map((reaction) => <span key={`${reaction.actorDirection}-${reaction.emoji}`} title={reaction.actorDirection === "inbound" ? "Reacción del cliente" : "Tu reacción"}>{reaction.emoji}</span>)}</div> : null}{message.direction === "inbound" && <div className="message-reaction-picker" aria-label="Reaccionar al mensaje">{reactionEmojis.map((emoji) => <button key={emoji} type="button" className={ownReaction?.emoji === emoji ? "selected" : ""} disabled={reactingMessageId === message.id} onClick={() => void react(message, emoji)} aria-label={`Reaccionar con ${emoji}`}>{emoji}</button>)}</div>}</>;
   };
-  const fileTools = <div className="tool-file-cards"><label><b>PDF</b><small>Documento</small><input type="file" accept="application/pdf,.pdf" onChange={onUploadDocument} disabled={!chat || uploadingMedia} /></label><label><b>▧</b><small>Imagen</small><input type="file" accept="image/jpeg,image/png,image/webp" onChange={onUploadImage} disabled={!chat || uploadingMedia} /></label><label><b>▶</b><small>Video</small><input type="file" accept="video/mp4,video/3gpp" onChange={onUploadVideo} disabled={!chat || uploadingMedia} /></label></div>;
+  const fileTools = <><div className="composer-emoji-picker" aria-label="Insertar emoji">{composerEmojis.map((emoji) => <button key={emoji} type="button" onClick={() => insertEmoji(emoji)} aria-label={`Insertar ${emoji}`}>{emoji}</button>)}</div><div className="tool-file-cards"><label><b>PDF</b><small>Documento</small><input type="file" accept="application/pdf,.pdf" onChange={onUploadDocument} disabled={!chat || uploadingMedia} /></label><label><b>▧</b><small>Imagen</small><input type="file" accept="image/jpeg,image/png,image/webp" onChange={onUploadImage} disabled={!chat || uploadingMedia} /></label><label><b>▶</b><small>Video</small><input type="file" accept="video/mp4,video/3gpp" onChange={onUploadVideo} disabled={!chat || uploadingMedia} /></label></div></>;
 
   const shareTools = <>
     <ToolAccordion defaultOpen icon="▤" title="Catálogo" description="Comparte un catálogo con un mensaje personalizado."><select value={selectedDocumentId} onChange={event => onDocumentChange(event.target.value)}><option value="">Selecciona un catálogo</option>{documentOptions.map(document => <option key={document.mediaId} value={document.mediaId}>{document.filename}</option>)}</select><textarea value={documentCaption} onChange={event => onDocumentCaptionChange(event.target.value)} placeholder="Mensaje que acompaña el catálogo" disabled={!selectedDocumentId} /><button className="tool-primary-button" type="button" disabled={!chat || !selectedDocumentId || uploadingMedia} onClick={onSendDocument}>Enviar catálogo</button></ToolAccordion>
