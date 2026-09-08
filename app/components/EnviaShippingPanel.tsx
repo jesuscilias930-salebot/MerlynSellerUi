@@ -14,6 +14,9 @@ const emptyAddress = (): Address => ({ name: "", phone: "", street: "", city: ""
 const emptyParcel = (): Parcel => ({ type: "box", content: "Productos", amount: "1", declaredValue: "0", weight: "1", length: "20", width: "20", height: "20" });
 const asParcel = (value?: StoredPackage): Parcel => ({ ...emptyParcel(), type: value?.type || "box", content: value?.content || "Productos", amount: String(value?.amount ?? "1"), declaredValue: String(value?.declaredValue ?? "0"), weight: String(value?.weight ?? "1"), length: String(value?.dimensions?.length ?? "20"), width: String(value?.dimensions?.width ?? "20"), height: String(value?.dimensions?.height ?? "20") });
 const asAddress = (value?: Partial<Address>): Address => ({ ...emptyAddress(), ...value });
+const mexicoStates = [
+  ["AG", "Aguascalientes"], ["BC", "Baja California"], ["BS", "Baja California Sur"], ["CM", "Campeche"], ["CS", "Chiapas"], ["CH", "Chihuahua"], ["CX", "Ciudad de México"], ["CL", "Coahuila"], ["CO", "Colima"], ["DG", "Durango"], ["GT", "Guanajuato"], ["GR", "Guerrero"], ["HG", "Hidalgo"], ["JC", "Jalisco"], ["ME", "Estado de México"], ["MI", "Michoacán"], ["MO", "Morelos"], ["NA", "Nayarit"], ["NL", "Nuevo León"], ["OA", "Oaxaca"], ["PU", "Puebla"], ["QT", "Querétaro"], ["QR", "Quintana Roo"], ["SL", "San Luis Potosí"], ["SI", "Sinaloa"], ["SO", "Sonora"], ["TB", "Tabasco"], ["TL", "Tlaxcala"], ["VE", "Veracruz"], ["YU", "Yucatán"], ["ZA", "Zacatecas"],
+] as const;
 
 export function EnviaShippingPanel() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -63,7 +66,9 @@ export function EnviaShippingPanel() {
   };
 
   const addressFields = (target: "origin" | "destination", value: Address) => <div className="envia-address-fields">
-    {([['name', 'Nombre completo'], ['email', 'Correo'], ['phone', 'Teléfono'], ['street', 'Calle'], ['number', 'Número'], ['postalCode', 'Código postal'], ['district', 'Colonia'], ['city', 'Ciudad'], ['state', 'Estado'], ['country', 'País']] as [keyof Address, string][]).map(([field, label]) => <label key={field} className={field === "street" ? "envia-field-wide" : ""}>{label}<input value={value[field] || ""} maxLength={field === "country" ? 2 : undefined} placeholder={field === "country" ? "MX" : label} onChange={event => setAddressField(target, field, field === "country" ? event.target.value.toUpperCase() : event.target.value)} required={!['district', 'email', 'number'].includes(field)} /></label>)}
+    {([['name', 'Nombre completo'], ['email', 'Correo'], ['phone', 'Teléfono'], ['street', 'Calle'], ['number', 'Número'], ['postalCode', 'Código postal'], ['district', 'Colonia'], ['city', 'Ciudad'], ['state', 'Estado'], ['country', 'País']] as [keyof Address, string][]).map(([field, label]) => <label key={field} className={field === "street" ? "envia-field-wide" : ""}>{label}
+      {field === "state" && value.country === "MX" ? <select value={value.state || ""} onChange={event => setAddressField(target, field, event.target.value)} required><option value="">Selecciona tu estado</option>{mexicoStates.map(([code, name]) => <option value={code} key={code}>{name} ({code})</option>)}</select> : <input value={value[field] || ""} maxLength={field === "country" ? 2 : undefined} placeholder={field === "country" ? "MX" : label} onChange={event => setAddressField(target, field, field === "country" ? event.target.value.toUpperCase() : event.target.value)} required={!['district', 'email', 'number'].includes(field)} />}
+    </label>)}
   </div>;
   const orderedRates = useMemo(() => [...rates].sort((a, b) => {
     if (rateFilter === "cheapest") return Number(a.totalPrice || Number.MAX_SAFE_INTEGER) - Number(b.totalPrice || Number.MAX_SAFE_INTEGER);
