@@ -19,8 +19,9 @@ import { QuickRepliesPanel } from "./components/QuickRepliesPanel";
 import { StickersPanel } from "./components/StickersPanel";
 import { CtaUrlTemplatesPanel } from "./components/CtaUrlTemplatesPanel";
 import { WhatsAppTemplatesPanel } from "./components/WhatsAppTemplatesPanel";
+import { EnviaShippingPanel } from "./components/EnviaShippingPanel";
 
-type View = "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "control";
+type View = "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control";
 type ControlTab = "summary" | "customers" | "categories" | "inventory" | "prices" | "bundles" | "sales" | "purchases" | "reports";
 type UploadResponse = { error?: string; mediaId?: string; filename?: string };
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -972,6 +973,8 @@ export default function Home() {
         <div className="automation-workspace"><WhatsAppTemplatesPanel templates={whatsAppTemplates} syncing={syncingWhatsAppTemplates} onSync={syncWhatsAppTemplates} onSaveMappings={saveWhatsAppTemplateMappings} /></div>
       ) : view === "scenarios" ? (
         <ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} />
+      ) : view === "shipping" ? (
+        <EnviaShippingPanel />
       ) : view === "control" ? (
         <ControlPanel chats={chats} tab={controlTab} onTabChange={setControlTab} entrepreneurPackages={entrepreneurPackages} onCreateBundleImageSet={createBundleImageSet} onUploadBundleImage={uploadEntrepreneurPackage} />
       ) : null}

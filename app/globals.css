@@ -5392,6 +5392,31 @@ button {
     border-style: dashed;
 }
 
+.envia-panel { max-width: 1120px; margin: 0 auto; padding: 28px; display: grid; gap: 18px; }
+.envia-panel > header { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; padding: 6px 2px; }
+.envia-panel > header p { margin: 0 0 5px; color: #168352; font-weight: 800; letter-spacing: .11em; font-size: 11px; }
+.envia-panel > header h1 { margin: 0; color: #173d2c; font-size: 28px; }
+.envia-panel > header span { display: block; margin-top: 5px; color: #667a70; }
+.envia-status { white-space: nowrap; border: 1px solid #edd09b; border-radius: 999px; padding: 7px 10px; color: #976213; background: #fff9e9; font-size: 12px; }
+.envia-status.ready { border-color: #bde5cd; color: #167447; background: #effaf3; }
+.envia-card { display: grid; gap: 16px; padding: 22px; border: 1px solid #d9e3de; border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgba(21, 62, 45, .05); }
+.envia-card-heading { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.envia-card h2, .envia-card h3 { margin: 0; color: #1a4030; }
+.envia-card h3 { font-size: 15px; }
+.envia-card p { margin: 5px 0 0; color: #687b72; font-size: 13px; }
+.envia-address-fields, .envia-package-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.envia-address-fields label, .envia-package-fields label, .envia-carrier { display: grid; gap: 5px; color: #4f665b; font-size: 12px; font-weight: 700; }
+.envia-address-fields input, .envia-package-fields input, .envia-carrier input, .envia-card select { min-width: 0; padding: 10px 11px; border: 1px solid #cddbd4; border-radius: 8px; color: #1d3d2f; background: #fff; font: inherit; font-weight: 400; }
+.envia-primary { justify-self: start; border: 0; border-radius: 9px; padding: 11px 16px; color: #fff; background: #087d49; font-weight: 800; cursor: pointer; }
+.envia-primary:disabled { cursor: wait; opacity: .55; }
+.envia-notice { padding: 11px 14px; border: 1px solid #bfe3cd; border-radius: 9px; color: #175b39; background: #effaf3; }
+.envia-rates { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.envia-rates button { display: grid; gap: 5px; text-align: left; padding: 14px; border: 1px solid #d3e0d9; border-radius: 10px; color: #234535; background: #fff; cursor: pointer; }
+.envia-rates button.selected { border-color: #168352; background: #effaf3; box-shadow: 0 0 0 2px #c7ead6; }
+.envia-rates span { color: #6c8076; font-size: 12px; }.envia-rates strong { color: #087d49; }
+.envia-shipments { display: grid; gap: 8px; }.envia-shipments article { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 12px; border: 1px solid #e0e8e3; border-radius: 9px; }.envia-shipments article div { display: grid; gap: 3px; }.envia-shipments span { color: #6d8077; font-size: 12px; }.envia-shipments a { color: #087d49; font-size: 13px; font-weight: 800; }.envia-empty { margin: 0; color: #788980; }
+@media (max-width: 760px) { .envia-panel { padding: 18px; }.envia-panel > header, .envia-card-heading { flex-direction: column; }.envia-address-fields, .envia-package-fields { grid-template-columns: 1fr; }.envia-shipments article { align-items: flex-start; flex-direction: column; } }
+
 .delivery.failed {
     color: #b24129;
 }

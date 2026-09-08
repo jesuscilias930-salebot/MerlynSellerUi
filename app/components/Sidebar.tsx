@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { User } from "../lib/types";
 
-type View = "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "control";
+type View = "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control";
 type ControlTab = "summary" | "customers" | "categories" | "inventory" | "prices" | "bundles" | "sales" | "purchases" | "reports";
 type Props = {
   user: User;
@@ -103,6 +103,9 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
           onClick={switchView("scenarios")}
         >
           <span aria-hidden="true">◇</span><span className="sidebar-label">Escenarios</span>
+        </button>
+        <button type="button" className={view === "shipping" ? "selected" : ""} onClick={switchView("shipping")}>
+          <span aria-hidden="true">▧</span><span className="sidebar-label">Envíos</span>
         </button>
         <button
           type="button"
