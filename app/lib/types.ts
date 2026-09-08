@@ -45,6 +45,9 @@ export type CtaUrlTemplate = CtaUrlMessage & {
   created_at: string;
   updated_at: string;
 };
+export type WhatsAppTemplateVariable = { component: "body" | "header"; position: number };
+export type WhatsAppTemplateMapping = { component: "body" | "header"; position: number; source: "contact.name" | "contact.phone" | "fixed" | "manual"; value?: string; label?: string };
+export type WhatsAppTemplate = { id: string; metaTemplateId: string; name: string; language: string; status: string; category: string | null; components: { type: string; text?: string }[]; variables: WhatsAppTemplateVariable[]; mappings: WhatsAppTemplateMapping[]; updatedAt: string };
 
 export type LeadColumn = { id: string; name: string; position: number; leads: Chat[] };
 export type User = { email: string; role: string };

@@ -3,7 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { api, request } from "./lib/api";
-import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, CtaUrlMessage, CtaUrlTemplate, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, QuickReply, RemarketingPreset, SavedSticker, User } from "./lib/types";
+import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, CtaUrlMessage, CtaUrlTemplate, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, QuickReply, RemarketingPreset, SavedSticker, User, WhatsAppTemplate, WhatsAppTemplateMapping } from "./lib/types";
 import { AutomationsPanel } from "./components/AutomationsPanel";
 import { DocumentTemplatesPanel } from "./components/DocumentTemplatesPanel";
 import { ConversationModal } from "./components/ConversationModal";
@@ -18,8 +18,9 @@ import { EntrepreneurPackagesPanel } from "./components/EntrepreneurPackagesPane
 import { QuickRepliesPanel } from "./components/QuickRepliesPanel";
 import { StickersPanel } from "./components/StickersPanel";
 import { CtaUrlTemplatesPanel } from "./components/CtaUrlTemplatesPanel";
+import { WhatsAppTemplatesPanel } from "./components/WhatsAppTemplatesPanel";
 
-type View = "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "scenarios" | "control";
+type View = "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "control";
 type ControlTab = "summary" | "customers" | "categories" | "inventory" | "prices" | "bundles" | "sales" | "purchases" | "reports";
 type UploadResponse = { error?: string; mediaId?: string; filename?: string };
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -60,6 +61,8 @@ export default function Home() {
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [stickers, setStickers] = useState<SavedSticker[]>([]);
   const [ctaUrlTemplates, setCtaUrlTemplates] = useState<CtaUrlTemplate[]>([]);
+  const [whatsAppTemplates, setWhatsAppTemplates] = useState<WhatsAppTemplate[]>([]);
+  const [syncingWhatsAppTemplates, setSyncingWhatsAppTemplates] = useState(false);
   const [presetName, setPresetName] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingAudio, setUploadingAudio] = useState(false);
@@ -98,6 +101,7 @@ export default function Home() {
   const loadQuickReplies = async () => setQuickReplies(await request<QuickReply[]>("/quick-replies"));
   const loadStickers = async () => setStickers(await request<SavedSticker[]>("/settings/stickers"));
   const loadCtaUrlTemplates = async () => setCtaUrlTemplates(await request<CtaUrlTemplate[]>("/settings/cta-url-templates"));
+  const loadWhatsAppTemplates = async () => setWhatsAppTemplates(await request<WhatsAppTemplate[]>("/whatsapp-templates"));
   const loadScenarios = async () => setAutomationScenarios(await request<AutomationScenario[]>("/scenarios"));
   const loadDocumentTemplates = async () => setDocumentTemplates(await request<DocumentTemplate[]>("/settings/document-templates"));
   const loadEntrepreneurPackages = async () => setEntrepreneurPackages(await request<EntrepreneurPackage[]>("/settings/entrepreneur-packages"));
@@ -132,7 +136,7 @@ export default function Home() {
     await Promise.all([loadChats(), loadPipeline()]);
   };
   const refreshData = async () => {
-    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadStickers(), loadCtaUrlTemplates(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
+    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadStickers(), loadCtaUrlTemplates(), loadWhatsAppTemplates(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
     if (chat) setMessages(await loadMessages(chat));
     if (modalChat) setModalMessages(await loadMessages(modalChat));
   };
@@ -202,7 +206,7 @@ export default function Home() {
     request<{ user: User }>("/auth/me")
       .then(async (session) => {
         setUser(session.user);
-        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadStickers(), loadCtaUrlTemplates(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
+        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadStickers(), loadCtaUrlTemplates(), loadWhatsAppTemplates(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
       })
       .catch(() => undefined);
   }, []);
@@ -432,6 +436,20 @@ export default function Home() {
       window.dispatchEvent(new Event("cta-url-templates-updated"));
       setNotice("Invitación eliminada.");
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible eliminar la invitación."); }
+  };
+  const syncWhatsAppTemplates = async () => {
+    setSyncingWhatsAppTemplates(true);
+    try {
+      setWhatsAppTemplates(await request<WhatsAppTemplate[]>("/whatsapp-templates/sync", { method: "POST" }));
+      setNotice("Plantillas sincronizadas con Meta.");
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible sincronizar las plantillas."); }
+    finally { setSyncingWhatsAppTemplates(false); }
+  };
+  const saveWhatsAppTemplateMappings = async (templateId: string, mappings: WhatsAppTemplateMapping[]) => {
+    try {
+      const updated = await request<WhatsAppTemplate>(`/whatsapp-templates/${templateId}/mappings`, { method: "PUT", body: JSON.stringify({ mappings }) });
+      setWhatsAppTemplates(items => items.map(item => item.id === updated.id ? updated : item));
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible guardar el mapeo de variables."); }
   };
 
   const addColumn = async (event: FormEvent) => {
@@ -893,6 +911,8 @@ export default function Home() {
         <div className="automation-workspace"><EntrepreneurPackagesPanel packages={entrepreneurPackages} onCreate={createEntrepreneurPackage} onUpload={uploadEntrepreneurPackage} onSave={saveEntrepreneurPackage} onDelete={deleteEntrepreneurPackage} /></div>
       ) : view === "cta-buttons" ? (
         <div className="automation-workspace"><CtaUrlTemplatesPanel templates={ctaUrlTemplates} onSave={saveCtaUrlTemplate} onDelete={deleteCtaUrlTemplate} /></div>
+      ) : view === "templates" ? (
+        <div className="automation-workspace"><WhatsAppTemplatesPanel templates={whatsAppTemplates} syncing={syncingWhatsAppTemplates} onSync={syncWhatsAppTemplates} onSaveMappings={saveWhatsAppTemplateMappings} /></div>
       ) : view === "scenarios" ? (
         <ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} />
       ) : view === "control" ? (
