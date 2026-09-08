@@ -42,6 +42,14 @@ export type Message = {
     thumbnailUrl?: string;
     ctwaClid?: string;
   } | null;
+  messageMetadata?: {
+    contacts?: { name?: string; phones?: { phone?: string; waId?: string; type?: string }[]; emails?: string[] }[];
+    location?: { latitude: number; longitude: number; name?: string; address?: string };
+    order?: { catalogId?: string; items?: { retailerId?: string; quantity?: number; itemPrice?: number; currency?: string }[] };
+    button?: { text?: string; payload?: string };
+    interactive?: { kind?: "button" | "list" | "flow"; id?: string; title?: string; description?: string; name?: string; body?: string; responseJson?: string };
+    system?: { body?: string; type?: string; newWaId?: string };
+  } | null;
 };
 
 export type CtaUrlMessage = {

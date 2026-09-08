@@ -5337,6 +5337,61 @@ button {
     line-height: 1.3;
 }
 
+.whatsapp-content-card {
+    display: grid;
+    gap: 6px;
+    max-width: 320px;
+    margin: 0 0 8px;
+    padding: 11px;
+    border: 1px solid #d7e3de;
+    border-radius: 11px;
+    background: #f8fbf9;
+    color: #193b2d;
+    text-decoration: none;
+}
+
+.whatsapp-content-card section,
+.order-card > div {
+    display: grid;
+    gap: 3px;
+    padding-top: 7px;
+    border-top: 1px solid #e3ece7;
+}
+
+.whatsapp-content-card b {
+    color: #173d2c;
+    font-size: 13px;
+}
+
+.whatsapp-content-card span:not(.whatsapp-content-kicker),
+.whatsapp-content-card small {
+    color: #5b7468;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.whatsapp-content-kicker {
+    color: #168352;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.location-card:hover {
+    background: #eff9f3;
+    border-color: #8bc9a8;
+}
+
+.reply-card {
+    border-left: 3px solid #20a464;
+}
+
+.system-card {
+    background: #f5f7f6;
+    border-style: dashed;
+}
+
 .delivery.failed {
     color: #b24129;
 }
