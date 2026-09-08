@@ -488,6 +488,17 @@ export default function Home() {
       );
     }
   };
+  const moveAllLeads = async (sourceColumn: LeadColumn, targetColumnId: string) => {
+    try {
+      const result = await request<{ movedLeads: number }>(`/leads/columns/${sourceColumn.id}/move-leads`, { method: "PATCH", body: JSON.stringify({ targetColumnId }) });
+      await Promise.all([loadPipeline(), loadChats()]);
+      setNotice(`${result.movedLeads} ${result.movedLeads === 1 ? "lead movido" : "leads movidos"} desde “${sourceColumn.name}”.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudieron mover los leads.";
+      setNotice(message);
+      throw error;
+    }
+  };
   const dropLead = async (event: DragEvent<HTMLElement>, columnId: string) => {
     event.preventDefault();
     const leadId =
@@ -876,6 +887,7 @@ export default function Home() {
           onFilterChange={setDashboardFilter}
           onAddColumn={addColumn}
           onRemoveColumn={removeColumn}
+          onMoveAll={moveAllLeads}
           onOpenLead={openModal}
           onDragStart={(event, leadId) => {
             event.dataTransfer.effectAllowed = "move";
