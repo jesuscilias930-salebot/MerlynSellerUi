@@ -5418,6 +5418,29 @@ button {
 .envia-shipments { display: grid; gap: 8px; }.envia-shipments article { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 12px; border: 1px solid #e0e8e3; border-radius: 9px; }.envia-shipments article div { display: grid; gap: 3px; }.envia-shipments span { color: #6d8077; font-size: 12px; }.envia-shipments a { color: #087d49; font-size: 13px; font-weight: 800; }.envia-empty { margin: 0; color: #788980; }
 @media (max-width: 760px) { .envia-panel { padding: 18px; }.envia-panel > header, .envia-card-heading { flex-direction: column; }.envia-address-fields, .envia-package-fields { grid-template-columns: 1fr; }.envia-shipments article { align-items: flex-start; flex-direction: column; } }
 
+/* Envia quote workspace */
+.envia-quote-form { overflow: hidden; border: 1px solid #cfd9d4; border-radius: 15px; background: #fff; box-shadow: 0 10px 28px rgba(21, 62, 45, .07); }
+.envia-quote-columns { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr) minmax(260px, .88fr); }
+.envia-form-column { min-width: 0; padding: 20px; border-right: 1px solid #dfe7e2; }
+.envia-form-column:last-child { border-right: 0; background: #fbfdfc; }
+.envia-column-title { display: flex; gap: 10px; align-items: center; margin: -20px -20px 17px; padding: 14px 18px; border-bottom: 1px solid #dfe7e2; color: #143d2b; }
+.envia-column-title > span { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 8px; color: #087d49; background: #e3f5eb; }
+.envia-column-title div { display: grid; gap: 1px; }.envia-column-title b { font-size: 17px; }.envia-column-title small { color: #76887f; font-size: 12px; }
+.envia-environment { margin-bottom: 12px; }.envia-environment label { display: grid; gap: 5px; color: #4f665b; font-size: 12px; font-weight: 700; }
+.envia-environment select { padding: 9px 10px; border: 1px solid #cddbd4; border-radius: 8px; color: #1d3d2f; background: #fff; font: inherit; }
+.envia-quote-columns .envia-address-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.envia-quote-columns .envia-address-fields label { font-size: 11px; }.envia-quote-columns .envia-address-fields input, .envia-quote-columns .envia-package-fields input { padding: 8px 9px; border-radius: 7px; font-size: 13px; }
+.envia-field-wide { grid-column: 1 / -1; }
+.envia-package-column .envia-package-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.envia-package-column .envia-package-fields label { position: relative; font-size: 12px; }.envia-package-column .envia-package-fields label > span { color: #698075; font-size: 10px; font-weight: 600; }
+.envia-package-help { margin: 15px 0 0; padding: 10px; border-radius: 8px; color: #176942; background: #eff9f3; font-size: 12px; line-height: 1.4; }
+.envia-quote-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 20px; border-top: 1px solid #dfe7e2; background: #f6f9f7; }.envia-quote-actions > span { color: #687b72; font-size: 12px; }
+.envia-results { gap: 18px; }.envia-results-header { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; }.envia-results-header h2 { margin: 3px 0; }.envia-results-header p { margin: 0; color: #168352; font-size: 11px; font-weight: 800; letter-spacing: .1em; }.envia-results-header span { color: #687b72; font-size: 13px; }
+.envia-rate-filters { display: flex; flex-wrap: wrap; gap: 7px; }.envia-rate-filters button { padding: 8px 10px; border: 1px solid #cddbd4; border-radius: 8px; color: #365447; background: #fff; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }.envia-rate-filters button.active { border-color: #168352; color: #fff; background: #087d49; }
+.envia-rate-list { display: grid; gap: 8px; }.envia-rate-list > button { display: grid; grid-template-columns: minmax(92px, .75fr) minmax(180px, 1.5fr) minmax(145px, 1fr) minmax(90px, .55fr) auto; align-items: center; gap: 15px; width: 100%; padding: 13px 15px; border: 1px solid #d7e1dc; border-radius: 10px; color: #244333; background: #fff; text-align: left; cursor: pointer; }.envia-rate-list > button:hover, .envia-rate-list > button.selected { border-color: #15824e; background: #f0faf4; box-shadow: 0 0 0 2px #d8f1e1; }.envia-rate-list div { display: grid; gap: 2px; }.envia-rate-list b { font-size: 14px; }.envia-rate-list small, .envia-rate-list > button > span:not(.envia-rate-carrier):not(.envia-rate-choose) { color: #6e8177; font-size: 12px; }.envia-rate-list strong { color: #087d49; font-size: 16px; }.envia-rate-carrier { overflow-wrap: anywhere; color: #194835; font-size: 12px; font-weight: 800; text-transform: capitalize; }.envia-rate-choose { padding: 7px 10px; border-radius: 7px; color: #087d49; background: #e8f7ee; font-size: 12px; font-weight: 800; }.envia-rate-list .selected .envia-rate-choose { color: #fff; background: #087d49; }
+@media (max-width: 1050px) { .envia-quote-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }.envia-package-column { border-top: 1px solid #dfe7e2; border-right: 0; }.envia-rate-list > button { grid-template-columns: 90px 1fr minmax(90px, .6fr) auto; }.envia-rate-list > button > span:nth-of-type(2) { display: none; } }
+@media (max-width: 680px) { .envia-quote-columns { grid-template-columns: 1fr; }.envia-form-column { border-right: 0; border-bottom: 1px solid #dfe7e2; }.envia-form-column:last-child { border-bottom: 0; }.envia-quote-actions, .envia-results-header { align-items: stretch; flex-direction: column; }.envia-quote-actions .envia-primary { width: 100%; }.envia-rate-list > button { grid-template-columns: 1fr auto; gap: 8px; }.envia-rate-list > button > span:nth-of-type(2), .envia-rate-list strong { grid-column: 1; }.envia-rate-list .envia-rate-choose { grid-column: 2; grid-row: 1 / span 3; align-self: center; } }
+
 .delivery.failed {
     color: #b24129;
 }
