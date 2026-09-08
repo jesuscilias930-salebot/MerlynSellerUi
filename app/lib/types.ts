@@ -33,7 +33,7 @@ export type Message = {
 
 export type CtaUrlMessage = {
   header?: string;
-  headerMediaId?: string;
+  headerImageUrl?: string;
   body: string;
   footer?: string;
   buttonText: string;
