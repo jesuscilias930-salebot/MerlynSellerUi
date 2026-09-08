@@ -420,6 +420,18 @@ export default function Home() {
       throw new Error(message);
     }
   };
+  const sendQuickReplyCta = async (target: Chat | null, templateId: string) => {
+    const template = ctaUrlTemplates.find((item) => item.id === templateId);
+    if (!template) throw new Error("La invitación rápida ya no existe. Edita el atajo y elige otra invitación.");
+    await sendCtaUrl(target, {
+      header: template.header,
+      headerImageUrl: template.headerImageUrl,
+      body: template.body,
+      footer: template.footer,
+      buttonText: template.buttonText,
+      url: template.url,
+    });
+  };
   const saveCtaUrlTemplate = async (template: Omit<CtaUrlTemplate, "id" | "created_at" | "updated_at">, id?: string) => {
     try {
       await request(id ? `/settings/cta-url-templates/${id}` : "/settings/cta-url-templates", { method: id ? "PATCH" : "POST", body: JSON.stringify(template) });
@@ -516,6 +528,25 @@ export default function Home() {
       setNotice(
         error instanceof Error ? error.message : "No se pudo mover el lead.",
       );
+    }
+  };
+
+  const moveLeadToColumn = async (lead: Chat | null, columnId: string) => {
+    if (!lead || !columnId || lead.leadColumnId === columnId) return;
+    try {
+      await request(`/leads/${lead.id}/column`, {
+        method: "PATCH",
+        body: JSON.stringify({ columnId }),
+      });
+      const updatedLead = { ...lead, leadColumnId: columnId };
+      setChat((current) => current?.id === lead.id ? updatedLead : current);
+      setModalChat((current) => current?.id === lead.id ? updatedLead : current);
+      await Promise.all([loadPipeline(), loadChats()]);
+      setNotice("Lead movido de columna.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo mover el lead.";
+      setNotice(message);
+      throw error;
     }
   };
 
@@ -846,6 +877,7 @@ export default function Home() {
           stickers={stickers}
           onNumberChange={setNumber}
           onDraftChange={setDraft}
+          onSendQuickReplyCta={(templateId) => sendQuickReplyCta(chat, templateId)}
           onCreate={create}
           onOpen={openInbox}
           onFilterChange={setInboxFilter}
@@ -873,6 +905,7 @@ export default function Home() {
           automationIntents={automationIntents}
           onLearnIntent={(messageId, intentId) => learnIntent(chat, messageId, intentId)}
           onReact={(messageId, emoji) => reactToMessage(chat, messageId, emoji)}
+          onMoveLead={(columnId) => moveLeadToColumn(chat, columnId)}
           onDeleteConversation={() => deleteConversation(chat)}
         />
       ) : view === "pipeline" ? (
@@ -926,7 +959,7 @@ export default function Home() {
       ) : view === "automations" ? (
         <div className="automation-workspace"><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
       ) : view === "quick-replies" ? (
-        <div className="automation-workspace"><QuickRepliesPanel replies={quickReplies} onSave={saveQuickReply} onDelete={deleteQuickReply} /></div>
+        <div className="automation-workspace"><QuickRepliesPanel replies={quickReplies} ctaTemplates={ctaUrlTemplates} onSave={saveQuickReply} onDelete={deleteQuickReply} /></div>
       ) : view === "stickers" ? (
         <div className="automation-workspace"><StickersPanel stickers={stickers} onUpload={uploadSticker} onDelete={deleteSticker} /></div>
       ) : view === "documents" ? (
@@ -956,6 +989,7 @@ export default function Home() {
         stickers={stickers}
         replyToMessage={replyToMessage}
         onDraftChange={setModalDraft}
+        onSendQuickReplyCta={(templateId) => sendQuickReplyCta(modalChat, templateId)}
         onSendText={(event) => sendText(event, modalChat, modalDraft, () => setModalDraft(""))}
         onReplyToChange={setReplyToMessage}
         onUploadAudio={uploadSelectedAudio(modalChat)}
@@ -979,6 +1013,8 @@ export default function Home() {
         automationIntents={automationIntents}
         onLearnIntent={(messageId, intentId) => learnIntent(modalChat, messageId, intentId)}
         onReact={(messageId, emoji) => reactToMessage(modalChat, messageId, emoji)}
+        columns={pipeline}
+        onMoveLead={(columnId) => moveLeadToColumn(modalChat, columnId)}
         onDeleteConversation={() => deleteConversation(modalChat)}
         onClose={() => {
           setModalChat(null);

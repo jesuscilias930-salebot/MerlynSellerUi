@@ -30,6 +30,18 @@ export type Message = {
   replyToType?: string | null;
   replyToDirection?: "inbound" | "outbound" | null;
   reactions?: { emoji: string; actorDirection: "inbound" | "outbound" }[];
+  referral?: {
+    sourceUrl?: string;
+    sourceId?: string;
+    sourceType?: string;
+    headline?: string;
+    body?: string;
+    mediaType?: string;
+    imageUrl?: string;
+    videoUrl?: string;
+    thumbnailUrl?: string;
+    ctwaClid?: string;
+  } | null;
 };
 
 export type CtaUrlMessage = {
@@ -57,7 +69,7 @@ export type DocumentOption = { mediaId: string; filename: string; caption: strin
 export type DocumentTemplate = { id: string; mediaId: string; filename: string; caption: string | null; isCatalog: boolean; created_at: string; updated_at: string };
 export type EntrepreneurPackageImage = { id: string; mediaId: string; filename: string | null; caption: string | null; position: number };
 export type EntrepreneurPackage = { id: string; name: string; mediaId: string | null; filename: string | null; caption: string | null; bundleType?: string | null; imageCategory?: string | null; controlBundleId?: number | null; position: number; created_at: string; updated_at: string; images: EntrepreneurPackageImage[] };
-export type QuickReply = { id: string; shortcut: string; name: string; body: string; created_at: string; updated_at: string };
+export type QuickReply = { id: string; shortcut: string; name: string; body: string; kind: "text" | "cta_url"; ctaUrlTemplateId?: string | null; created_at: string; updated_at: string };
 export type SavedSticker = { id: string; name: string; mediaId: string; filename: string | null; position: number; created_at: string };
 export type ConversationFilter = "all" | "unread" | "needs-response" | `column:${string}`;
 export type ScenarioBranch = { id: string; name: string; aiDescription?: string; examples: string[]; nextStepId: string };

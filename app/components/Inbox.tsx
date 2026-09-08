@@ -32,6 +32,7 @@ type Props = {
   stickers: SavedSticker[];
   onNumberChange: (value: string) => void;
   onDraftChange: (value: string) => void;
+  onSendQuickReplyCta: (templateId: string) => Promise<void>;
   onCreate: (event: FormEvent) => void;
   onOpen: (chat: Chat) => void;
   onFilterChange: (filter: ConversationFilter) => void;
@@ -54,6 +55,7 @@ type Props = {
   automationIntents: AutomationIntent[];
   onLearnIntent: (messageId: string, intentId: string) => Promise<void>;
   onReact: (messageId: string, emoji: string) => Promise<void>;
+  onMoveLead: (columnId: string) => Promise<void>;
   onDeleteConversation: () => void;
 };
 
@@ -75,6 +77,7 @@ export function Inbox({
   stickers,
   onNumberChange,
   onDraftChange,
+  onSendQuickReplyCta,
   onCreate,
   onOpen,
   onFilterChange,
@@ -97,6 +100,7 @@ export function Inbox({
   automationIntents,
   onLearnIntent,
   onReact,
+  onMoveLead,
   onDeleteConversation,
 }: Props) {
   return (
@@ -178,6 +182,7 @@ export function Inbox({
         quickReplies={quickReplies}
         stickers={stickers}
         onDraftChange={onDraftChange}
+        onSendQuickReplyCta={onSendQuickReplyCta}
         onSendText={onSendText}
         replyToMessage={replyToMessage}
         onReplyToChange={onReplyToChange}
@@ -197,6 +202,8 @@ export function Inbox({
         automationIntents={automationIntents}
         onLearnIntent={onLearnIntent}
         onReact={onReact}
+        columns={columns}
+        onMoveLead={onMoveLead}
         onDeleteConversation={onDeleteConversation}
       />
     </>
