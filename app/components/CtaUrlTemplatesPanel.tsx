@@ -1,0 +1,17 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+import type { CtaUrlTemplate } from "../lib/types";
+
+type Draft = Omit<CtaUrlTemplate, "id" | "created_at" | "updated_at">;
+const emptyDraft: Draft = { name: "", header: "", headerImageUrl: "", body: "", footer: "", buttonText: "", url: "" };
+
+export function CtaUrlTemplatesPanel({ templates, onSave, onDelete }: { templates: CtaUrlTemplate[]; onSave: (template: Draft, id?: string) => Promise<void>; onDelete: (id: string) => Promise<void> }) {
+  const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [editingId, setEditingId] = useState<string | undefined>();
+  const [saving, setSaving] = useState(false);
+  const update = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft(current => ({ ...current, [key]: value }));
+  const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); try { await onSave(draft, editingId); setDraft(emptyDraft); setEditingId(undefined); } finally { setSaving(false); } };
+  const edit = (template: CtaUrlTemplate) => { setEditingId(template.id); setDraft({ name: template.name, header: template.header || "", headerImageUrl: template.headerImageUrl || "", body: template.body, footer: template.footer || "", buttonText: template.buttonText, url: template.url }); };
+  return <section className="cta-templates-panel"><header><div><p>INVITACIONES CON BOTÓN</p><h2>Botones guardados</h2><span>Guarda configuraciones completas y envíalas desde cualquier chat.</span></div></header><form onSubmit={event => void submit(event)}><label>Nombre interno<input value={draft.name} onChange={event => update("name", event.target.value)} placeholder="Invitación a grupo VIP" required maxLength={120} /></label><label>URL pública de imagen (opcional)<input value={draft.headerImageUrl || ""} onChange={event => update("headerImageUrl", event.target.value || undefined)} type="url" placeholder="https://tu-dominio.com/invitacion.jpg" /></label><label>Encabezado de texto (opcional)<input value={draft.header || ""} disabled={Boolean(draft.headerImageUrl)} onChange={event => update("header", event.target.value || undefined)} maxLength={60} /></label><label>Texto del mensaje<textarea value={draft.body} onChange={event => update("body", event.target.value)} maxLength={1024} required /></label><label>Pie de mensaje (opcional)<input value={draft.footer || ""} onChange={event => update("footer", event.target.value || undefined)} maxLength={60} /></label><label>Texto del botón<input value={draft.buttonText} onChange={event => update("buttonText", event.target.value)} maxLength={20} required /></label><label>URL del botón<input value={draft.url} onChange={event => update("url", event.target.value)} type="url" required /></label><footer>{editingId && <button className="plain-button" type="button" onClick={() => { setEditingId(undefined); setDraft(emptyDraft); }}>Cancelar</button>}<button className="primary-action" disabled={saving}>{saving ? "Guardando…" : editingId ? "Guardar cambios" : "Guardar invitación"}</button></footer></form><div className="cta-template-list">{templates.length === 0 && <p>Aún no hay invitaciones guardadas.</p>}{templates.map(template => <article key={template.id}><div><b>{template.name}</b><small>{template.buttonText} · {template.url}</small></div><button className="plain-button" type="button" onClick={() => edit(template)}>Editar</button><button className="danger-link" type="button" onClick={() => void onDelete(template.id)}>Eliminar</button></article>)}</div></section>;
+}

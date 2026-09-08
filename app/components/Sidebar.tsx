@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { User } from "../lib/types";
 
-type View = "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "scenarios" | "control";
+type View = "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "scenarios" | "control";
 type ControlTab = "summary" | "customers" | "categories" | "inventory" | "prices" | "bundles" | "sales" | "purchases" | "reports";
 type Props = {
   user: User;
@@ -82,6 +82,13 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
           onClick={switchView("collections")}
         >
           <span aria-hidden="true">▦</span><span className="sidebar-label">Conjuntos reutilizables</span>
+        </button>
+        <button
+          type="button"
+          className={view === "cta-buttons" ? "selected" : ""}
+          onClick={switchView("cta-buttons")}
+        >
+          <span aria-hidden="true">↗</span><span className="sidebar-label">Invitaciones con botón</span>
         </button>
         <button
           type="button"

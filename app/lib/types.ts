@@ -39,6 +39,12 @@ export type CtaUrlMessage = {
   buttonText: string;
   url: string;
 };
+export type CtaUrlTemplate = CtaUrlMessage & {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+};
 
 export type LeadColumn = { id: string; name: string; position: number; leads: Chat[] };
 export type User = { email: string; role: string };

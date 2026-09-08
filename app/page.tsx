@@ -3,7 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { api, request } from "./lib/api";
-import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, CtaUrlMessage, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, QuickReply, RemarketingPreset, SavedSticker, User } from "./lib/types";
+import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, CtaUrlMessage, CtaUrlTemplate, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, QuickReply, RemarketingPreset, SavedSticker, User } from "./lib/types";
 import { AutomationsPanel } from "./components/AutomationsPanel";
 import { DocumentTemplatesPanel } from "./components/DocumentTemplatesPanel";
 import { ConversationModal } from "./components/ConversationModal";
@@ -17,8 +17,9 @@ import { ControlPanel } from "./components/ControlPanel";
 import { EntrepreneurPackagesPanel } from "./components/EntrepreneurPackagesPanel";
 import { QuickRepliesPanel } from "./components/QuickRepliesPanel";
 import { StickersPanel } from "./components/StickersPanel";
+import { CtaUrlTemplatesPanel } from "./components/CtaUrlTemplatesPanel";
 
-type View = "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "scenarios" | "control";
+type View = "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "scenarios" | "control";
 type ControlTab = "summary" | "customers" | "categories" | "inventory" | "prices" | "bundles" | "sales" | "purchases" | "reports";
 type UploadResponse = { error?: string; mediaId?: string; filename?: string };
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -58,6 +59,7 @@ export default function Home() {
   const [automationScenarios, setAutomationScenarios] = useState<AutomationScenario[]>([]);
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [stickers, setStickers] = useState<SavedSticker[]>([]);
+  const [ctaUrlTemplates, setCtaUrlTemplates] = useState<CtaUrlTemplate[]>([]);
   const [presetName, setPresetName] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingAudio, setUploadingAudio] = useState(false);
@@ -95,6 +97,7 @@ export default function Home() {
   const loadAutomations = async () => setAutomationIntents(await request<AutomationIntent[]>("/automations"));
   const loadQuickReplies = async () => setQuickReplies(await request<QuickReply[]>("/quick-replies"));
   const loadStickers = async () => setStickers(await request<SavedSticker[]>("/settings/stickers"));
+  const loadCtaUrlTemplates = async () => setCtaUrlTemplates(await request<CtaUrlTemplate[]>("/settings/cta-url-templates"));
   const loadScenarios = async () => setAutomationScenarios(await request<AutomationScenario[]>("/scenarios"));
   const loadDocumentTemplates = async () => setDocumentTemplates(await request<DocumentTemplate[]>("/settings/document-templates"));
   const loadEntrepreneurPackages = async () => setEntrepreneurPackages(await request<EntrepreneurPackage[]>("/settings/entrepreneur-packages"));
@@ -129,7 +132,7 @@ export default function Home() {
     await Promise.all([loadChats(), loadPipeline()]);
   };
   const refreshData = async () => {
-    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadStickers(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
+    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadStickers(), loadCtaUrlTemplates(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
     if (chat) setMessages(await loadMessages(chat));
     if (modalChat) setModalMessages(await loadMessages(modalChat));
   };
@@ -199,7 +202,7 @@ export default function Home() {
     request<{ user: User }>("/auth/me")
       .then(async (session) => {
         setUser(session.user);
-        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadStickers(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
+        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadStickers(), loadCtaUrlTemplates(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
       })
       .catch(() => undefined);
   }, []);
@@ -412,6 +415,23 @@ export default function Home() {
       setNotice(message);
       throw new Error(message);
     }
+  };
+  const saveCtaUrlTemplate = async (template: Omit<CtaUrlTemplate, "id" | "created_at" | "updated_at">, id?: string) => {
+    try {
+      await request(id ? `/settings/cta-url-templates/${id}` : "/settings/cta-url-templates", { method: id ? "PATCH" : "POST", body: JSON.stringify(template) });
+      await loadCtaUrlTemplates();
+      window.dispatchEvent(new Event("cta-url-templates-updated"));
+      setNotice(id ? "Invitación actualizada." : "Invitación guardada.");
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible guardar la invitación."); throw error; }
+  };
+  const deleteCtaUrlTemplate = async (id: string) => {
+    if (!window.confirm("¿Eliminar esta invitación guardada?")) return;
+    try {
+      await request(`/settings/cta-url-templates/${id}`, { method: "DELETE" });
+      await loadCtaUrlTemplates();
+      window.dispatchEvent(new Event("cta-url-templates-updated"));
+      setNotice("Invitación eliminada.");
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible eliminar la invitación."); }
   };
 
   const addColumn = async (event: FormEvent) => {
@@ -871,6 +891,8 @@ export default function Home() {
         <div className="automation-workspace"><DocumentTemplatesPanel templates={documentTemplates} onUpload={uploadDocumentTemplate} onSave={saveDocumentTemplate} onDelete={deleteDocumentTemplate} /></div>
       ) : view === "collections" ? (
         <div className="automation-workspace"><EntrepreneurPackagesPanel packages={entrepreneurPackages} onCreate={createEntrepreneurPackage} onUpload={uploadEntrepreneurPackage} onSave={saveEntrepreneurPackage} onDelete={deleteEntrepreneurPackage} /></div>
+      ) : view === "cta-buttons" ? (
+        <div className="automation-workspace"><CtaUrlTemplatesPanel templates={ctaUrlTemplates} onSave={saveCtaUrlTemplate} onDelete={deleteCtaUrlTemplate} /></div>
       ) : view === "scenarios" ? (
         <ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} />
       ) : view === "control" ? (
