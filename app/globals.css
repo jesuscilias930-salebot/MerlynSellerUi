@@ -2788,6 +2788,30 @@ select:focus-visible {
     min-height: 60px;
 }
 
+.budget-recommendation-editor article {
+    gap: 9px;
+    border-color: #b9dfc7;
+    background: #f4fbf6;
+}
+
+.budget-range-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.budget-recommendation-editor select[multiple] {
+    min-height: 104px;
+}
+
+.budget-recommendation-editor code {
+    padding: 1px 4px;
+    border-radius: 4px;
+    background: #e5f2e9;
+    color: #17663f;
+    font-size: 11px;
+}
+
 .flow-validation {
     display: flex;
     align-items: center;

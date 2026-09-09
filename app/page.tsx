@@ -973,7 +973,7 @@ export default function Home() {
       ) : view === "templates" ? (
         <div className="automation-workspace"><WhatsAppTemplatesPanel templates={whatsAppTemplates} syncing={syncingWhatsAppTemplates} onSync={syncWhatsAppTemplates} onSaveMappings={saveWhatsAppTemplateMappings} /></div>
       ) : view === "scenarios" ? (
-        <ScenariosPanel scenarios={automationScenarios} columns={pipeline} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} />
+        <ScenariosPanel scenarios={automationScenarios} columns={pipeline} entrepreneurPackages={entrepreneurPackages} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} />
       ) : view === "shipping" ? (
         <EnviaShippingPanel />
       ) : view === "control" ? (
