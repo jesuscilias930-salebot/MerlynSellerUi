@@ -6326,6 +6326,7 @@ button {
 .tool-gallery-grid button {
     display: grid;
     gap: 3px;
+    position: relative;
     min-width: 0;
     overflow: hidden;
     padding: 4px;
@@ -6361,6 +6362,73 @@ button {
     font-weight: 700;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.tool-gallery-grid button > span {
+    display: none;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 1;
+    width: 20px;
+    height: 20px;
+    overflow: visible;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--green);
+    color: #fff;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.tool-gallery-grid button.selected > span {
+    display: grid;
+}
+
+.saved-image-set {
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+}
+
+.saved-image-set-header,
+.saved-image-selection-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.saved-image-set-header b {
+    overflow: hidden;
+    color: var(--deep);
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.saved-image-selection-actions {
+    flex-wrap: wrap;
+    padding: 9px;
+    border: 1px solid #bde0cb;
+    border-radius: 10px;
+    background: #f3fbf6;
+}
+
+.saved-image-selection-actions > span {
+    flex: 1 1 100%;
+    color: var(--deep);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.saved-image-selection-actions .tool-primary-button,
+.saved-image-selection-actions .plain-button,
+.saved-image-set-header .plain-button {
+    width: auto;
+    min-height: 32px;
+    padding: 6px 9px;
+    font-size: 11px;
 }
 
 .tool-gallery-grid small {
