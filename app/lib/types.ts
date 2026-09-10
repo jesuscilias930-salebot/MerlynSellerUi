@@ -23,6 +23,7 @@ export type Message = {
   filename?: string | null;
   type: string;
   status: string;
+  deletedForEveryone?: boolean;
   error_code?: string | null;
   created_at: string;
   replyToMessageId?: string | null;

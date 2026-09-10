@@ -12,7 +12,7 @@ import type {
   QuickReply,
   SavedSticker,
 } from "../lib/types";
-import { ConversationPanel } from "./ConversationPanel";
+import { ConversationPanel, type PendingChatImage } from "./ConversationPanel";
 
 type Props = {
   chats: Chat[];
@@ -24,6 +24,7 @@ type Props = {
   draft: string;
   uploadingAudio: boolean;
   uploadingMedia: boolean;
+  pendingImages: PendingChatImage[];
   documentOptions: DocumentOption[];
   selectedDocumentId: string;
   documentCaption: string;
@@ -43,6 +44,7 @@ type Props = {
   onUploadImage: (event: ChangeEvent<HTMLInputElement>) => void;
   onUploadVideo: (event: ChangeEvent<HTMLInputElement>) => void;
   onUploadDocument: (event: ChangeEvent<HTMLInputElement>) => void;
+  onRemovePendingImage: (id: string) => void;
   onDocumentChange: (mediaId: string) => void;
   onDocumentCaptionChange: (caption: string) => void;
   onSendDocument: () => void;
@@ -55,6 +57,7 @@ type Props = {
   automationIntents: AutomationIntent[];
   onLearnIntent: (messageId: string, intentId: string) => Promise<void>;
   onReact: (messageId: string, emoji: string) => Promise<void>;
+  onDeleteMessage: (messageId: string, scope: "for_me" | "for_everyone") => Promise<void>;
   onMoveLead: (columnId: string) => Promise<void>;
   onOpenShipping: () => void;
   onDeleteConversation: () => void;
@@ -70,6 +73,7 @@ export function Inbox({
   draft,
   uploadingAudio,
   uploadingMedia,
+  pendingImages,
   documentOptions,
   selectedDocumentId,
   documentCaption,
@@ -89,6 +93,7 @@ export function Inbox({
   onUploadImage,
   onUploadVideo,
   onUploadDocument,
+  onRemovePendingImage,
   onDocumentChange,
   onDocumentCaptionChange,
   onSendDocument,
@@ -101,6 +106,7 @@ export function Inbox({
   automationIntents,
   onLearnIntent,
   onReact,
+  onDeleteMessage,
   onMoveLead,
   onOpenShipping,
   onDeleteConversation,
@@ -177,6 +183,7 @@ export function Inbox({
         draft={draft}
         uploadingAudio={uploadingAudio}
         uploadingMedia={uploadingMedia}
+        pendingImages={pendingImages}
         documentOptions={documentOptions}
         selectedDocumentId={selectedDocumentId}
         documentCaption={documentCaption}
@@ -192,6 +199,7 @@ export function Inbox({
         onUploadImage={onUploadImage}
         onUploadVideo={onUploadVideo}
         onUploadDocument={onUploadDocument}
+        onRemovePendingImage={onRemovePendingImage}
         onDocumentChange={onDocumentChange}
         onDocumentCaptionChange={onDocumentCaptionChange}
         onSendDocument={onSendDocument}
@@ -204,6 +212,7 @@ export function Inbox({
         automationIntents={automationIntents}
         onLearnIntent={onLearnIntent}
         onReact={onReact}
+        onDeleteMessage={onDeleteMessage}
         columns={columns}
         onMoveLead={onMoveLead}
         onOpenShipping={onOpenShipping}

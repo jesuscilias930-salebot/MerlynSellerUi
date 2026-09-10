@@ -1,9 +1,10 @@
 import { ChangeEvent, FormEvent } from "react";
 import type { AutomationIntent, Chat, CtaUrlMessage, DocumentOption, EntrepreneurPackage, LeadColumn, Message, QuickReply, SavedSticker } from "../lib/types";
-import { ConversationPanel } from "./ConversationPanel";
+import { ConversationPanel, type PendingChatImage } from "./ConversationPanel";
 
 type Props = {
   chat: Chat | null; messages: Message[]; draft: string; uploadingAudio: boolean; uploadingMedia: boolean;
+  pendingImages: PendingChatImage[];
   documentOptions: DocumentOption[]; selectedDocumentId: string; documentCaption: string;
   entrepreneurPackages: EntrepreneurPackage[]; quickReplies: QuickReply[]; stickers: SavedSticker[];
   replyToMessage: Message | null; columns: LeadColumn[];
@@ -11,12 +12,14 @@ type Props = {
   onReplyToChange: (message: Message | null) => void;
   onUploadAudio: (event: ChangeEvent<HTMLInputElement>) => void; onUploadImage: (event: ChangeEvent<HTMLInputElement>) => void;
   onUploadVideo: (event: ChangeEvent<HTMLInputElement>) => void; onUploadDocument: (event: ChangeEvent<HTMLInputElement>) => void;
+  onRemovePendingImage: (id: string) => void;
   onDocumentChange: (mediaId: string) => void; onDocumentCaptionChange: (caption: string) => void; onSendDocument: () => void;
   onSendCtaUrl: (data: CtaUrlMessage) => Promise<void>; onSendEntrepreneurPackages: (selection: { packageIds?: string[]; imageIds?: string[] }) => Promise<void>;
   onSendSticker: (stickerId: string) => Promise<void>; onRecordAudio: (audio: Blob, filename: string) => Promise<void>;
   onAutoReplyChange: (enabled: boolean) => void; onScenarioChange: (enabled: boolean) => void;
   automationIntents: AutomationIntent[]; onLearnIntent: (messageId: string, intentId: string) => Promise<void>;
   onReact: (messageId: string, emoji: string) => Promise<void>; onMoveLead: (columnId: string) => Promise<void>;
+  onDeleteMessage: (messageId: string, scope: "for_me" | "for_everyone") => Promise<void>;
   onOpenShipping: () => void;
   onDeleteConversation: () => void; onClose: () => void;
 };

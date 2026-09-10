@@ -2812,6 +2812,100 @@ select:focus-visible {
     font-size: 11px;
 }
 
+.media-caption {
+    margin: 8px 0 0;
+    white-space: pre-wrap;
+}
+
+.deleted-message {
+    margin: 0;
+    color: #76817b;
+    font-style: italic;
+}
+
+.message-more-button {
+    border: 0;
+    background: transparent;
+    color: #718078;
+    cursor: pointer;
+    font-size: 17px;
+    line-height: 1;
+}
+
+.message-delete-menu {
+    position: absolute;
+    z-index: 6;
+    right: 0;
+    bottom: 28px;
+    display: grid;
+    min-width: 158px;
+    overflow: hidden;
+    border: 1px solid #dce6e0;
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: 0 8px 22px #173b2a22;
+}
+
+.message-delete-menu button {
+    padding: 9px 11px;
+    border: 0;
+    background: #fff;
+    color: #9e2935;
+    font: inherit;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.message-delete-menu button:hover { background: #fff1f2; }
+
+.composer-image-previews {
+    display: flex;
+    gap: 8px;
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 2px 3px 7px;
+}
+
+.composer-image-previews figure {
+    position: relative;
+    flex: 0 0 84px;
+    margin: 0;
+}
+
+.composer-image-previews img {
+    display: block;
+    width: 84px;
+    height: 72px;
+    border: 1px solid #cce2d3;
+    border-radius: 9px;
+    object-fit: cover;
+}
+
+.composer-image-previews button {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    display: grid;
+    width: 21px;
+    height: 21px;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: #26352e;
+    color: #fff;
+    cursor: pointer;
+}
+
+.composer-image-previews figcaption {
+    overflow: hidden;
+    margin-top: 3px;
+    color: #607067;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .flow-validation {
     display: flex;
     align-items: center;
@@ -4039,6 +4133,7 @@ button {
 }
 
 .message-meta {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;

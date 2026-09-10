@@ -20,6 +20,7 @@ import { StickersPanel } from "./components/StickersPanel";
 import { CtaUrlTemplatesPanel } from "./components/CtaUrlTemplatesPanel";
 import { WhatsAppTemplatesPanel } from "./components/WhatsAppTemplatesPanel";
 import { EnviaShippingPanel } from "./components/EnviaShippingPanel";
+import type { PendingChatImage } from "./components/ConversationPanel";
 
 type View = "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control";
 type ControlTab = "summary" | "customers" | "categories" | "inventory" | "prices" | "bundles" | "sales" | "purchases" | "reports";
@@ -68,6 +69,7 @@ export default function Home() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [pendingImages, setPendingImages] = useState<PendingChatImage[]>([]);
   const [documentOptions, setDocumentOptions] = useState<DocumentOption[]>([]);
   const [documentTemplates, setDocumentTemplates] = useState<DocumentTemplate[]>([]);
   const [entrepreneurPackages, setEntrepreneurPackages] = useState<EntrepreneurPackage[]>([]);
@@ -293,9 +295,13 @@ export default function Home() {
     clear: () => void,
   ) => {
     event.preventDefault();
-    if (!target || !value.trim()) return;
+    if (!target || (!value.trim() && !pendingImages.length)) return;
     try {
-      await request(`/conversations/${target.id}/messages/text`, {
+      if (pendingImages.length) {
+        for (const [index, image] of pendingImages.entries()) await uploadMedia(target, "image", image.file, index === 0 ? value.trim() || undefined : undefined);
+        pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+        setPendingImages([]);
+      } else await request(`/conversations/${target.id}/messages/text`, {
         method: "POST",
         body: JSON.stringify({ body: value, replyToMessageId: replyToMessage?.id || undefined }),
       });
@@ -367,7 +373,7 @@ export default function Home() {
       }
     };
 
-  const uploadMedia = async (target: Chat | null, type: "image" | "video" | "document", file: File) => {
+  const uploadMedia = async (target: Chat | null, type: "image" | "video" | "document", file: File, caption?: string) => {
     if (!target) return;
     const allowedTypes = type === "image" ? ["image/jpeg", "image/png", "image/webp"] : type === "document" ? ["application/pdf"] : ["video/mp4", "video/3gpp"];
     const maxSize = type === "image" ? 5 * 1024 * 1024 : type === "document" ? 25 * 1024 * 1024 : 16 * 1024 * 1024;
@@ -380,7 +386,7 @@ export default function Home() {
       const response = await fetch(`${api}/conversations/${target.id}/messages/${endpoint}`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": isPdf ? "application/pdf" : file.type, "X-Upload-Filename": encodeURIComponent(file.name) },
+        headers: { "Content-Type": isPdf ? "application/pdf" : file.type, "X-Upload-Filename": encodeURIComponent(file.name), ...(caption ? { "X-Message-Caption": encodeURIComponent(caption) } : {}) },
         body: file,
       });
       const result = (await response.json().catch(() => ({}))) as UploadResponse;
@@ -390,10 +396,26 @@ export default function Home() {
     } finally { setUploadingMedia(false); }
   };
   const uploadSelectedMedia = (target: Chat | null, type: "image" | "video" | "document") => async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files || []);
     event.target.value = "";
-    if (!file) return;
-    try { await uploadMedia(target, type, file); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar el archivo."); }
+    if (!files.length) return;
+    if (type === "image") {
+      const valid = files.filter((file) => ["image/jpeg", "image/png", "image/webp"].includes(file.type) && file.size <= 5 * 1024 * 1024);
+      if (valid.length !== files.length) { setNotice("Selecciona imágenes JPEG, PNG o WebP de máximo 5 MB."); return; }
+      setPendingImages((current) => [...current, ...valid.map((file) => ({ id: `${file.name}-${file.lastModified}-${crypto.randomUUID()}`, file, previewUrl: URL.createObjectURL(file) }))]);
+      return;
+    }
+    try { await uploadMedia(target, type, files[0]); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar el archivo."); }
+  };
+  const removePendingImage = (id: string) => setPendingImages((current) => {
+    const image = current.find((item) => item.id === id);
+    if (image) URL.revokeObjectURL(image.previewUrl);
+    return current.filter((item) => item.id !== id);
+  });
+  const deleteMessage = async (target: Chat | null, messageId: string, scope: "for_me" | "for_everyone") => {
+    if (!target) return;
+    await request(`/conversations/${target.id}/messages/${messageId}`, { method: "DELETE", body: JSON.stringify({ scope }) });
+    await refreshData();
   };
   const sendDocument = async (target: Chat | null) => {
     const document = documentOptions.find((option) => option.mediaId === selectedDocumentId);
@@ -870,6 +892,7 @@ export default function Home() {
           draft={draft}
           uploadingAudio={uploadingAudio}
           uploadingMedia={uploadingMedia}
+          pendingImages={pendingImages}
           documentOptions={documentOptions}
           selectedDocumentId={selectedDocumentId}
           documentCaption={documentCaption}
@@ -889,6 +912,7 @@ export default function Home() {
           onUploadImage={uploadSelectedMedia(chat, "image")}
           onUploadVideo={uploadSelectedMedia(chat, "video")}
           onUploadDocument={uploadSelectedMedia(chat, "document")}
+          onRemovePendingImage={removePendingImage}
           onDocumentChange={(mediaId) => {
             setSelectedDocumentId(mediaId);
             setDocumentCaption(documentOptions.find((option) => option.mediaId === mediaId)?.caption || "");
@@ -906,6 +930,7 @@ export default function Home() {
           automationIntents={automationIntents}
           onLearnIntent={(messageId, intentId) => learnIntent(chat, messageId, intentId)}
           onReact={(messageId, emoji) => reactToMessage(chat, messageId, emoji)}
+          onDeleteMessage={(messageId, scope) => deleteMessage(chat, messageId, scope)}
           onMoveLead={(columnId) => moveLeadToColumn(chat, columnId)}
           onOpenShipping={() => setView("shipping")}
           onDeleteConversation={() => deleteConversation(chat)}
@@ -985,6 +1010,7 @@ export default function Home() {
         draft={modalDraft}
         uploadingAudio={uploadingAudio}
         uploadingMedia={uploadingMedia}
+        pendingImages={pendingImages}
         documentOptions={documentOptions}
         selectedDocumentId={selectedDocumentId}
         documentCaption={documentCaption}
@@ -1000,6 +1026,7 @@ export default function Home() {
         onUploadImage={uploadSelectedMedia(modalChat, "image")}
         onUploadVideo={uploadSelectedMedia(modalChat, "video")}
         onUploadDocument={uploadSelectedMedia(modalChat, "document")}
+        onRemovePendingImage={removePendingImage}
         onDocumentChange={(mediaId) => {
           setSelectedDocumentId(mediaId);
           setDocumentCaption(documentOptions.find((option) => option.mediaId === mediaId)?.caption || "");
@@ -1017,6 +1044,7 @@ export default function Home() {
         automationIntents={automationIntents}
         onLearnIntent={(messageId, intentId) => learnIntent(modalChat, messageId, intentId)}
         onReact={(messageId, emoji) => reactToMessage(modalChat, messageId, emoji)}
+        onDeleteMessage={(messageId, scope) => deleteMessage(modalChat, messageId, scope)}
         columns={pipeline}
         onMoveLead={(columnId) => moveLeadToColumn(modalChat, columnId)}
         onOpenShipping={() => { setModalChat(null); setView("shipping"); }}
