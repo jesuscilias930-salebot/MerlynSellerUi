@@ -2812,6 +2812,58 @@ select:focus-visible {
     font-size: 11px;
 }
 
+.budget-option-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.budget-photo-picker {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border: 1px dashed #b9dfc7;
+    border-radius: 10px;
+    background: #fbfefc;
+}
+
+.budget-photo-picker > label {
+    display: grid;
+    gap: 5px;
+}
+
+.budget-photo-picker .media-button {
+    width: fit-content;
+}
+
+.budget-selected-photos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.budget-selected-photos span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 5px 7px;
+    border-radius: 7px;
+    background: #e8f6ed;
+    color: #17663f;
+    font-size: 11px;
+}
+
+.budget-selected-photos button {
+    border: 0;
+    background: transparent;
+    color: #aa2b35;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
 .media-caption {
     margin: 8px 0 0;
     white-space: pre-wrap;
@@ -5636,6 +5688,16 @@ button {
 
 .compact-composer .reply-preview {
     grid-column: 1 / -1;
+}
+
+/* Previews are a full composer row, not an item in the input's four-column
+   control grid. This keeps the attachment button, textarea and send button
+   aligned even when several images are waiting to be sent. */
+.compact-composer .composer-image-previews {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    align-self: start;
 }
 
 .quick-tools-backdrop {

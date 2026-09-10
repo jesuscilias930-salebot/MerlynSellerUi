@@ -83,6 +83,6 @@ export type SavedSticker = { id: string; name: string; mediaId: string; filename
 export type ConversationFilter = "all" | "unread" | "needs-response" | `column:${string}`;
 export type ScenarioBranch = { id: string; name: string; aiDescription?: string; examples: string[]; nextStepId: string };
 export type ScenarioMedia = { mediaId: string; filename?: string; caption?: string; type?: "image" | "document" };
-export type ScenarioBudgetOption = { id: string; label: string; min?: number; max?: number; examples?: string[]; packageIds: string[]; recommendationBody: string };
+export type ScenarioBudgetOption = { id: string; label: string; min?: number; max?: number; examples?: string[]; packageIds: string[]; items?: ScenarioMedia[]; recommendationBody: string };
 export type ScenarioStep = { id: string; type: "send_text" | "send_catalog" | "send_media" | "wait_reply" | "budget_recommendation" | "move_column" | "end"; label: string; body?: string; caption?: string; fallbackBody?: string; resendCatalog?: boolean; items?: ScenarioMedia[]; branches?: ScenarioBranch[]; budgetOptions?: ScenarioBudgetOption[]; fallbackStepId?: string; nextStepId?: string; columnId?: string };
 export type AutomationScenario = { id: string; key: string; name: string; isActive: boolean; triggerExamples: string[]; aiDescription?: string | null; priority: number; canInterrupt: boolean; position: number; steps: ScenarioStep[]; updatedAt: string };
