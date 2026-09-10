@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, DragEvent, FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import type { AutomationScenario, EntrepreneurPackage, LeadColumn, ScenarioBranch, ScenarioBudgetOption, ScenarioMedia, ScenarioStep } from "../lib/types";
 
@@ -76,6 +76,12 @@ function FlowBuilder({ initial, columns, entrepreneurPackages, reusableMedia, on
   }), [value.steps]);
 
   const updateStep = (id: string, patch: Partial<ScenarioStep>) => setValue((current) => ({ ...current, steps: current.steps.map((step) => step.id === id ? { ...step, ...patch } : step) }));
+  // Older budget steps may have been saved before ranges were introduced, or
+  // with an empty array. Give those steps a usable first range automatically.
+  useEffect(() => {
+    if (selectedStep?.type !== "budget_recommendation" || selectedStep.budgetOptions?.length) return;
+    updateStep(selectedStep.id, { budgetOptions: defaultBudgetOptions() });
+  }, [selectedStep?.id, selectedStep?.type, selectedStep?.budgetOptions?.length]);
   const openStepEditor = (id: string) => { setSelectedStepId(id); setStepEditorOpen(true); };
   const targetOptions = (currentId: string) => value.steps.filter((step) => step.id !== currentId);
   const addStep = () => {
