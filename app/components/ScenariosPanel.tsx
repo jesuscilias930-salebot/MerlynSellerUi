@@ -59,8 +59,7 @@ const defaultBudgetOptions = (): ScenarioBudgetOption[] => [
     examples: ["menos de 1500", "mil", "1000", "1200"],
     packageIds: [],
     items: [],
-    recommendationBody:
-      "Perfecto 🙌🏼 Con ese presupuesto sí tenemos una muy buena opción para comenzar. Le recomendaría {{package_name}} porque incluye buena variedad para iniciar. Le comparto unas fotos para que vea cómo viene 👇🏼",
+    recommendationBody: "",
   },
   {
     id: `budget_mid_${stepId()}`,
@@ -70,8 +69,7 @@ const defaultBudgetOptions = (): ScenarioBudgetOption[] => [
     examples: ["1500", "2000", "2500", "3000"],
     packageIds: [],
     items: [],
-    recommendationBody:
-      "Perfecto 🙌🏼 Con ese presupuesto sí tenemos una muy buena opción para comenzar. Le recomendaría {{package_name}} porque incluye buena variedad para iniciar. Le comparto unas fotos para que vea cómo viene 👇🏼",
+    recommendationBody: "",
   },
   {
     id: `budget_high_${stepId()}`,
@@ -80,8 +78,7 @@ const defaultBudgetOptions = (): ScenarioBudgetOption[] => [
     examples: ["mas de 3000", "más de 3000", "4000", "5000"],
     packageIds: [],
     items: [],
-    recommendationBody:
-      "Perfecto 🙌🏼 Con ese presupuesto sí tenemos una muy buena opción para comenzar. Le recomendaría {{package_name}} porque incluye buena variedad para iniciar. Le comparto unas fotos para que vea cómo viene 👇🏼",
+    recommendationBody: "",
   },
 ];
 const blankStep = (type: ScenarioStep["type"] = "send_text"): ScenarioStep => ({
@@ -610,6 +607,16 @@ function FlowBuilder({
         option.id === optionId ? { ...option, ...patch } : option,
       ),
     });
+  const toggleBudgetPackage = (
+    step: ScenarioStep,
+    option: ScenarioBudgetOption,
+    packageId: string,
+  ) =>
+    updateBudgetOption(step, option.id, {
+      packageIds: (option.packageIds || []).includes(packageId)
+        ? (option.packageIds || []).filter((id) => id !== packageId)
+        : [...(option.packageIds || []), packageId],
+    });
   const budgetImageLibrary = useMemo(() => {
     const savedImages: ReusableScenarioMedia[] = entrepreneurPackages.flatMap(
       (item) =>
@@ -772,34 +779,23 @@ function FlowBuilder({
               />
             </label>
           </div>
-          <label>
-            Paquetes o conjuntos de fotos
-            <select
-              multiple
-              value={option.packageIds || []}
-              onChange={(event) =>
-                updateBudgetOption(step, option.id, {
-                  packageIds: Array.from(
-                    event.target.selectedOptions,
-                    (item) => item.value,
-                  ),
-                })
-              }
-            >
-              {entrepreneurPackages.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                  {item.images.length
-                    ? ` · ${item.images.length} fotos`
-                    : " · sin fotos"}
-                </option>
-              ))}
-            </select>
+          <div className="budget-package-picker">
+            <strong>Paquetes o conjuntos de fotos</strong>
             <small>
-              Los paquetes envían todas sus fotos. Mantén ⌘ en Mac o Ctrl en
-              Windows para elegir varios.
+              Marca los paquetes que quieres recomendar. Vuelve a hacer clic
+              para quitarlos; cada paquete enviará sus fotografías.
             </small>
-          </label>
+            <div className="budget-package-options">
+              {entrepreneurPackages.map((item) => {
+                const selected = (option.packageIds || []).includes(item.id);
+                return <label className={selected ? "selected" : ""} key={item.id}>
+                  <input type="checkbox" checked={selected} onChange={() => toggleBudgetPackage(step, option, item.id)} />
+                  <span><b>{item.name}</b><small>{item.images.length ? `${item.images.length} fotos` : "Sin fotos"}</small></span>
+                </label>;
+              })}
+            </div>
+            {!entrepreneurPackages.length && <small>Aún no hay paquetes ni conjuntos guardados.</small>}
+          </div>
           <div className="budget-photo-picker">
             <label>
               Fotografías individuales
@@ -867,10 +863,6 @@ function FlowBuilder({
               })
             }
           />
-          <small>
-            Variables disponibles: <code>{"{{package_name}}"}</code>,{" "}
-            <code>{"{{package_names}}"}</code> y <code>{"{{budget}}"}</code>.
-          </small>
         </article>
       ))}
       <button
