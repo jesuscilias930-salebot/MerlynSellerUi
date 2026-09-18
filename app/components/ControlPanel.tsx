@@ -6,6 +6,9 @@ import type { Chat, EntrepreneurPackage } from "../lib/types";
 import { PriceRulesPanel } from "./PriceRulesPanel";
 import { BundlesPanel } from "./BundlesPanel";
 import { BundleImageManager } from "./BundleImageManager";
+import { StoreOrdersPanel } from "./StoreOrdersPanel";
+import { ProductWeightEditor } from "./ProductWeightEditor";
+import { PackingRulesPanel } from "./PackingRulesPanel";
 
 type Customer = {
   id: number;
@@ -20,6 +23,7 @@ type Product = {
   name: string;
   currentStock: number;
   minStockAlert: number;
+  weightGrams?: number | string | null;
     category: Category;
   gender?: string | null;
   size?: string | null;
@@ -80,6 +84,7 @@ export type ControlTab =
   | "customers"
   | "categories"
   | "inventory"
+  | "packing"
   | "prices"
   | "bundles"
   | "sales"
@@ -930,13 +935,17 @@ export function ControlPanel({
                 <strong>{`${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}${product.size ? ` - ${product.size}` : ""}`}</strong>
                 <b>{product.currentStock} disponibles</b>
                 <span className="category-actions"><button type="button" className="plain-button" onClick={() => editProduct(product)}>Editar</button><button type="button" className="plain-button" onClick={() => duplicateProduct(product)}>Duplicar</button><button type="button" className="danger-link" onClick={() => void deleteProduct(product)}>Eliminar</button></span>
+                <ProductWeightEditor productId={product.id} productName={product.name} weightGrams={product.weightGrams}
+                  onSaved={weight => setProducts(current => current.map(item => item.id === product.id ? { ...item, weightGrams: weight } : item))} />
               </div>
             ))}
           </section>
         </div>
       )}
       {tab === "prices" && <PriceRulesPanel products={products} />}
-      {tab === "bundles" && <><BundlesPanel products={products} /><BundleImageManager packages={entrepreneurPackages} onCreate={onCreateBundleImageSet} onUpload={onUploadBundleImage} /></>}
+      {tab === "packing" && <PackingRulesPanel />}
+      {tab === "bundles" && <><BundlesPanel products={products} packages={entrepreneurPackages} onCreateImageSet={onCreateBundleImageSet} onUploadImage={onUploadBundleImage} /><BundleImageManager packages={entrepreneurPackages} onCreate={onCreateBundleImageSet} onUpload={onUploadBundleImage} /></>}
+      {tab === "sales" && <StoreOrdersPanel />}
       {tab === "sales" && (
         <div className="control-customers">
           <form className="customer-form" onSubmit={createSale}>

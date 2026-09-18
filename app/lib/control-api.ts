@@ -11,7 +11,7 @@ export async function controlRequest<T>(path: string, init?: RequestInit): Promi
   const token = controlSession.get();
   const response = await fetch(`${controlApi}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers || {}) },
+    headers: { ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers || {}) },
   });
   const body = (await response.json().catch(() => undefined)) as unknown;
   const errorBody = body && typeof body === "object" ? body as { message?: string; error?: string } : undefined;

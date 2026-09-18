@@ -1,0 +1,10 @@
+"use client";
+import {useEffect,useState} from 'react';
+import {request} from '../lib/api';
+import {controlRequest} from '../lib/control-api';
+type Order={id:string;folio:string;status:string;saleId:number|null;subtotal:number;lines:{kind:string;name:string;quantity:number;unitPrice:number;contents?:string}[]};
+export function StoreOrders({conversationId}:{conversationId:string}){
+ const [orders,setOrders]=useState<Order[]>([]),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false);
+ useEffect(()=>{let active=true;setOrders([]);setNotice('');request<Order[]>(`/store-orders/conversation/${conversationId}`).then(v=>{if(active)setOrders(v);}).catch(()=>{if(active)setNotice('No se pudieron cargar los pedidos de la tienda.');});return()=>{active=false;};},[conversationId]);
+ return <details style={{padding:12,border:'1px solid #dedfd6',borderRadius:8,marginBottom:12}}><summary>Pedidos de la tienda ({orders.length})</summary>{notice&&<p role="status">{notice}</p>}{orders.map(o=><article key={o.id} style={{padding:12,borderTop:'1px solid #dedfd6'}}><b>{o.folio}</b><p>{o.status==='CONFIRMED'?`Venta registrada: ${o.saleId}`:'Pendiente de confirmación'}</p>{o.lines.map((l,n)=><p key={n}>{l.quantity} × {l.name} · ${Number(l.unitPrice).toFixed(2)} = ${(l.quantity*Number(l.unitPrice)).toFixed(2)}{l.contents&&<small style={{display:'block'}}>{l.contents}</small>}</p>)}<p>Subtotal: ${Number(o.subtotal).toFixed(2)} MXN · envío e impuestos aparte.</p>{!o.saleId&&<button disabled={busy} onClick={async()=>{if(!window.confirm('¿El cliente confirmó el pedido? Esto registrará la venta y descontará inventario. No registra un pago ni genera envío.'))return;setBusy(true);setNotice('');try{const updated=await controlRequest<Order>(`/store/orders/${o.id}/confirm`,{method:'POST'});setOrders(current=>current.map(v=>v.id===o.id?updated:v));setNotice('Venta registrada. Continúa con el envío desde las herramientas del chat.');}catch(e){setNotice(e instanceof Error?e.message:'No se pudo confirmar');}finally{setBusy(false);}}}>Confirmar y registrar venta</button>}</article>)}</details>;
+}

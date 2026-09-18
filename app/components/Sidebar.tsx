@@ -1,8 +1,8 @@
 import { useState } from "react";
 import type { User } from "../lib/types";
 
-type View = "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control";
-type ControlTab = "summary" | "customers" | "categories" | "inventory" | "prices" | "bundles" | "sales" | "purchases" | "reports";
+type View = "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
+type ControlTab = import("./ControlPanel").ControlTab;
 type Props = {
   user: User;
   view: View;
@@ -26,7 +26,14 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
         <strong className="sidebar-label">Merlyn Sales</strong>
         <button type="button" className="sidebar-collapse-toggle" onClick={() => setCollapsed((current) => !current)} aria-label={collapsed ? "Desplegar menú" : "Contraer menú"} aria-expanded={!collapsed} title={collapsed ? "Desplegar menú" : "Contraer menú"}>{collapsed ? "›" : "‹"}</button>
       </div>
-      <nav>
+      <nav aria-label="Menú principal">
+        {["owner", "admin"].includes(user.role) && <button type="button" title="Feature" className={view === "feature" ? "selected" : ""} onClick={switchView("feature")}><span aria-hidden="true">⚑</span><span className="sidebar-label">Feature</span></button>}
+        <button type="button" title="E-commerce" aria-label="E-commerce" aria-expanded={view.startsWith("ecommerce-")} className={view.startsWith("ecommerce-") ? "selected" : ""} onClick={() => { setCollapsed(false); onViewChange("ecommerce-orders"); }}>
+          <span aria-hidden="true">▣</span><span className="sidebar-label">E-commerce</span>
+        </button>
+        {view.startsWith("ecommerce-") && <div className="control-aside-menu" aria-label="Opciones de E-commerce">
+          {([["ecommerce-orders", "Pedidos"], ["ecommerce-bundles", "Bundles"], ["ecommerce-products", "Productos"]] as [View,string][]).map(([target,label]) => <button type="button" key={target} className={view === target ? "selected" : ""} aria-current={view === target ? "page" : undefined} onClick={() => onViewChange(target)}><span className="sidebar-label">{label}</span></button>)}
+        </div>}
         <button
           type="button"
           className={view === "inbox" ? "selected" : ""}
@@ -115,7 +122,7 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
           <span aria-hidden="true">◌</span><span className="sidebar-label">Control de ventas</span>
         </button>
         {view === "control" && <div className="control-aside-menu" aria-label="Opciones de control de ventas">
-          {([['summary', 'Resumen'], ['customers', 'Clientes'], ['categories', 'Categorías'], ['inventory', 'Inventario'], ['prices', 'Precios'], ['bundles', 'Bundles'], ['sales', 'Ventas'], ['purchases', 'Compras'], ['reports', 'Reportes']] as [ControlTab, string][]).map(([tab, label]) => <button key={tab} type="button" className={controlTab === tab ? "selected" : ""} onClick={() => onControlTabChange(tab)}><span className="sidebar-label">{label}</span></button>)}
+          {([['summary', 'Resumen'], ['customers', 'Clientes'], ['categories', 'Categorías'], ['inventory', 'Inventario'], ['packing', 'Empaques'], ['prices', 'Precios'], ['bundles', 'Bundles'], ['sales', 'Ventas'], ['purchases', 'Compras'], ['reports', 'Reportes']] as [ControlTab, string][]).map(([tab, label]) => <button key={tab} type="button" className={controlTab === tab ? "selected" : ""} onClick={() => onControlTabChange(tab)}><span className="sidebar-label">{label}</span></button>)}
         </div>}
       </nav>
       <div className="profile">

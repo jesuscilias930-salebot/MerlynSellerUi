@@ -622,7 +622,7 @@ function FlowBuilder({
       (item) =>
         item.images.map((image) => ({
           mediaId: image.mediaId,
-          filename: image.filename,
+          filename: image.filename ?? undefined,
           caption: image.caption || item.caption || undefined,
           type: "image",
           source: `Imágenes guardadas · ${item.name}`,

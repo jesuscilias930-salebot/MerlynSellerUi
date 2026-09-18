@@ -8146,11 +8146,47 @@ button {
 }
 
 @media (min-width: 581px) {
-    .sidebarMain nav {
+    /* Bound the navigation in Inbox and pipeline/control views alike. */
+    .shell > .sidebarMain {
+        height: 100dvh;
+        max-height: 100dvh;
         min-height: 0;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+    .sidebarMain > .brand,
+    .sidebarMain > .profile {
+        flex-shrink: 0;
+    }
+
+    .sidebarMain > nav {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        min-height: 0;
+        min-width: 0;
         flex: 1 1 auto;
         overflow-y: auto;
-        padding-bottom: 8px;
+        overflow-x: hidden;
+        overscroll-behavior-y: contain;
+        scrollbar-width: thin;
+        scrollbar-color: #91b9a6 transparent;
+        padding: 3px 3px 12px;
+        scroll-padding-block: 12px;
+    }
+
+    .sidebarMain > nav > * {
+        flex-shrink: 0;
+    }
+
+    .sidebarMain > nav::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .sidebarMain > nav::-webkit-scrollbar-thumb {
+        background: #91b9a6;
+        border-radius: 6px;
     }
 }
 

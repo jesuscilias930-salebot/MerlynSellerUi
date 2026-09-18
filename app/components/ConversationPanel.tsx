@@ -6,6 +6,7 @@ import { initials } from "../lib/format";
 import type { AutomationIntent, Chat, CtaUrlMessage, DocumentOption, EntrepreneurPackage, LeadColumn, Message, QuickReply, SavedSticker } from "../lib/types";
 import { AudioRecorder } from "./AudioRecorder";
 import { QuoteNoteGenerator } from "./QuoteNoteGenerator";
+import { StoreOrders } from "./StoreOrders";
 import { ChatSaleModal } from "./ChatSaleModal";
 import { CtaUrlCard } from "./CtaUrlCard";
 import { ToolAccordion } from "./ToolAccordion";
@@ -77,7 +78,7 @@ export function ConversationPanel(props: Props) {
         <button className="tool-primary-button" type="button" disabled={!chat || !selectedDocumentId || uploadingMedia} onClick={onSendDocument}>Enviar catálogo</button>
       </ToolAccordion>
       <CtaUrlCard disabled={!chat} packages={entrepreneurPackages} onSend={onSendCtaUrl} />
-      <WhatsAppTemplateCard conversationId={chat?.id} disabled={!chat} />
+      <>{chat && <StoreOrders key={chat.id} conversationId={chat.id}/>}</><WhatsAppTemplateCard conversationId={chat?.id} disabled={!chat} />
       <ToolAccordion icon="＋" title="Adjuntar archivos" description="Las imágenes se muestran antes de enviarse.">{attachTools}</ToolAccordion>
       <ToolAccordion icon="▦" title="Imágenes guardadas" description="Selecciona una o varias imágenes y envíalas juntas.">
         {selectedSavedImageIds.length > 0 && <div className="saved-image-selection-actions"><span>{selectedSavedImageIds.length} seleccionada{selectedSavedImageIds.length === 1 ? "" : "s"}</span><button className="tool-primary-button" type="button" disabled={!chat} onClick={() => void submitImages(selectedSavedImageIds)}>Enviar selección</button><button className="plain-button" type="button" onClick={() => setSelectedSavedImageIds([])}>Limpiar</button></div>}

@@ -1,0 +1,10 @@
+.editor{grid-column:1 / -1;min-width:0;width:100%;padding:14px;border:1px solid #dce5df;border-radius:12px;background:#f7faf8;box-sizing:border-box}
+.editor label{display:block;font-weight:600;color:#183c32;margin-bottom:8px}
+.editor .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.editor input{flex:1 1 130px;min-width:0;max-width:220px;min-height:42px;padding:8px 12px;border:1px solid #bdccc3;border-radius:8px;background:white;color:#183c32;font:inherit;font-size:16px;box-sizing:border-box}
+.editor input:focus-visible{outline:2px solid #296c51;outline-offset:2px}
+.editor button{min-height:42px;padding:8px 16px;border:0;border-radius:8px;background:#1c513e;color:white;cursor:pointer;font:inherit;font-weight:600}
+.editor button:disabled{opacity:.55;cursor:default}
+.editor p{margin:8px 0 0;font-size:13px;line-height:1.5}
+.editor .hint{color:#53665b}.editor .warning{color:#86531a}.editor .error{color:#a52c2c}.editor .success{color:#1c513e}.editor .success:empty{display:none}
+@media(max-width:600px){.editor input{max-width:none}.editor button{flex:1 1 130px}}
