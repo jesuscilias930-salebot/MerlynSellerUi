@@ -37,7 +37,7 @@ export function ProductWeightEditor({ productId, productName, weightGrams, onSav
         method: "PUT", body: JSON.stringify({ weightGrams: weight }),
       });
       const saved = Number(result?.weightGrams);
-      if (result?.productId !== productId || !Number.isFinite(saved) || saved <= 0 || saved > 100000) throw new Error("No se pudo confirmar el peso guardado. Recarga el inventario para verificar.");
+      if (result?.productId !== productId || !Number.isFinite(saved) || saved <= 0 || saved > 100000) throw new Error("No se pudo confirmar el peso guardado. Actualiza la lista de productos para verificar.");
       setDraft(String(saved)); onSaved(saved); setNotice("Peso guardado para cotizar envíos.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No fue posible guardar el peso.");

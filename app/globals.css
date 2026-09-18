@@ -8365,3 +8365,10 @@ article.inbound:hover .message-reaction-picker, .message-reaction-picker:focus-w
     .whatsapp-templates-panel > header { display: grid; }
     .template-variable-row { grid-template-columns: 1fr; gap: 5px; padding: 8px 0; border-top: 1px solid #edf3ef; }
 }
+.product-weights-settings{display:grid;gap:18px;max-width:1100px}
+.product-weights-settings>p{margin:0;color:#52695f;line-height:1.6}
+.product-weights-settings>article{padding:24px;border:1px solid #dce5df;border-radius:16px;background:white;min-width:0}
+.product-weights-settings>article>header{display:block;margin-bottom:16px}
+.product-weights-settings h2{margin:0 0 8px;font-size:20px;color:#183c32}
+.product-weights-settings header strong{display:block;color:#296c51;font-size:14px}
+@media(max-width:600px){.product-weights-settings>article{padding:16px}}

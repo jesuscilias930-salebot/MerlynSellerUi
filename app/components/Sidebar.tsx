@@ -1,140 +1,67 @@
 import { useState } from "react";
 import type { User } from "../lib/types";
+import styles from "./Sidebar.module.css";
 
 type View = "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./ControlPanel").ControlTab;
-type Props = {
-  user: User;
-  view: View;
-  controlTab: ControlTab;
-  onViewChange: (view: View) => void;
-  onControlTabChange: (tab: ControlTab) => void;
-  onLogout: () => void;
-};
+type Item = { label: string; view: View; tab?: ControlTab };
+const groups: { id: string; label: string; icon: string; items: Item[] }[] = [
+  { id: "ecommerce", label: "E-commerce", icon: "▣", items: [
+    { label: "Pedidos", view: "ecommerce-orders" }, { label: "Bundles", view: "ecommerce-bundles" },
+    { label: "Productos", view: "ecommerce-products" }, { label: "Envíos", view: "shipping" },
+  ] },
+  { id: "whatsapp", label: "WhatsApp", icon: "◉", items: [
+    { label: "Remarketing", view: "remarketing" }, { label: "Respuestas automáticas", view: "automations" },
+    { label: "Respuestas rápidas", view: "quick-replies" }, { label: "Plantillas oficiales", view: "templates" }, { label: "Stickers", view: "stickers" },
+  ] },
+  { id: "documents", label: "Documentos", icon: "▤", items: [
+    { label: "Plantillas de documentos", view: "documents" }, { label: "Conjuntos reutilizables", view: "collections" },
+  ] },
+  { id: "sales", label: "Control de ventas", icon: "◌", items: (
+    [["summary", "Resumen"], ["customers", "Clientes"], ["categories", "Categorías"], ["inventory", "Inventario"],
+      ["prices", "Precios"], ["sales", "Ventas"], ["purchases", "Adquisición de mercancía"], ["reports", "Reportes"]] as [ControlTab, string][]
+  ).map(([tab, label]) => ({ label, view: "control", tab })) },
+  { id: "settings", label: "Configuración", icon: "⚙", items: [
+    { label: "Configuración de paquetes", view: "control", tab: "packing" },
+    { label: "Peso de productos", view: "control", tab: "weights" },
+    { label: "Bundles", view: "control", tab: "bundles" },
+  ] },
+];
+type Props = { user: User; view: View; controlTab: ControlTab; onViewChange: (view: View) => void; onControlTabChange: (tab: ControlTab) => void; onLogout: () => void };
 
 export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChange, onLogout }: Props) {
   const [collapsed, setCollapsed] = useState(false);
-  const switchView =
-    (nextView: View) => (event: React.MouseEvent<HTMLButtonElement>) => {
-      event.preventDefault();
-      onViewChange(nextView);
-    };
-  return (
-    <aside className={`sidebarMain${collapsed ? " collapsed" : ""}`}>
-      <div className="brand">
-        <b className="mark">M</b>
-        <strong className="sidebar-label">Merlyn Sales</strong>
-        <button type="button" className="sidebar-collapse-toggle" onClick={() => setCollapsed((current) => !current)} aria-label={collapsed ? "Desplegar menú" : "Contraer menú"} aria-expanded={!collapsed} title={collapsed ? "Desplegar menú" : "Contraer menú"}>{collapsed ? "›" : "‹"}</button>
-      </div>
-      <nav aria-label="Menú principal">
-        {["owner", "admin"].includes(user.role) && <button type="button" title="Feature" className={view === "feature" ? "selected" : ""} onClick={switchView("feature")}><span aria-hidden="true">⚑</span><span className="sidebar-label">Feature</span></button>}
-        <button type="button" title="E-commerce" aria-label="E-commerce" aria-expanded={view.startsWith("ecommerce-")} className={view.startsWith("ecommerce-") ? "selected" : ""} onClick={() => { setCollapsed(false); onViewChange("ecommerce-orders"); }}>
-          <span aria-hidden="true">▣</span><span className="sidebar-label">E-commerce</span>
-        </button>
-        {view.startsWith("ecommerce-") && <div className="control-aside-menu" aria-label="Opciones de E-commerce">
-          {([["ecommerce-orders", "Pedidos"], ["ecommerce-bundles", "Bundles"], ["ecommerce-products", "Productos"]] as [View,string][]).map(([target,label]) => <button type="button" key={target} className={view === target ? "selected" : ""} aria-current={view === target ? "page" : undefined} onClick={() => onViewChange(target)}><span className="sidebar-label">{label}</span></button>)}
-        </div>}
-        <button
-          type="button"
-          className={view === "inbox" ? "selected" : ""}
-          onClick={switchView("inbox")}
-        >
-          <span aria-hidden="true">◉</span><span className="sidebar-label">Inbox</span>
-        </button>
-        <button
-          type="button"
-          className={view === "pipeline" ? "selected" : ""}
-          onClick={switchView("pipeline")}
-        >
-          <span aria-hidden="true">▦</span><span className="sidebar-label">Leads</span>
-        </button>
-        <button
-          type="button"
-          className={view === "remarketing" ? "selected" : ""}
-          onClick={switchView("remarketing")}
-        >
-          <span aria-hidden="true">↗</span><span className="sidebar-label">Remarketing</span>
-        </button>
-        <button
-          type="button"
-          className={view === "automations" ? "selected" : ""}
-          onClick={switchView("automations")}
-        >
-          <span aria-hidden="true">⚙</span><span className="sidebar-label">Respuestas automáticas</span>
-        </button>
-        <button
-          type="button"
-          className={view === "quick-replies" ? "selected" : ""}
-          onClick={switchView("quick-replies")}
-        >
-          <span aria-hidden="true">↯</span><span className="sidebar-label">Respuestas rápidas</span>
-        </button>
-        <button
-          type="button"
-          className={view === "stickers" ? "selected" : ""}
-          onClick={switchView("stickers")}
-        >
-          <span aria-hidden="true">☺</span><span className="sidebar-label">Stickers</span>
-        </button>
-        <button
-          type="button"
-          className={view === "documents" ? "selected" : ""}
-          onClick={switchView("documents")}
-        >
-          <span aria-hidden="true">▤</span><span className="sidebar-label">Plantillas de documentos</span>
-        </button>
-        <button
-          type="button"
-          className={view === "collections" ? "selected" : ""}
-          onClick={switchView("collections")}
-        >
-          <span aria-hidden="true">▦</span><span className="sidebar-label">Conjuntos reutilizables</span>
-        </button>
-        <button
-          type="button"
-          className={view === "cta-buttons" ? "selected" : ""}
-          onClick={switchView("cta-buttons")}
-        >
-          <span aria-hidden="true">↗</span><span className="sidebar-label">Invitaciones con botón</span>
-        </button>
-        <button
-          type="button"
-          className={view === "templates" ? "selected" : ""}
-          onClick={switchView("templates")}
-        >
-          <span aria-hidden="true">✦</span><span className="sidebar-label">Plantillas oficiales</span>
-        </button>
-        <button
-          type="button"
-          className={view === "scenarios" ? "selected" : ""}
-          onClick={switchView("scenarios")}
-        >
-          <span aria-hidden="true">◇</span><span className="sidebar-label">Escenarios</span>
-        </button>
-        <button type="button" className={view === "shipping" ? "selected" : ""} onClick={switchView("shipping")}>
-          <span aria-hidden="true">▧</span><span className="sidebar-label">Envíos</span>
-        </button>
-        <button
-          type="button"
-          className={view === "control" ? "selected" : ""}
-          onClick={switchView("control")}
-        >
-          <span aria-hidden="true">◌</span><span className="sidebar-label">Control de ventas</span>
-        </button>
-        {view === "control" && <div className="control-aside-menu" aria-label="Opciones de control de ventas">
-          {([['summary', 'Resumen'], ['customers', 'Clientes'], ['categories', 'Categorías'], ['inventory', 'Inventario'], ['packing', 'Empaques'], ['prices', 'Precios'], ['bundles', 'Bundles'], ['sales', 'Ventas'], ['purchases', 'Compras'], ['reports', 'Reportes']] as [ControlTab, string][]).map(([tab, label]) => <button key={tab} type="button" className={controlTab === tab ? "selected" : ""} onClick={() => onControlTabChange(tab)}><span className="sidebar-label">{label}</span></button>)}
-        </div>}
-      </nav>
-      <div className="profile">
-        <b>{user.email[0].toUpperCase()}</b>
-        <span className="sidebar-label">
-          {user.email}
-          <small>{user.role}</small>
-        </span>
-        <button type="button" onClick={onLogout} aria-label="Cerrar sesión" title="Cerrar sesión">
-          ↪
-        </button>
-      </div>
-    </aside>
-  );
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const isActive = (item: Item) => view === item.view && (!item.tab || controlTab === item.tab);
+  function navigate(item: Item) {
+    if (item.tab) onControlTabChange(item.tab); else onViewChange(item.view);
+  }
+  function link(label: string, target: View, icon: string) {
+    return <button type="button" title={label} aria-label={label} aria-current={view === target ? "page" : undefined} className={view === target ? "selected" : ""} onClick={() => onViewChange(target)}><span aria-hidden="true">{icon}</span><span className="sidebar-label">{label}</span></button>;
+  }
+  return <aside className={`sidebarMain${collapsed ? " collapsed" : ""}`}>
+    <div className="brand"><b className="mark">M</b><strong className="sidebar-label">Merlyn Sales</strong>
+      <button type="button" className="sidebar-collapse-toggle" onClick={() => setCollapsed(v => !v)} aria-label={collapsed ? "Desplegar menú" : "Contraer menú"} aria-expanded={!collapsed}>{collapsed ? "›" : "‹"}</button>
+    </div>
+    <nav aria-label="Menú principal">
+      {["owner", "admin"].includes(user.role) && link("Feature", "feature", "⚑")}
+      {link("Inbox", "inbox", "◉")}
+      {link("Leads", "pipeline", "▦")}
+      {groups.map(group => {
+        const active = group.items.some(isActive);
+        const open = !collapsed && (expanded[group.id] ?? active);
+        return <div key={group.id} className={styles.group}>
+          <button type="button" className={`${styles.heading} ${active ? "selected" : ""}`} title={group.label} aria-label={group.label} aria-expanded={open} aria-controls={`sidebar-${group.id}`} onClick={() => { setExpanded(current => ({ ...current, [group.id]: collapsed || !open })); setCollapsed(false); }}>
+            <span aria-hidden="true">{group.icon}</span><span className="sidebar-label">{group.label}</span><span className={`${styles.chevron} sidebar-label`} aria-hidden="true">{open ? "⌄" : "›"}</span>
+          </button>
+          <div id={`sidebar-${group.id}`} className={styles.items} hidden={!open}>
+            {group.items.map(item => <button type="button" key={item.tab || item.view} title={item.label} aria-current={isActive(item) ? "page" : undefined} className={isActive(item) ? "selected" : ""} onClick={() => navigate(item)}>{item.label}</button>)}
+          </div>
+        </div>;
+      })}
+      {link("Invitaciones con botón", "cta-buttons", "↗")}
+      {link("Escenarios", "scenarios", "◇")}
+    </nav>
+    <div className="profile"><b>{user.email[0].toUpperCase()}</b><span className="sidebar-label">{user.email}<small>{user.role}</small></span><button type="button" onClick={onLogout} aria-label="Cerrar sesión" title="Cerrar sesión">↪</button></div>
+  </aside>;
 }

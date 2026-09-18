@@ -85,6 +85,7 @@ export type ControlTab =
   | "categories"
   | "inventory"
   | "packing"
+  | "weights"
   | "prices"
   | "bundles"
   | "sales"
@@ -622,10 +623,10 @@ export function ControlPanel({
     <section className="control-panel">
       <header>
         <div>
-          <p>CONTROL DE VENTAS</p>
-          <h1>Operación comercial</h1>
+          <p>{["packing", "weights", "bundles"].includes(tab) ? "CONFIGURACIÓN" : "CONTROL DE VENTAS"}</p>
+          <h1>{tab === "packing" ? "Configuración de paquetes" : tab === "weights" ? "Peso de productos" : tab === "bundles" ? "Configuración de bundles" : "Operación comercial"}</h1>
           <span>
-            Inventario, clientes, ventas y reportes conectados a Sock Control.
+            {["packing", "weights", "bundles"].includes(tab) ? "Administra los datos de tus paquetes y productos." : "Inventario, clientes, ventas y reportes conectados a Sock Control."}
           </span>
         </div>
         <div>
@@ -935,8 +936,6 @@ export function ControlPanel({
                 <strong>{`${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}${product.size ? ` - ${product.size}` : ""}`}</strong>
                 <b>{product.currentStock} disponibles</b>
                 <span className="category-actions"><button type="button" className="plain-button" onClick={() => editProduct(product)}>Editar</button><button type="button" className="plain-button" onClick={() => duplicateProduct(product)}>Duplicar</button><button type="button" className="danger-link" onClick={() => void deleteProduct(product)}>Eliminar</button></span>
-                <ProductWeightEditor productId={product.id} productName={product.name} weightGrams={product.weightGrams}
-                  onSaved={weight => setProducts(current => current.map(item => item.id === product.id ? { ...item, weightGrams: weight } : item))} />
               </div>
             ))}
           </section>
@@ -944,6 +943,16 @@ export function ControlPanel({
       )}
       {tab === "prices" && <PriceRulesPanel products={products} />}
       {tab === "packing" && <PackingRulesPanel />}
+      {tab === "weights" && <section aria-label="Pesos por par de productos" className="product-weights-settings">
+        <p>Configura el peso de un par completo, sin empaque. Estos valores se utilizan para cotizar envíos; no modifican los precios.</p>
+        <p>{products.length} productos · {products.filter(product => Number(product.weightGrams) > 0).length} con peso configurado</p>
+        {products.length === 0 && <p>{loading ? "Cargando productos…" : "No hay productos guardados. Agrégalos desde Inventario."}</p>}
+        {products.map(product => <article key={product.id}>
+          <header><h2>{product.name}</h2><p>{[product.category?.name, product.gender, product.size].filter(Boolean).join(" · ")}</p><strong>{Number(product.weightGrams) > 0 ? `Peso guardado: ${product.weightGrams} g por par` : "Peso pendiente de configurar"}</strong></header>
+          <ProductWeightEditor productId={product.id} productName={product.name} weightGrams={product.weightGrams}
+            onSaved={weight => setProducts(current => current.map(item => item.id === product.id ? { ...item, weightGrams: weight } : item))} />
+        </article>)}
+      </section>}
       {tab === "bundles" && <><BundlesPanel products={products} packages={entrepreneurPackages} onCreateImageSet={onCreateBundleImageSet} onUploadImage={onUploadBundleImage} /><BundleImageManager packages={entrepreneurPackages} onCreate={onCreateBundleImageSet} onUpload={onUploadBundleImage} /></>}
       {tab === "sales" && <StoreOrdersPanel />}
       {tab === "sales" && (
@@ -1025,7 +1034,7 @@ export function ControlPanel({
             className="customer-form purchase-form"
             onSubmit={savePurchase}
           >
-            <header><div><p className="form-kicker">INVENTARIO</p><h2>{editingPurchaseId ? `Editar compra #${editingPurchaseId}` : "Registrar compra"}</h2></div>{editingPurchaseId && <button type="button" className="plain-button" onClick={resetPurchaseEditor}>Cancelar edición</button>}</header>
+            <header><div><p className="form-kicker">ADQUISICIÓN DE MERCANCÍA</p><h2>{editingPurchaseId ? `Editar adquisición #${editingPurchaseId}` : "Registrar adquisición de mercancía"}</h2></div>{editingPurchaseId && <button type="button" className="plain-button" onClick={resetPurchaseEditor}>Cancelar edición</button>}</header>
             <input
               value={purchaseDraft.supplierName}
               onChange={(event) =>
@@ -1276,7 +1285,7 @@ export function ControlPanel({
             <button>{editingPurchaseId ? "Actualizar compra" : "Registrar compra"}</button>
           </form>
           <section className="control-table">
-            <h2>Compras recientes</h2>
+            <h2>Adquisiciones de mercancía recientes</h2>
             {purchases.length === 0 && <p>Aún no hay compras registradas.</p>}
             {purchases.map((purchase) => (
               <div key={purchase.id}>
