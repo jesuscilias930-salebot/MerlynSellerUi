@@ -4720,6 +4720,27 @@ button {
     font-size: 14px
 }
 
+.control-table.inventory-list > div {
+    grid-template-columns: minmax(0, 2fr) minmax(110px, 1fr) minmax(140px, 1fr);
+}
+
+.control-table.product-catalog-list > div {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.product-catalog-list .category-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+@media (max-width: 700px) {
+    .control-table.inventory-list > div,
+    .control-table.product-catalog-list > div {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 .stock-row {
     grid-template-columns: 1fr auto
 }

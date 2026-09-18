@@ -13,12 +13,13 @@ const groups: { id: string; label: string; icon: string; items: Item[] }[] = [
   { id: "whatsapp", label: "WhatsApp", icon: "◉", items: [
     { label: "Remarketing", view: "remarketing" }, { label: "Respuestas automáticas", view: "automations" },
     { label: "Respuestas rápidas", view: "quick-replies" }, { label: "Plantillas oficiales", view: "templates" }, { label: "Stickers", view: "stickers" },
+    { label: "Invitaciones con botón", view: "cta-buttons" },
   ] },
   { id: "documents", label: "Documentos", icon: "▤", items: [
     { label: "Plantillas de documentos", view: "documents" }, { label: "Conjuntos reutilizables", view: "collections" },
   ] },
   { id: "sales", label: "Control de ventas", icon: "◌", items: (
-    [["summary", "Resumen"], ["customers", "Clientes"], ["categories", "Categorías"], ["inventory", "Inventario"],
+    [["summary", "Resumen"], ["customers", "Clientes"], ["categories", "Categorías"], ["products", "Productos"], ["inventory", "Inventario"],
       ["prices", "Precios"], ["sales", "Ventas"], ["purchases", "Adquisición de mercancía"], ["reports", "Reportes"]] as [ControlTab, string][]
   ).map(([tab, label]) => ({ label, view: "control", tab })) },
   { id: "settings", label: "Configuración", icon: "⚙", items: [
@@ -59,7 +60,6 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
           </div>
         </div>;
       })}
-      {link("Invitaciones con botón", "cta-buttons", "↗")}
       {link("Escenarios", "scenarios", "◇")}
     </nav>
     <div className="profile"><b>{user.email[0].toUpperCase()}</b><span className="sidebar-label">{user.email}<small>{user.role}</small></span><button type="button" onClick={onLogout} aria-label="Cerrar sesión" title="Cerrar sesión">↪</button></div>

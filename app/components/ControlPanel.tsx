@@ -84,6 +84,7 @@ export type ControlTab =
   | "customers"
   | "categories"
   | "inventory"
+  | "products"
   | "packing"
   | "weights"
   | "prices"
@@ -831,6 +832,21 @@ export function ControlPanel({
         </div>
       )}
       {tab === "inventory" && (
+        <section className="control-table inventory-list" aria-label="Inventario de productos">
+          <h2>Inventario</h2>
+          {products.length === 0 && (
+            <p>{loading ? "Cargando inventario…" : "No hay productos. Créelos desde Control de ventas → Productos."}</p>
+          )}
+          {products.map((product) => (
+            <div key={product.id} className={product.currentStock <= product.minStockAlert ? "low" : ""}>
+              <strong>{`${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}${product.size ? ` - ${product.size}` : ""}`}</strong>
+              <b>{product.currentStock} disponibles</b>
+              <span>{product.currentStock <= product.minStockAlert ? "Stock bajo · " : ""}Alerta mínima: {product.minStockAlert}</span>
+            </div>
+          ))}
+        </section>
+      )}
+      {tab === "products" && (
         <div className="control-customers inventory-workspace">
           <form className="customer-form product-form" onSubmit={saveProduct}>
             <div>
@@ -921,20 +937,14 @@ export function ControlPanel({
                 : "Primero crea una categoría"}
             </button>{editingProductId && <button type="button" className="plain-button" onClick={resetProductEditor}>Cancelar</button>}</div>
           </form>
-          <section className="control-table">
-            <h2>Inventario</h2>
+          <section className="control-table product-catalog-list">
+            <h2>Productos existentes</h2>
             {products.length === 0 && (
               <p>Aún no hay productos en tu catálogo.</p>
             )}
             {products.map((product) => (
-              <div
-                key={product.id}
-                className={
-                  product.currentStock <= product.minStockAlert ? "low" : ""
-                }
-              >
+              <div key={product.id}>
                 <strong>{`${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}${product.size ? ` - ${product.size}` : ""}`}</strong>
-                <b>{product.currentStock} disponibles</b>
                 <span className="category-actions"><button type="button" className="plain-button" onClick={() => editProduct(product)}>Editar</button><button type="button" className="plain-button" onClick={() => duplicateProduct(product)}>Duplicar</button><button type="button" className="danger-link" onClick={() => void deleteProduct(product)}>Eliminar</button></span>
               </div>
             ))}
@@ -946,7 +956,7 @@ export function ControlPanel({
       {tab === "weights" && <section aria-label="Pesos por par de productos" className="product-weights-settings">
         <p>Configura el peso de un par completo, sin empaque. Estos valores se utilizan para cotizar envíos; no modifican los precios.</p>
         <p>{products.length} productos · {products.filter(product => Number(product.weightGrams) > 0).length} con peso configurado</p>
-        {products.length === 0 && <p>{loading ? "Cargando productos…" : "No hay productos guardados. Agrégalos desde Inventario."}</p>}
+        {products.length === 0 && <p>{loading ? "Cargando productos…" : "No hay productos guardados. Agrégalos desde Control de ventas → Productos."}</p>}
         {products.map(product => <article key={product.id}>
           <header><h2>{product.name}</h2><p>{[product.category?.name, product.gender, product.size].filter(Boolean).join(" · ")}</p><strong>{Number(product.weightGrams) > 0 ? `Peso guardado: ${product.weightGrams} g por par` : "Peso pendiente de configurar"}</strong></header>
           <ProductWeightEditor productId={product.id} productName={product.name} weightGrams={product.weightGrams}
