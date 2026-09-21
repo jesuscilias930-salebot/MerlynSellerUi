@@ -40,10 +40,16 @@ export function FeaturesPanel() {
       <section className="envia-card">
         <h2>Tienda · Pagos con tarjeta</h2>
         <p>Al desactivar, se ocultan los botones de pago y solo queda concluir el pedido por WhatsApp. No cambia el ambiente Dev/Prod.</p>
-        <button type="button" role="switch" aria-checked={data?.cardPaymentsEnabled === true} disabled={busy || !data} onClick={() => void toggleCardPayments()} aria-label="Habilitar pagos con tarjeta" style={{ padding: "12px 20px", borderRadius: 999, color: "white", background: data?.cardPaymentsEnabled ? "#1C513E" : "#6C7770" }}>
-          {!data ? "Cargando…" : data.cardPaymentsEnabled ? "Activados · Desactivar" : "Desactivados · Activar"}
-        </button>
-        <p>Las sesiones ya abiertas en Stripe pueden completarse. Sus confirmaciones siguen procesándose.</p>
+        <strong>Estado: {!data ? "Cargando…" : data.cardPaymentsEnabled ? "Activados" : "Desactivados"}</strong>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 20 }}>
+          <span style={{ fontWeight: data && !data.cardPaymentsEnabled ? 700 : 400 }}>Off</span>
+          <label style={{ position: "relative", display: "inline-flex", width: 64, minWidth: 64, height: 36, opacity: !data || busy ? 0.55 : 1 }}>
+            <input type="checkbox" role="switch" checked={data?.cardPaymentsEnabled === true} disabled={busy || !data} onChange={() => void toggleCardPayments()} aria-label="Habilitar pagos con tarjeta" aria-describedby="card-payments-help" style={{ appearance: "none", width: "100%", height: "100%", margin: 0, padding: 0, borderRadius: 999, border: "1px solid #6C7770", background: data?.cardPaymentsEnabled ? "#1C513E" : "#6C7770", cursor: !data || busy ? "not-allowed" : "pointer" }} />
+            <span aria-hidden="true" style={{ pointerEvents: "none", display: "block", position: "absolute", top: 4, left: data?.cardPaymentsEnabled ? 32 : 4, width: 28, height: 28, borderRadius: "50%", background: "white", transition: "left 160ms ease" }} />
+          </label>
+          <span style={{ fontWeight: data?.cardPaymentsEnabled ? 700 : 400 }}>On</span>
+        </div>
+        <p id="card-payments-help">Las sesiones ya abiertas en Stripe pueden completarse. Sus confirmaciones siguen procesándose.</p>
       </section>
       {(["stripe", "envia"] as Service[]).map(service => {
         const production = data?.[service] === "production";
