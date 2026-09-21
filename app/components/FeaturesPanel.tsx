@@ -3,13 +3,24 @@ import { useEffect, useState } from "react";
 import { request } from "../lib/api";
 type Mode = "sandbox" | "production";
 type Service = "envia" | "stripe";
-type Features = Record<Service, Mode> & { configured: Record<Service, Record<Mode, boolean>>; stripeError?: string };
+type Features = Record<Service, Mode> & { cardPaymentsEnabled: boolean; configured: Record<Service, Record<Mode, boolean>>; stripeError?: string };
 
 export function FeaturesPanel() {
   const [data, setData] = useState<Features | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   async function load() { setData(await request<Features>("/features")); }
+  async function toggleCardPayments() {
+    if (!data || busy) return;
+    const enabled = !data.cardPaymentsEnabled;
+    setBusy(true); setNotice("");
+    try {
+      await request("/features", { method: "PUT", body: JSON.stringify({ service: "cardPayments", enabled }) });
+      await load();
+      setNotice(enabled ? "Pagos con tarjeta habilitados en la tienda." : "Pagos con tarjeta deshabilitados. Los nuevos pedidos se concluyen por WhatsApp.");
+    } catch (e) { setNotice(e instanceof Error ? e.message : "No se pudo actualizar."); }
+    finally { setBusy(false); }
+  }
   useEffect(() => { const controller = new AbortController(); void request<Features>("/features", { signal: controller.signal }).then(setData).catch(e => { if (!controller.signal.aborted) setNotice(e.message); }); return () => controller.abort(); }, []);
   async function change(service: Service, environment: Mode) {
     if (environment === data?.[service]) return;
@@ -22,10 +33,18 @@ export function FeaturesPanel() {
     finally { setBusy(false); }
   }
   return <div className="automation-workspace" style={{ overflowY: "auto", padding: 24 }}>
-    <header><small>CONFIGURACIÓN ADMINISTRATIVA</small><h1>Feature</h1><p>Dos controles independientes. Apagado: Dev · Encendido: Prod.</p></header>
+    <header><small>CONFIGURACIÓN ADMINISTRATIVA</small><h1>Feature</h1><p>Configura los métodos de compra y, por separado, el ambiente de cada integración.</p></header>
     <p role="status">{notice}</p>
     <button type="button" disabled={busy} onClick={() => { setBusy(true); void load().catch(e => setNotice(e.message)).finally(() => setBusy(false)); }}>Actualizar estado</button>
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 290px), 1fr))", gap: 20, marginTop: 24 }}>
+      <section className="envia-card">
+        <h2>Tienda · Pagos con tarjeta</h2>
+        <p>Al desactivar, se ocultan los botones de pago y solo queda concluir el pedido por WhatsApp. No cambia el ambiente Dev/Prod.</p>
+        <button type="button" role="switch" aria-checked={data?.cardPaymentsEnabled === true} disabled={busy || !data} onClick={() => void toggleCardPayments()} aria-label="Habilitar pagos con tarjeta" style={{ padding: "12px 20px", borderRadius: 999, color: "white", background: data?.cardPaymentsEnabled ? "#1C513E" : "#6C7770" }}>
+          {!data ? "Cargando…" : data.cardPaymentsEnabled ? "Activados · Desactivar" : "Desactivados · Activar"}
+        </button>
+        <p>Las sesiones ya abiertas en Stripe pueden completarse. Sus confirmaciones siguen procesándose.</p>
+      </section>
       {(["stripe", "envia"] as Service[]).map(service => {
         const production = data?.[service] === "production";
         const nextMode: Mode = production ? "sandbox" : "production";
