@@ -70,7 +70,7 @@ type PurchaseDraftItem = {
   isTaxed: boolean;
   pricePerBulk: string;
 };
-type PurchaseDraft = { supplierName: string; totalInvoiceAmount: string; items: PurchaseDraftItem[] };
+type PurchaseDraft = { supplierName: string; purchaseDate: string; totalInvoiceAmount: string; items: PurchaseDraftItem[] };
 type Page<T> = { content: T[]; totalElements: number };
 type Report = {
   productId: number;
@@ -103,7 +103,11 @@ const monthStart = () =>
     .slice(0, 10);
 const today = () => new Date().toISOString().slice(0, 10);
 const emptyPurchaseItem = (): PurchaseDraftItem => ({ productId: "", isBulk: false, bulksReceived: "1", unitsPerBulk: "", individualUnitsReceived: "0", unitCostNet: "", isTaxed: false, pricePerBulk: "" });
-const emptyPurchaseDraft = (): PurchaseDraft => ({ supplierName: "", totalInvoiceAmount: "", items: [emptyPurchaseItem()] });
+const purchaseToday = () => {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+};
+const emptyPurchaseDraft = (): PurchaseDraft => ({ supplierName: "", purchaseDate: purchaseToday(), totalInvoiceAmount: "", items: [emptyPurchaseItem()] });
 
 export function ControlPanel({
   chats,
@@ -416,6 +420,7 @@ export function ControlPanel({
   const savePurchase = async (event: FormEvent) => {
     event.preventDefault();
     try {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(purchaseDraft.purchaseDate)) throw new Error("Selecciona la fecha de compra.");
       const items = purchaseDraft.items.map((item) => {
         const bulksReceived = item.isBulk ? Number(item.bulksReceived || 0) : 0;
         const unitsPerBulk = item.isBulk ? Number(item.unitsPerBulk || 0) : 0;
@@ -441,7 +446,7 @@ export function ControlPanel({
           pricePerBulk: item.isBulk ? pricePerBulk : null,
           // Son una vista previa para el usuario; el backend los recalcula.
           totalUnitsAcquired,
-          totalPaid: unitCostNet * totalUnitsAcquired,
+          totalPaid: item.isBulk ? pricePerBulk * bulksReceived : unitCostNet * totalUnitsAcquired,
         };
       });
       if (
@@ -462,6 +467,8 @@ export function ControlPanel({
         method: editingPurchaseId ? "PUT" : "POST",
         body: JSON.stringify({
           supplierName: purchaseDraft.supplierName || null,
+          // Calendar date: no UTC conversion that could move it to another day.
+          purchaseDate: `${purchaseDraft.purchaseDate}T00:00:00`,
           totalInvoiceAmount: purchaseDraft.totalInvoiceAmount
             ? Number(purchaseDraft.totalInvoiceAmount)
             : null,
@@ -484,6 +491,7 @@ export function ControlPanel({
     setEditingPurchaseId(purchase.id);
     setPurchaseDraft({
       supplierName: purchase.supplierName || "",
+      purchaseDate: purchase.purchaseDate?.slice(0, 10) || "",
       totalInvoiceAmount: purchase.totalInvoiceAmount == null ? "" : String(purchase.totalInvoiceAmount),
       items: (purchase.purchaseItemsRequest?.length ? purchase.purchaseItemsRequest : [undefined]).map((item) => ({
         ...(item?.id ? { id: item.id } : {}),
@@ -1055,6 +1063,11 @@ export function ControlPanel({
               }
               placeholder="Proveedor (opcional)"
             />
+            <label>
+              Fecha de compra
+              <input type="date" required value={purchaseDraft.purchaseDate}
+                onChange={(event) => setPurchaseDraft({ ...purchaseDraft, purchaseDate: event.target.value })} />
+            </label>
             <input
               type="number"
               min="0"
@@ -1237,16 +1250,15 @@ export function ControlPanel({
                 <p className="purchase-item-summary">
                   {(() => {
                     const units =
-                      (item.isBulk
-                        ? Number(item.bulksReceived || 0) *
-                          Number(item.unitsPerBulk || 0)
-                        : 0) + Number(item.individualUnitsReceived || 0);
+                      item.isBulk
+                        ? Number(item.bulksReceived || 0) * Number(item.unitsPerBulk || 0)
+                        : Number(item.individualUnitsReceived || 0);
                     const unitCost = item.isBulk
                       ? Number(item.pricePerBulk || 0) /
                         Number(item.unitsPerBulk || 1)
                       : Number(item.unitCostNet || 0);
                     return `${units} piezas · ${money(
-                      units * unitCost,
+                      item.isBulk ? Number(item.pricePerBulk || 0) * Number(item.bulksReceived || 0) : units * unitCost,
                     )} total calculado`;
                   })()}
                 </p>
@@ -1301,6 +1313,7 @@ export function ControlPanel({
               <div key={purchase.id}>
                 <strong>Compra #{purchase.id}</strong>
                 <span>{purchase.supplierName || "Sin proveedor"}</span>
+                <span>{purchase.purchaseDate ? `Fecha: ${purchase.purchaseDate.slice(0,10).split("-").reverse().join("/")}` : "Sin fecha"}</span>
                 <span>
                   {purchase.purchaseItemsRequest
                     ?.map(
