@@ -2,8 +2,28 @@
 import { useEffect, useRef, useState } from "react";
 import { controlRequest, controlSession } from "../lib/control-api";
 import styles from "./EcommerceCatalogPanel.module.css";
-type Item = { id: number; name: string; currentStock?: number; fixedPrice?: number; items?: {quantity:number}[] };
+type Item = { id: number; name: string; description?:string|null; currentStock?: number; fixedPrice?: number; items?: {quantity:number}[] };
 type SavedPhoto = {id:number;url:string};
+function BundleDescriptionEditor({item}:{item:Item}) {
+  const [description,setDescription]=useState(item.description||"");
+  const [saved,setSaved]=useState(item.description||"");
+  const [busy,setBusy]=useState(false);
+  const [notice,setNotice]=useState("");
+  async function save() {
+    setBusy(true);setNotice("");
+    try {
+      const result=await controlRequest<Item>(`/bundles/${item.id}/description`,{method:"PATCH",body:JSON.stringify({description})});
+      setDescription(result.description||"");setSaved(result.description||"");setNotice("Descripción guardada. Se mostrará debajo del título en la tienda.");
+    } catch(e){setNotice(e instanceof Error?e.message:"No se pudo guardar la descripción.");}
+    finally{setBusy(false);}
+  }
+  return <div className={styles.descriptionEditor}>
+    <label>Descripción del paquete<textarea value={description} maxLength={4000} rows={5} disabled={busy} onChange={e=>setDescription(e.target.value)} placeholder="Explica cómo está armado: surtido, tallas, colores y otros detalles…"/></label>
+    <small>{description.length}/4000 caracteres · Visible en la tienda</small>
+    <button type="button" disabled={busy||description===saved} onClick={()=>void save()}>{busy?"Guardando…":"Guardar descripción"}</button>
+    <p role="status">{notice}</p>
+  </div>;
+}
 function Photo({ src, file, name }: {src?:string;file:File|null;name:string}) {
   const ref=useRef<HTMLImageElement>(null);
   useEffect(()=>{if(!file)return;const url=URL.createObjectURL(file);if(ref.current)ref.current.src=url;return()=>URL.revokeObjectURL(url);},[file]);
@@ -33,6 +53,7 @@ function CatalogCard({item,photos,kind,refresh}:{item:Item;photos:SavedPhoto[];k
   return <article className={styles.card}>
     <Photo src={photos[0]?.url} file={null} name={item.name}/>
     <h3>{item.name}</h3><small>#{item.id} · {kind==="products"?`${item.currentStock||0} piezas disponibles`:`${item.items?.reduce((n,i)=>n+i.quantity,0)||0} piezas por paquete`}</small>
+    {kind==="bundles"&&<BundleDescriptionEditor key={`${item.id}-${item.description||""}`} item={item}/>}
     {item.fixedPrice!=null&&<b>{new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN"}).format(item.fixedPrice)}</b>}
     <small>{photos.length} fotos guardadas · La primera es la portada.</small>
     <div className={styles.photos}>{photos.map((photo,index)=><figure key={photo.id}><Photo src={photo.url} file={null} name={`${item.name}, foto ${index+1}`}/><figcaption>{index===0?"Portada":`Foto ${index+1}`}</figcaption></figure>)}</div>

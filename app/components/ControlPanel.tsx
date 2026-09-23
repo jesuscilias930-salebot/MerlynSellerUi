@@ -9,6 +9,7 @@ import { BundleImageManager } from "./BundleImageManager";
 import { StoreOrdersPanel } from "./StoreOrdersPanel";
 import { ProductWeightEditor } from "./ProductWeightEditor";
 import { PackingRulesPanel } from "./PackingRulesPanel";
+import { InventoryQuantityEditor } from "./InventoryQuantityEditor";
 
 type Customer = {
   id: number;
@@ -850,6 +851,7 @@ export function ControlPanel({
               <strong>{`${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}${product.size ? ` - ${product.size}` : ""}`}</strong>
               <b>{product.currentStock} disponibles</b>
               <span>{product.currentStock <= product.minStockAlert ? "Stock bajo · " : ""}Alerta mínima: {product.minStockAlert}</span>
+              <InventoryQuantityEditor id={product.id} name={`${product.name} · ${product.category?.name || ""} · ${product.gender || ""} ${product.size || ""}`} stock={product.currentStock} onSaved={load} />
             </div>
           ))}
         </section>

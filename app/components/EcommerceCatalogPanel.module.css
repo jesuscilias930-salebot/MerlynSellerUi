@@ -12,3 +12,5 @@
 .photos img {height:80px;}
 .photos figcaption {font-size:11px;color:#6c7770;overflow-wrap:anywhere;}
 .photos button {font-size:12px;padding:6px;}
+.descriptionEditor{display:grid;gap:8px;border-bottom:1px solid #dedfd6;padding-bottom:16px;}
+.descriptionEditor textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:120px;padding:10px;border:1px solid #dedfd6;border-radius:8px;background:#fff;color:#183c32;font:inherit;line-height:1.5;}
