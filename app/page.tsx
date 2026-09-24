@@ -13,6 +13,7 @@ import { LoginScreen } from "./components/LoginScreen";
 import { RemarketingPanel } from "./components/RemarketingPanel";
 import { Sidebar } from "./components/Sidebar";
 import { EcommerceCatalogPanel } from "./components/EcommerceCatalogPanel";
+import { TestimonialsPanel } from "./components/TestimonialsPanel";
 import { FeaturesPanel } from "./components/FeaturesPanel";
 import { PendingOrdersPanel } from "./components/PendingOrdersPanel";
 import { ScenariosPanel } from "./components/ScenariosPanel";
@@ -25,7 +26,7 @@ import { WhatsAppTemplatesPanel } from "./components/WhatsAppTemplatesPanel";
 import { EnviaShippingPanel } from "./components/EnviaShippingPanel";
 import type { PendingChatImage } from "./components/ConversationPanel";
 
-type View = "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
+type View = "ecommerce-testimonials" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./components/ControlPanel").ControlTab;
 type UploadResponse = { error?: string; mediaId?: string; filename?: string };
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -1002,6 +1003,8 @@ export default function Home() {
         <div className="automation-workspace"><WhatsAppTemplatesPanel templates={whatsAppTemplates} syncing={syncingWhatsAppTemplates} onSync={syncWhatsAppTemplates} onSaveMappings={saveWhatsAppTemplateMappings} /></div>
       ) : view === "ecommerce-orders" ? (
         <PendingOrdersPanel onOpenShipping={() => setView("shipping")} />
+      ) : view === "ecommerce-testimonials" ? (
+        <TestimonialsPanel />
       ) : view === "ecommerce-bundles" || view === "ecommerce-products" ? (
         <EcommerceCatalogPanel key={view} kind={view === "ecommerce-bundles" ? "bundles" : "products"} />
       ) : view === "scenarios" ? (

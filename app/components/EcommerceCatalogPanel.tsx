@@ -35,6 +35,23 @@ function CatalogCard({item,photos,kind,refresh}:{item:Item;photos:SavedPhoto[];k
   const [busy,setBusy]=useState(false);
   const [notice,setNotice]=useState("");
   const lock=useRef(false);
+  async function editGallery(action:()=>Promise<unknown>,message:string){
+    if(lock.current)return;lock.current=true;setBusy(true);setNotice("");
+    try{await action();setNotice(message);}catch(e){setNotice(e instanceof Error?e.message:"No se pudo modificar la galería");}
+    finally{await refresh();setBusy(false);lock.current=false;}
+  }
+  function move(photoId:number,target:number){
+    const ids=photos.map(p=>p.id);const from=ids.indexOf(photoId);
+    if(from<0||target<0||target>=ids.length)return;
+    ids.splice(from,1);ids.splice(target,0,photoId);
+    void editGallery(()=>controlRequest(`/${kind}/${item.id}/store-gallery/order`,{method:"PUT",body:JSON.stringify(ids)}),"Orden guardado. La primera fotografía es la portada.");
+  }
+  function replace(photoId:number,file?:File){
+    if(!file)return;
+    if(!["image/jpeg","image/png"].includes(file.type)||!file.size||file.size>5*1024*1024){setNotice("Usa JPG o PNG de hasta 5 MB.");return;}
+    const body=new FormData();body.append("file",file);
+    void editGallery(()=>controlRequest(`/${kind}/${item.id}/store-gallery/${photoId}`,{method:"PUT",body}),"Fotografía reemplazada, conservando su posición.");
+  }
   const upload=async(replaceCover=false)=>{
     if(!files.length||lock.current)return;
     lock.current=true;setBusy(true);setNotice("");
@@ -56,7 +73,17 @@ function CatalogCard({item,photos,kind,refresh}:{item:Item;photos:SavedPhoto[];k
     {kind==="bundles"&&<BundleDescriptionEditor key={`${item.id}-${item.description||""}`} item={item}/>}
     {item.fixedPrice!=null&&<b>{new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN"}).format(item.fixedPrice)}</b>}
     <small>{photos.length} fotos guardadas · La primera es la portada.</small>
-    <div className={styles.photos}>{photos.map((photo,index)=><figure key={photo.id}><Photo src={photo.url} file={null} name={`${item.name}, foto ${index+1}`}/><figcaption>{index===0?"Portada":`Foto ${index+1}`}</figcaption></figure>)}</div>
+    <div className={styles.gallery}>{photos.map((photo,index)=><figure key={photo.id}>
+      <a href={photo.url} target="_blank" rel="noopener noreferrer"><Photo src={photo.url} file={null} name={`${item.name}, foto ${index+1}`}/></a>
+      <figcaption>{index===0?"★ Portada":`Foto ${index+1}`}</figcaption>
+      <div className={styles.actions}>
+        <button type="button" disabled={busy||index===0} onClick={()=>move(photo.id,0)}>Usar como portada</button>
+        <button type="button" aria-label={`Mover foto ${index+1} antes`} disabled={busy||index===0} onClick={()=>move(photo.id,index-1)}>← Antes</button>
+        <button type="button" aria-label={`Mover foto ${index+1} después`} disabled={busy||index===photos.length-1} onClick={()=>move(photo.id,index+1)}>Después →</button>
+      </div>
+      <label>Reemplazar foto {index+1}<input type="file" accept="image/jpeg,image/png" disabled={busy} onChange={e=>{const file=e.target.files?.[0];e.target.value="";replace(photo.id,file);}}/></label>
+      <button type="button" disabled={busy} onClick={()=>{if(window.confirm(`¿Eliminar la foto ${index+1} de esta galería?${index===0?" La siguiente será la portada.":""}`))void editGallery(()=>controlRequest(`/${kind}/${item.id}/store-gallery/${photo.id}`,{method:"DELETE"}),"Foto retirada de la galería. El archivo privado se conserva en S3.");}}>Eliminar foto</button>
+    </figure>)}</div>
     <label>Agregar fotografías<input type="file" multiple accept="image/jpeg,image/png" disabled={busy} onChange={e=>{
       const next=Array.from(e.target.files||[]);e.target.value="";
       if(next.some(file=>!["image/jpeg","image/png"].includes(file.type)||file.size>5*1024*1024||!file.size)){setNotice("Usa JPG o PNG de hasta 5 MB por imagen.");return;}
