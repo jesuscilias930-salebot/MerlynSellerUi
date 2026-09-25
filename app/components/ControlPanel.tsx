@@ -134,6 +134,16 @@ export function ControlPanel({
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const productCategories = useMemo(() => {
+    const groups = new Map<string, { id: string; name: string; products: Product[] }>();
+    for (const product of products) {
+      const id = product.category?.id == null ? "uncategorized" : String(product.category.id);
+      const group = groups.get(id) ?? { id, name: product.category?.name?.trim() || "Sin categoría", products: [] };
+      group.products.push(product);
+      groups.set(id, group);
+    }
+    return [...groups.values()].sort((a, b) => a.id === "uncategorized" ? 1 : b.id === "uncategorized" ? -1 : a.name.localeCompare(b.name, "es"));
+  }, [products]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -949,14 +959,22 @@ export function ControlPanel({
           </form>
           <section className="control-table product-catalog-list">
             <h2>Productos existentes</h2>
+            {products.length > 0 && <p>{products.length} productos en {productCategories.length} categorías. Abre una categoría para ver sus productos.</p>}
             {products.length === 0 && (
-              <p>Aún no hay productos en tu catálogo.</p>
+              <p>{loading ? "Cargando productos…" : "Aún no hay productos en tu catálogo."}</p>
             )}
-            {products.map((product) => (
-              <div key={product.id}>
+            {productCategories.map((category) => (
+              <details key={category.id} className="product-category-group">
+                <summary><strong>{category.name}</strong><span>{category.products.length} {category.products.length === 1 ? "producto" : "productos"}</span></summary>
+                <div className="product-category-content">
+                {category.products.map((product) => (
+              <div key={product.id} className="product-category-row">
                 <strong>{`${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}${product.size ? ` - ${product.size}` : ""}`}</strong>
                 <span className="category-actions"><button type="button" className="plain-button" onClick={() => editProduct(product)}>Editar</button><button type="button" className="plain-button" onClick={() => duplicateProduct(product)}>Duplicar</button><button type="button" className="danger-link" onClick={() => void deleteProduct(product)}>Eliminar</button></span>
               </div>
+                ))}
+                </div>
+              </details>
             ))}
           </section>
         </div>

@@ -4734,6 +4734,46 @@ button {
     gap: 8px;
 }
 
+.product-category-group {
+    margin-top: 12px;
+    border: 1px solid #dce5df;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+}
+.product-category-group > summary {
+    cursor: pointer;
+    padding: 16px;
+    background: #f2f7f3;
+    color: #183c32;
+    overflow-wrap: anywhere;
+}
+.product-category-group > summary span {
+    display: inline-block;
+    margin-left: 12px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    background: #e0eadf;
+    font-size: 12px;
+}
+.product-category-group > summary:focus-visible {
+    outline: 3px solid #296c51;
+    outline-offset: -3px;
+}
+.product-category-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 14px 16px;
+    border-top: 1px solid #edf1ee;
+    font-size: 14px;
+}
+.product-category-row > strong { overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+    .product-category-row { grid-template-columns: minmax(0, 1fr); }
+}
+
 @media (max-width: 700px) {
     .control-table.inventory-list > div,
     .control-table.product-catalog-list > div {
