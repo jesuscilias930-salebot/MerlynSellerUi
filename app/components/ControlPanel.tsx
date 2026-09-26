@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import { controlResources, type ControlResource } from "../lib/section-data";
 import { controlApi, controlRequest, controlSession } from "../lib/control-api";
 import type { Chat, EntrepreneurPackage } from "../lib/types";
 import { PriceRulesPanel } from "./PriceRulesPanel";
@@ -177,48 +178,52 @@ export function ControlPanel({
   const [editingPurchaseId, setEditingPurchaseId] = useState<number | null>(null);
   const [purchaseDraft, setPurchaseDraft] = useState<PurchaseDraft>(emptyPurchaseDraft);
 
-  const load = async () => {
+  const loadController = useRef<AbortController | null>(null);
+  const load = useCallback(async () => {
+    loadController.current?.abort();
+    const controller = new AbortController();
+    loadController.current = controller;
+    const { signal } = controller;
     setLoading(true);
     setNotice("");
     try {
-      const [
-        nextCustomers,
-        nextProducts,
-        nextCategories,
-        nextSales,
-        nextPurchases,
-        nextReport,
-      ] = await Promise.all([
-        controlRequest<Customer[]>("/customers"),
-        controlRequest<Product[]>("/products/all"),
-        controlRequest<Category[]>("/category"),
-        controlRequest<Page<Sale>>("/sales?page=0&size=40"),
-        controlRequest<Page<Purchase>>("/purchase?page=0&size=40"),
-        controlRequest<Report[]>(
-          `/financial-reports/product-breakdown?start=${start}&end=${end}`,
-        ),
-      ]);
-      setCustomers(nextCustomers);
-      setProducts(nextProducts);
-      setCategories(nextCategories);
-      setSales(nextSales.content || []);
-      setPurchases(nextPurchases.content || []);
-      setReport(nextReport);
+      const get = async <T,>(path: string, apply: (data: T) => void) => {
+        const data = await controlRequest<T>(path, { signal });
+        if (!signal.aborted) apply(data);
+      };
+      const loaders: Record<ControlResource, () => Promise<void>> = {
+        customers: () => get<Customer[]>("/customers", setCustomers),
+        products: () => get<Product[]>("/products/all", setProducts),
+        categories: () => get<Category[]>("/category", setCategories),
+        sales: () => get<Page<Sale>>("/sales?page=0&size=40", page => setSales(page.content || [])),
+        purchases: () => get<Page<Purchase>>("/purchase?page=0&size=40", page => setPurchases(page.content || [])),
+        report: () => get<Report[]>(`/financial-reports/product-breakdown?start=${start}&end=${end}`, setReport),
+      };
+      const results = await Promise.allSettled(controlResources(tab).map(resource => loaders[resource]()));
+      const failed = results.find(result => result.status === "rejected");
+      if (failed?.status === "rejected") throw failed.reason;
     } catch (error) {
+      if (signal.aborted) return;
       setNotice(
         error instanceof Error
           ? error.message
           : "No fue posible cargar el Control.",
       );
     } finally {
-      setLoading(false);
+      if (!signal.aborted) setLoading(false);
     }
-  };
+  }, [tab, start, end]);
+  const loadActiveSection = useEffectEvent(() => load());
   useEffect(() => {
-    const saved = controlSession.get();
-    setToken(saved);
-    if (saved) void load();
+    let active = true;
+    void Promise.resolve(controlSession.get()).then(saved => { if (active) setToken(saved); });
+    return () => { active = false; };
   }, []);
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(() => { if (active && token) void loadActiveSection(); });
+    return () => { active = false; loadController.current?.abort(); };
+  }, [token, tab]);
   const login = async (event: FormEvent) => {
     event.preventDefault();
     setLoading(true);
@@ -230,7 +235,6 @@ export function ControlPanel({
       });
       controlSession.set(result.token);
       setToken(result.token);
-      await load();
     } catch (error) {
       setNotice(
         error instanceof Error
@@ -256,7 +260,6 @@ export function ControlPanel({
       });
       controlSession.set(result.token);
       setToken(result.token);
-      await load();
     } catch (error) {
       setNotice(
         error instanceof Error

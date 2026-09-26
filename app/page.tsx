@@ -1,8 +1,9 @@
 "use client";
 
 import { createClient } from "@supabase/supabase-js";
-import { ChangeEvent, DragEvent, FormEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, useEffect, useEffectEvent, useRef, useState } from "react";
 import { api, request } from "./lib/api";
+import { crmResources, type CrmResource } from "./lib/section-data";
 import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, CtaUrlMessage, CtaUrlTemplate, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, QuickReply, RemarketingPreset, SavedSticker, User, WhatsAppTemplate, WhatsAppTemplateMapping } from "./lib/types";
 import { AutomationsPanel } from "./components/AutomationsPanel";
 import { DocumentTemplatesPanel } from "./components/DocumentTemplatesPanel";
@@ -86,11 +87,24 @@ export default function Home() {
   const [inboxFilter, setInboxFilter] = useState<ConversationFilter>("all");
   const [dashboardFilter, setDashboardFilter] = useState<ConversationFilter>("all");
   const soundContext = useRef<AudioContext | null>(null);
+  const [sectionLoading, setSectionLoading] = useState(false);
+  const [sectionError, setSectionError] = useState("");
+  const [sectionRetry, setSectionRetry] = useState(0);
+  const visibleChat = view === "inbox" ? chat : null;
+  const resourceKey = crmResources(view, controlTab, Boolean(visibleChat || modalChat)).join(",");
+  const liveController = useRef<AbortController | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    liveController.current = controller;
+    return () => controller.abort();
+  }, [user, view, controlTab, chat?.id, modalChat?.id]);
 
-  const loadChats = async () =>
-    setChats(await request<Chat[]>("/conversations"));
-  const loadMessages = (item: Chat) =>
-    request<Message[]>(`/conversations/${item.id}/messages`);
+  const loadChats = async (signal?: AbortSignal) => {
+    const items = await request<Chat[]>("/conversations", { signal });
+    if (!signal?.aborted) setChats(items);
+  };
+  const loadMessages = (item: Chat, signal?: AbortSignal) =>
+    request<Message[]>(`/conversations/${item.id}/messages`, { signal });
   const loadDocumentOptions = async (item: Chat, selectLatest = false) => {
     const options = await request<DocumentOption[]>(`/conversations/${item.id}/document-options`);
     setDocumentOptions(options);
@@ -108,12 +122,12 @@ export default function Home() {
   const loadQuickReplies = async () => setQuickReplies(await request<QuickReply[]>("/quick-replies"));
   const loadStickers = async () => setStickers(await request<SavedSticker[]>("/settings/stickers"));
   const loadCtaUrlTemplates = async () => setCtaUrlTemplates(await request<CtaUrlTemplate[]>("/settings/cta-url-templates"));
-  const loadWhatsAppTemplates = async () => setWhatsAppTemplates(await request<WhatsAppTemplate[]>("/whatsapp-templates"));
   const loadScenarios = async () => setAutomationScenarios(await request<AutomationScenario[]>("/scenarios"));
   const loadDocumentTemplates = async () => setDocumentTemplates(await request<DocumentTemplate[]>("/settings/document-templates"));
   const loadEntrepreneurPackages = async () => setEntrepreneurPackages(await request<EntrepreneurPackage[]>("/settings/entrepreneur-packages"));
-  const loadPipeline = async () => {
-    const columns = await request<LeadColumn[]>("/leads/board");
+  const loadPipeline = async (signal?: AbortSignal) => {
+    const columns = await request<LeadColumn[]>("/leads/board", { signal });
+    if (signal?.aborted) return;
     setPipeline(columns);
     setRemarketingColumnId((current) => {
       if (columns.some((column) => column.id === current)) return current;
@@ -129,8 +143,7 @@ export default function Home() {
     setMessages([]);
     setChat(item);
     setReplyToMessage(null);
-    const [nextMessages] = await Promise.all([loadMessages(item), loadDocumentOptions(item), request(`/conversations/${item.id}/read`, { method: "POST" })]);
-    setMessages(nextMessages);
+    await Promise.all([loadDocumentOptions(item), request(`/conversations/${item.id}/read`, { method: "POST" })]);
     await Promise.all([loadChats(), loadPipeline()]);
   };
   const openModal = async (item: Chat) => {
@@ -138,14 +151,25 @@ export default function Home() {
     setModalChat(item);
     setReplyToMessage(null);
     setModalDraft("");
-    const [nextMessages] = await Promise.all([loadMessages(item), loadDocumentOptions(item), request(`/conversations/${item.id}/read`, { method: "POST" })]);
-    setModalMessages(nextMessages);
-    await Promise.all([loadChats(), loadPipeline()]);
+    await Promise.all([loadDocumentOptions(item), request(`/conversations/${item.id}/read`, { method: "POST" })]);
+    await loadPipeline();
   };
   const refreshData = async () => {
-    await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadStickers(), loadCtaUrlTemplates(), loadWhatsAppTemplates(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
-    if (chat) setMessages(await loadMessages(chat));
-    if (modalChat) setModalMessages(await loadMessages(modalChat));
+    const signal = liveController.current?.signal;
+    if (signal?.aborted) return;
+    const resources = crmResources(view, controlTab, Boolean(visibleChat || modalChat));
+    await Promise.all([
+      ...(resources.includes("chats") ? [loadChats(signal)] : []),
+      ...(resources.includes("pipeline") ? [loadPipeline(signal)] : []),
+    ]);
+    if (visibleChat) {
+      const items = await loadMessages(visibleChat, signal);
+      if (!signal?.aborted) setMessages(items);
+    }
+    if (modalChat) {
+      const items = await loadMessages(modalChat, signal);
+      if (!signal?.aborted) setModalMessages(items);
+    }
   };
   const canEditPipeline = user?.role === "owner" || user?.role === "admin";
   const setAutoReply = async (target: Chat | null, enabled: boolean) => {
@@ -175,7 +199,7 @@ export default function Home() {
       await request(`/conversations/${target.id}`, { method: "DELETE" });
       if (chat?.id === target.id) { setChat(null); setMessages([]); setDraft(""); }
       if (modalChat?.id === target.id) { setModalChat(null); setModalMessages([]); setModalDraft(""); }
-      await Promise.all([loadChats(), loadPipeline()]);
+      await refreshData();
       setNotice("Conversación eliminada. El próximo mensaje del número iniciará una prueba limpia.");
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible borrar la conversación."); }
   };
@@ -211,41 +235,96 @@ export default function Home() {
 
   useEffect(() => {
     request<{ user: User }>("/auth/me")
-      .then(async (session) => {
+      .then((session) => {
         setUser(session.user);
-        await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadStickers(), loadCtaUrlTemplates(), loadWhatsAppTemplates(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
       })
       .catch(() => undefined);
   }, []);
 
   useEffect(() => {
     if (!user) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+    const get = async <T,>(path: string, apply: (data: T) => void) => {
+      const data = await request<T>(path, { signal });
+      if (!signal.aborted) apply(data);
+    };
+    const loaders: Record<CrmResource, () => Promise<void>> = {
+      chats: () => get<Chat[]>("/conversations", setChats),
+      pipeline: () => get<LeadColumn[]>("/leads/board", columns => {
+        setPipeline(columns);
+        setRemarketingColumnId(current => columns.some(column => column.id === current) ? current :
+          (columns.find(column => column.name.toLocaleLowerCase("es-MX").replace(/[^a-z]/g, "") === "remarketing")?.id || columns[0]?.id || ""));
+      }),
+      presets: () => get<RemarketingPreset[]>("/remarketing/presets", setPresets),
+      automations: () => get<AutomationIntent[]>("/automations", setAutomationIntents),
+      quickReplies: () => get<QuickReply[]>("/quick-replies", setQuickReplies),
+      stickers: () => get<SavedSticker[]>("/settings/stickers", setStickers),
+      ctaTemplates: () => get<CtaUrlTemplate[]>("/settings/cta-url-templates", setCtaUrlTemplates),
+      templates: () => get<WhatsAppTemplate[]>("/whatsapp-templates", setWhatsAppTemplates),
+      scenarios: () => get<AutomationScenario[]>("/scenarios", setAutomationScenarios),
+      documents: () => get<DocumentTemplate[]>("/settings/document-templates", setDocumentTemplates),
+      collections: () => get<EntrepreneurPackage[]>("/settings/entrepreneur-packages", setEntrepreneurPackages),
+    };
+    const selected = resourceKey ? resourceKey.split(",") as CrmResource[] : [];
+    // Defer until setup completes so a Strict Mode cleanup cancels duplicate work.
+    void Promise.resolve().then(async () => {
+      if (signal.aborted) return;
+      setSectionLoading(selected.length > 0);
+      setSectionError("");
+      const results = await Promise.allSettled(selected.map(resource => loaders[resource]()));
+      if (signal.aborted) return;
+      const failed = results.find(result => result.status === "rejected");
+      if (failed?.status === "rejected") setSectionError(failed.reason instanceof Error ? failed.reason.message : "No se pudieron cargar los datos de esta sección.");
+      setSectionLoading(false);
+    });
+    return () => controller.abort();
+  }, [user, resourceKey, sectionRetry]);
+
+  useEffect(() => {
+    if (!user) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+    const loadVisible = async (id: string, apply: (items: Message[]) => void) => {
+      try {
+        const items = await request<Message[]>(`/conversations/${id}/messages`, { signal });
+        if (!signal.aborted) apply(items);
+      } catch (error) {
+        if (!signal.aborted) setNotice(error instanceof Error ? error.message : "No se pudieron cargar los mensajes.");
+      }
+    };
+    void Promise.resolve().then(() => {
+      if (signal.aborted) return;
+      if (visibleChat?.id) void loadVisible(visibleChat.id, setMessages);
+      if (modalChat?.id) void loadVisible(modalChat.id, setModalMessages);
+    });
+    return () => controller.abort();
+  }, [user, visibleChat?.id, modalChat?.id]);
+
+  const onConversationUpdate = useEffectEvent(async (event: Event) => {
+    try {
+      const update = JSON.parse((event as MessageEvent).data);
+      if (update.type === "message.received") {
+        playIncomingSound();
+        const activeConversationId = modalChat?.id || visibleChat?.id;
+        if (activeConversationId === update.conversationId) {
+          await request(`/conversations/${activeConversationId}/read`, { method: "POST" });
+        }
+      }
+    } catch { /* Refresh still works if the read marker or event is unavailable. */ }
+    try { await refreshData(); }
+    catch (error) { if (!(error instanceof Error && error.name === "AbortError")) setNotice("No fue posible actualizar los leads y conversaciones."); }
+  });
+
+  useEffect(() => {
+    if (!user) return;
     const stream = new EventSource(`${api}/realtime/events`, {
       withCredentials: true,
     });
-    const refresh = () =>
-      refreshData().catch(() =>
-        setNotice("No fue posible actualizar los leads y conversaciones."),
-      );
-    const handleConversationUpdate = (event: Event) => {
-      try {
-        const update = JSON.parse((event as MessageEvent).data);
-        if (update.type === "message.received") {
-          playIncomingSound();
-          const activeConversationId = chat?.id || modalChat?.id;
-          if (activeConversationId === update.conversationId) {
-            request(`/conversations/${activeConversationId}/read`, { method: "POST" })
-              .then(refresh)
-              .catch(refresh);
-            return;
-          }
-        }
-      } catch { /* Refresh still works if an unexpected event is received. */ }
-      refresh();
-    };
+    const handleConversationUpdate = (event: Event) => { void onConversationUpdate(event); };
     stream.addEventListener("conversation.updated", handleConversationUpdate);
     return () => stream.close();
-  }, [user, chat?.id, modalChat?.id]);
+  }, [user]);
 
   const login = async (event: FormEvent) => {
     event.preventDefault();
@@ -265,7 +344,6 @@ export default function Home() {
       });
       await supabase.auth.signOut();
       setUser(session.user);
-      await Promise.all([loadChats(), loadPipeline(), loadPresets(), loadAutomations(), loadQuickReplies(), loadStickers(), loadScenarios(), loadDocumentTemplates(), loadEntrepreneurPackages()]);
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "Error al iniciar sesión.",
@@ -283,7 +361,7 @@ export default function Home() {
         body: JSON.stringify({ phoneNumber: number }),
       });
       setNumber("");
-      await Promise.all([loadChats(), loadPipeline()]);
+      await refreshData();
       await openInbox(item);
     } catch (error) {
       setNotice(
@@ -530,7 +608,7 @@ export default function Home() {
   const moveAllLeads = async (sourceColumn: LeadColumn, targetColumnId: string) => {
     try {
       const result = await request<{ movedLeads: number }>(`/leads/columns/${sourceColumn.id}/move-leads`, { method: "PATCH", body: JSON.stringify({ targetColumnId }) });
-      await Promise.all([loadPipeline(), loadChats()]);
+      await refreshData();
       setNotice(`${result.movedLeads} ${result.movedLeads === 1 ? "lead movido" : "leads movidos"} desde “${sourceColumn.name}”.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "No se pudieron mover los leads.";
@@ -550,7 +628,7 @@ export default function Home() {
         method: "PATCH",
         body: JSON.stringify({ columnId }),
       });
-      await Promise.all([loadPipeline(), loadChats()]);
+      await refreshData();
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "No se pudo mover el lead.",
@@ -568,7 +646,7 @@ export default function Home() {
       const updatedLead = { ...lead, leadColumnId: columnId };
       setChat((current) => current?.id === lead.id ? updatedLead : current);
       setModalChat((current) => current?.id === lead.id ? updatedLead : current);
-      await Promise.all([loadPipeline(), loadChats()]);
+      await refreshData();
       setNotice("Lead movido de columna.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "No se pudo mover el lead.";
@@ -755,7 +833,7 @@ export default function Home() {
   const saveDocumentTemplate = async (template: DocumentTemplate, changes: { filename: string; caption: string; isCatalog: boolean }) => {
     try {
       await request(`/settings/document-templates/${template.id}`, { method: "PATCH", body: JSON.stringify(changes) });
-      await Promise.all([loadDocumentTemplates(), chat ? loadDocumentOptions(chat) : Promise.resolve(), modalChat ? loadDocumentOptions(modalChat) : Promise.resolve()]);
+      await Promise.all([loadDocumentTemplates(), visibleChat ? loadDocumentOptions(visibleChat) : Promise.resolve(), modalChat ? loadDocumentOptions(modalChat) : Promise.resolve()]);
       setNotice("Plantilla de documento guardada.");
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible guardar el documento."); }
   };
@@ -861,6 +939,14 @@ export default function Home() {
     setPipeline([]);
     setPresets([]);
     setAutomationIntents([]);
+    setQuickReplies([]);
+    setStickers([]);
+    setCtaUrlTemplates([]);
+    setWhatsAppTemplates([]);
+    setAutomationScenarios([]);
+    setDocumentTemplates([]);
+    setEntrepreneurPackages([]);
+    setView("inbox");
   };
 
   if (!user)
@@ -885,6 +971,9 @@ export default function Home() {
         onControlTabChange={(tab) => { setControlTab(tab); setView("control"); }}
         onLogout={logout}
       />
+      {(sectionLoading || sectionError) && <div className="section-data-status" role="status">
+        {sectionLoading ? "Cargando datos de esta sección…" : <>{sectionError} <button type="button" onClick={() => setSectionRetry(value => value + 1)}>Reintentar</button></>}
+      </div>}
       {view === "inbox" ? (
         <Inbox
           chats={filteredChats}
