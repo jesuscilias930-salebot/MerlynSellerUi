@@ -3,13 +3,24 @@ import { useEffect, useState } from "react";
 import { request } from "../lib/api";
 type Mode = "sandbox" | "production";
 type Service = "envia" | "stripe";
-type Features = Record<Service, Mode> & { cardPaymentsEnabled: boolean; configured: Record<Service, Record<Mode, boolean>>; stripeError?: string };
+type Features = Record<Service, Mode> & { cardPaymentsEnabled: boolean; metaEventsEnabled: boolean; configured: Record<Service, Record<Mode, boolean>>; stripeError?: string };
 
 export function FeaturesPanel() {
   const [data, setData] = useState<Features | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   async function load() { setData(await request<Features>("/features")); }
+  async function toggleMetaEvents() {
+    if (!data || busy) return;
+    const enabled = !data.metaEventsEnabled;
+    setBusy(true); setNotice("");
+    try {
+      await request("/features", { method: "PUT", body: JSON.stringify({ service: "metaEvents", enabled }) });
+      await load();
+      setNotice(enabled ? "Meta habilitado. Solo se medirán nuevas visitas y compras con consentimiento." : "Meta deshabilitado para toda la tienda. No cambia Stripe ni Envia.");
+    } catch (e) { setNotice(e instanceof Error ? e.message : "No se pudo actualizar."); }
+    finally { setBusy(false); }
+  }
   async function toggleCardPayments() {
     if (!data || busy) return;
     const enabled = !data.cardPaymentsEnabled;
@@ -50,6 +61,16 @@ export function FeaturesPanel() {
           <span style={{ fontWeight: data?.cardPaymentsEnabled ? 700 : 400 }}>On</span>
         </div>
         <p id="card-payments-help">Las sesiones ya abiertas en Stripe pueden completarse. Sus confirmaciones siguen procesándose.</p>
+      </section>
+      <section className="envia-card">
+        <h2>Tienda · Eventos de Meta</h2>
+        <p>Control global del píxel y las conversiones Purchase de toda la tienda, también para clientes reales. Apágalo antes de probar.</p>
+        <label style={{display:"flex",alignItems:"center",gap:12,marginTop:20}}>
+          <input type="checkbox" role="switch" checked={data?.metaEventsEnabled===true} disabled={busy||!data} onChange={()=>void toggleMetaEvents()} aria-label="Habilitar eventos de Meta" style={{width:24,height:24,accentColor:"#1C513E"}}/>
+          <strong>{!data?"Cargando…":data.metaEventsEnabled?"On · Envío habilitado":"Off · Sin eventos de Meta"}</strong>
+        </label>
+        <p>La tienda consulta el estado al navegar y cada 15 segundos. Recarga la tienda antes de probar. No cambia cobros ni envíos; los eventos ya enviados no se pueden retirar.</p>
+        <p>Reactivar no recupera compras creadas o confirmadas mientras estaba apagado. El consentimiento de cookies sigue siendo obligatorio.</p>
       </section>
       {(["stripe", "envia"] as Service[]).map(service => {
         const production = data?.[service] === "production";
