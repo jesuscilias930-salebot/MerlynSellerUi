@@ -13,13 +13,13 @@ type Product = {
   category?: { name?: string | null } | null;
   gender?: string | null;
 };
-type PriceRule = { id: number; ruleName: string; minQuantity: number; maxQuantity: number; pricePerUnit: number };
+type PriceQuote = { lines: { productId: number; quantity: number; groupQuantity: number; unitPrice: number; subtotal: number }[]; subtotal: number };
 type BundleItem = { id?: number; productId: number; productName?: string; quantity: number; assignedUnitPrice: number };
 type Bundle = { id?: number; name: string; fixedPrice: number; boxLengthCm?: number | null; boxWidthCm?: number | null; boxHeightCm?: number | null; boxWeightKg?: number | null; items: BundleItem[] };
-type DraftItem = { id?: number; productId: string; quantity: string; assignedUnitPrice: string };
+type DraftItem = { id?: number; productId: string; quantity: string };
 type FinancialReport = { totalOrderSale?: number; totalOrderProfit?: number; totalOrderTax?: number; totalIsr?: number };
 
-const blankItem = (): DraftItem => ({ productId: "", quantity: "", assignedUnitPrice: "" });
+const blankItem = (): DraftItem => ({ productId: "", quantity: "" });
 const money = (value?: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(Number(value || 0));
 const productLabel = (product: Product) => `${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}`;
 
@@ -41,8 +41,9 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
   const [boxHeightCm, setBoxHeightCm] = useState("");
   const [boxWeightKg, setBoxWeightKg] = useState("");
   const [items, setItems] = useState<DraftItem[]>([blankItem()]);
-  const [rulesByItem, setRulesByItem] = useState<Record<number, PriceRule[]>>({});
-  const [report, setReport] = useState<FinancialReport | null>(null);
+  const [pricingResult, setPricingResult] = useState<{ key: string; quote?: PriceQuote; error?: string } | null>(null);
+  const [reportResult, setReport] = useState<{ key: string; value: FinancialReport } | null>(null);
+  const [pricingRevision, setPricingRevision] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -63,25 +64,38 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
     return () => { active = false; };
   }, []);
 
-  const fixedPrice = useMemo(() => items.reduce((total, item) => total + Number(item.quantity || 0) * Number(item.assignedUnitPrice || 0), 0), [items]);
-  const validItems = useMemo(() => items.every((item) => Number(item.productId) > 0 && Number(item.quantity) > 0 && item.assignedUnitPrice !== "" && Number(item.assignedUnitPrice) >= 0), [items]);
-
-  const loadRules = async (productId: string, index: number) => {
-    if (!productId) return setRulesByItem((current) => ({ ...current, [index]: [] }));
-    try {
-      const rules = await controlRequest<PriceRule[]>(`/price-rule/product/${productId}`);
-      setRulesByItem((current) => ({ ...current, [index]: [...rules].sort((a, b) => a.minQuantity - b.minQuantity) }));
-    } catch { setRulesByItem((current) => ({ ...current, [index]: [] })); }
-  };
+  const completeItems = items.length > 0 && items.length <= 200 && items.every(item => Number.isSafeInteger(Number(item.productId)) && Number(item.productId) > 0 && Number.isSafeInteger(Number(item.quantity)) && Number(item.quantity) > 0 && Number(item.quantity) <= 100000);
+  const pricingKey = useMemo(() => JSON.stringify(items.map(item => ({ productId: Number(item.productId), quantity: Number(item.quantity) }))), [items]);
+  const requestKey = `${pricingRevision}:${pricingKey}`;
+  const report = reportResult?.key === requestKey ? reportResult.value : null;
+  const quote = completeItems && pricingResult?.key === requestKey ? pricingResult.quote : undefined;
+  const pricingError = completeItems && pricingResult?.key === requestKey ? pricingResult.error : undefined;
+  const pricingPending = completeItems && pricingResult?.key !== requestKey;
+  const fixedPrice = quote ? Number(quote.subtotal) : 0;
+  const validItems = !!quote;
+  useEffect(() => {
+    if (!completeItems) return;
+    const controller = new AbortController();
+    let active = true;
+    const timer = setTimeout(() => {
+      void controlRequest<PriceQuote>("/bundles/price-quote", { method: "POST", body: pricingKey, signal: controller.signal })
+        .then(data => {
+          if (data?.subtotal == null || !Array.isArray(data?.lines) || !Number.isFinite(Number(data.subtotal)) || data.lines.some(line => line.unitPrice == null || !Number.isFinite(Number(line.unitPrice)) || Number(line.unitPrice) < 0) || (JSON.parse(pricingKey) as { productId: number }[]).some(item => !data.lines.some(line => line.productId === item.productId))) throw new Error("La respuesta de precios no es válida.");
+          if (active) setPricingResult({ key: requestKey, quote: data });
+        })
+        .catch(error => { if (active) setPricingResult({ key: requestKey, error: error instanceof Error ? error.message : "No fue posible consultar las reglas de precio." }); });
+    }, 250);
+    return () => { active = false; clearTimeout(timer); controller.abort(); };
+  }, [pricingKey, requestKey, completeItems]);
   const changeItem = (index: number, change: Partial<DraftItem>) => {
     setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...change } : item));
-    if (change.productId !== undefined) void loadRules(change.productId, index);
     setReport(null);
   };
-  const resetEditor = () => { setPhotos([]); setUploadProgress(""); imageSetId.current = null; setEditingId(null); setName(""); setBoxLengthCm(""); setBoxWidthCm(""); setBoxHeightCm(""); setBoxWeightKg(""); setItems([blankItem()]); setRulesByItem({}); setReport(null); setNotice(""); };
+  const resetEditor = () => { setPricingRevision(value => value + 1); setPhotos([]); setUploadProgress(""); imageSetId.current = null; setEditingId(null); setName(""); setBoxLengthCm(""); setBoxWidthCm(""); setBoxHeightCm(""); setBoxWeightKg(""); setItems([blankItem()]); setReport(null); setNotice(""); };
   const editBundle = (bundle: Bundle) => {
     if (saveInFlight.current) return;
     if (photos.length && !window.confirm("¿Descartar las fotos pendientes y editar otro bundle?")) return;
+    setPricingRevision(value => value + 1);
     setPhotos([]); setUploadProgress(""); imageSetId.current = null;
     setEditingId(bundle.id || null);
     setName(bundle.name);
@@ -89,25 +103,24 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
     setBoxWidthCm(bundle.boxWidthCm == null ? "" : String(bundle.boxWidthCm));
     setBoxHeightCm(bundle.boxHeightCm == null ? "" : String(bundle.boxHeightCm));
     setBoxWeightKg(bundle.boxWeightKg == null ? "" : String(bundle.boxWeightKg));
-    const nextItems = bundle.items.map((item) => ({ id: item.id, productId: String(item.productId), quantity: String(item.quantity), assignedUnitPrice: String(item.assignedUnitPrice) }));
+    const nextItems = bundle.items.map((item) => ({ id: item.id, productId: String(item.productId), quantity: String(item.quantity) }));
     setItems(nextItems.length ? nextItems : [blankItem()]);
-    setRulesByItem({}); setReport(null); setNotice("");
-    nextItems.forEach((item, index) => void loadRules(item.productId, index));
+    setReport(null); setNotice("Al guardar se aplicarán las reglas vigentes a las cantidades de esta caja.");
   };
   const save = async (event: FormEvent) => {
     event.preventDefault();
     if (saveInFlight.current) return;
     if (name.trim().length < 3) return setNotice("Escribe un nombre de al menos 3 caracteres.");
-    if (!validItems) return setNotice("Completa producto, cantidad y precio unitario de cada renglón.");
+    if (!validItems) return setNotice("Completa los productos y cantidades y espera una cotización válida de las reglas de precio.");
     saveInFlight.current = true;
     setSaving(true); setNotice("");
     const payload = {
-      name: name.trim(), fixedPrice,
+      name: name.trim(),
       boxLengthCm: boxLengthCm === "" ? null : Number(boxLengthCm),
       boxWidthCm: boxWidthCm === "" ? null : Number(boxWidthCm),
       boxHeightCm: boxHeightCm === "" ? null : Number(boxHeightCm),
       boxWeightKg: boxWeightKg === "" ? null : Number(boxWeightKg),
-      items: items.map((item) => ({ ...(item.id ? { id: item.id } : {}), product: { id: Number(item.productId) }, quantity: Number(item.quantity), assignedUnitPrice: Number(item.assignedUnitPrice) })),
+      items: items.map((item) => ({ ...(item.id ? { id: item.id } : {}), product: { id: Number(item.productId) }, quantity: Number(item.quantity) })),
     };
     try {
       const saved = await controlRequest<Bundle>(editingId ? `/bundles/${editingId}` : "/bundles", { method: editingId ? "PUT" : "POST", body: JSON.stringify(payload) });
@@ -115,7 +128,7 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
       const savedId = saved.id || editingId;
       if (!savedId) throw new Error("El servicio no devolvió el ID del bundle. Actualiza la lista antes de volver a guardar.");
       setEditingId(savedId);
-      setItems(saved.items.map(item => ({ id: item.id, productId: String(item.productId), quantity: String(item.quantity), assignedUnitPrice: String(item.assignedUnitPrice) })));
+      setItems(saved.items.map(item => ({ id: item.id, productId: String(item.productId), quantity: String(item.quantity) })));
       if (photos.length) {
         try {
           const existing = packages.find(group => group.controlBundleId === savedId);
@@ -139,8 +152,8 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
     if (!validItems) return setNotice("Completa los productos antes de calcular la ganancia.");
     setAnalyzing(true); setReport(null);
     try {
-      const payload = items.map((item) => ({ product: { id: Number(item.productId) }, quantity: Number(item.quantity), assignedUnitPrice: Number(item.assignedUnitPrice) }));
-      setReport(await controlRequest<FinancialReport>("/financial/calculate/bundle-profit", { method: "POST", body: JSON.stringify(payload) }));
+      const payload = items.map((item) => ({ product: { id: Number(item.productId) }, quantity: Number(item.quantity), assignedUnitPrice: Number(quote!.lines.find(line => line.productId === Number(item.productId))!.unitPrice) }));
+      setReport({ key: requestKey, value: await controlRequest<FinancialReport>("/financial/calculate/bundle-profit", { method: "POST", body: JSON.stringify(payload) }) });
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible calcular la ganancia."); }
     finally { setAnalyzing(false); }
   };
@@ -152,7 +165,7 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
   };
 
   return <section className="bundles-workspace">
-    <header className="bundles-header"><div><p>BUNDLES</p><h2>Paquetes especiales</h2><span>Combina productos, asigna su precio de venta y consulta la ganancia estimada.</span></div><button type="button" className="plain-button" onClick={() => void refresh()} disabled={loading}>{loading ? "Actualizando…" : "↻ Actualizar"}</button></header>
+    <header className="bundles-header"><div><p>BUNDLES</p><h2>Paquetes especiales</h2><span>Combina productos y calcula su precio automáticamente con tus reglas de mayoreo.</span></div><button type="button" className="plain-button" onClick={() => void refresh()} disabled={loading}>{loading ? "Actualizando…" : "↻ Actualizar"}</button></header>
     {notice && <div className="control-notice">{notice}</div>}
     <div className="bundles-layout">
       <form className="bundle-editor" onSubmit={save}>
@@ -161,11 +174,22 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
         <label>Nombre del paquete<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej. Pack Mayorista Platinum" minLength={3} required /></label>
         <BundlePhotos key={editingId || "new"} groups={packages.filter(group => editingId !== null && group.controlBundleId === editingId)} pending={photos} onChange={setPhotos} disabled={saving} progress={uploadProgress} />
         <fieldset className="bundle-shipping-data"><legend>Medidas para cotizar envío</legend><small>Esta información aplica a cualquier caja de este bundle; no se repite por fotografía.</small><div><label>Largo (cm)<input type="number" min="0" step="0.1" value={boxLengthCm} onChange={(event) => setBoxLengthCm(event.target.value)} placeholder="Ej. 40" /></label><label>Ancho (cm)<input type="number" min="0" step="0.1" value={boxWidthCm} onChange={(event) => setBoxWidthCm(event.target.value)} placeholder="Ej. 30" /></label><label>Alto (cm)<input type="number" min="0" step="0.1" value={boxHeightCm} onChange={(event) => setBoxHeightCm(event.target.value)} placeholder="Ej. 25" /></label><label>Peso (kg)<input type="number" min="0" step="0.01" value={boxWeightKg} onChange={(event) => setBoxWeightKg(event.target.value)} placeholder="Ej. 8.5" /></label></div></fieldset>
-        <div className="bundle-items-heading"><div><b>Productos en el paquete</b><small>El precio final se calcula con los precios unitarios asignados.</small></div><button type="button" className="plain-button" onClick={() => { setItems((current) => [...current, blankItem()]); setReport(null); }}>＋ Agregar producto</button></div>
-        <div className="bundle-items">{items.map((item, index) => <fieldset key={`${item.id || "new"}-${index}`}><legend>Producto {index + 1}</legend><label>Producto<select value={item.productId} onChange={(event) => changeItem(index, { productId: event.target.value })} required><option value="">Selecciona un producto</option>{products.map((product) => <option key={product.id} value={product.id}>{productLabel(product)}</option>)}</select></label><label>Cantidad<input type="number" min="1" value={item.quantity} onChange={(event) => changeItem(index, { quantity: event.target.value })} required /></label><label>Precio unitario asignado<input type="number" min="0" step="0.01" value={item.assignedUnitPrice} onChange={(event) => changeItem(index, { assignedUnitPrice: event.target.value })} required /></label><button type="button" className="danger-link" disabled={items.length === 1} onClick={() => { setItems((current) => current.filter((_, itemIndex) => itemIndex !== index)); setReport(null); }}>Quitar</button>{rulesByItem[index]?.length > 0 && <div className="bundle-rules-hint"><b>Escalas de mayoreo disponibles</b>{rulesByItem[index].map((rule) => <span key={rule.id}>{rule.ruleName}: {rule.minQuantity}–{rule.maxQuantity} pzas · {money(rule.pricePerUnit)}</span>)}</div>}</fieldset>)}</div>
-        <div className="bundle-summary"><span>Precio final de venta</span><b>{money(fixedPrice)}</b><small>Subtotal de productos: {money(fixedPrice)}</small></div>
+        <div className="bundle-items-heading"><div><b>Productos en el paquete</b><small>Las cantidades de una caja se suman por grupo para aplicar la regla de precio de cada producto.</small></div><button type="button" className="plain-button" onClick={() => { setItems((current) => [...current, blankItem()]); setReport(null); }}>＋ Agregar producto</button></div>
+        <div className="bundle-items">{items.map((item, index) => {
+          const line = quote?.lines.find(line => line.productId === Number(item.productId));
+          return <fieldset key={`${item.id || "new"}-${index}`}>
+            <legend>Producto {index + 1}</legend>
+            <label>Producto<select value={item.productId} onChange={event => changeItem(index, { productId: event.target.value })} required><option value="">Selecciona un producto</option>{products.map(product => <option key={product.id} value={product.id}>{productLabel(product)}</option>)}</select></label>
+            <label>Cantidad por caja<input type="number" min="1" max="100000" step="1" value={item.quantity} onChange={event => changeItem(index, { quantity: event.target.value })} required /></label>
+            <label>Precio unitario automático<input readOnly value={line ? money(Number(line.unitPrice)) : pricingPending ? "Consultando…" : "Por calcular"} aria-label={`Precio automático del producto ${index + 1}`} /></label>
+            <button type="button" className="danger-link" disabled={items.length === 1} onClick={() => { setItems(current => current.filter((_, itemIndex) => itemIndex !== index)); setReport(null); }}>Quitar</button>
+            {line && <div className="bundle-rules-hint"><b>{line.groupQuantity} piezas acumuladas en su grupo</b><span>{item.quantity} × {money(Number(line.unitPrice))} = {money(Number(item.quantity) * Number(line.unitPrice))}</span></div>}
+          </fieldset>;
+        })}</div>
+        {pricingError && <div className="control-notice" role="alert">{pricingError} Revisa las reglas de precios de los productos del paquete. <button type="button" className="plain-button" onClick={() => { setPricingRevision(value => value + 1); setReport(null); }}>Reintentar cálculo</button></div>}
+        <div className="bundle-summary"><span>Precio final de venta</span><b aria-live="polite">{quote ? money(fixedPrice) : pricingPending ? "Calculando…" : "Por calcular"}</b><small>{!completeItems ? "Completa todos los productos y sus cantidades." : "Total de una caja. Los precios se verifican nuevamente al guardar."}</small></div>
         {report && <div className="bundle-financial-report"><b>Ganancia estimada</b><span>Venta: {money(report.totalOrderSale)}</span><span>IVA neto: {money(report.totalOrderTax)}</span><span>ISR estimado: {money(report.totalIsr)}</span><strong className={(report.totalOrderProfit || 0) <= 0 ? "negative" : ""}>Ganancia neta: {money(report.totalOrderProfit)}</strong></div>}
-        <div className="bundle-editor-actions"><button type="button" className="plain-button" onClick={() => void preview()} disabled={analyzing || !validItems}>{analyzing ? "Analizando…" : "Ver ganancia estimada"}</button><button disabled={saving || !products.length}>{saving ? "Guardando…" : "Guardar bundle"}</button></div>
+        <div className="bundle-editor-actions"><button type="button" className="plain-button" onClick={() => void preview()} disabled={analyzing || !validItems}>{analyzing ? "Analizando…" : "Ver ganancia estimada"}</button><button disabled={saving || !products.length || !validItems}>{saving ? "Guardando…" : "Guardar bundle"}</button></div>
         </fieldset>
       </form>
       <section className="bundle-list"><header><div><p>CATÁLOGO</p><h3>Bundles guardados</h3></div><b>{bundles.length}</b></header>{!loading && bundles.length === 0 && <div className="bundles-empty">Aún no hay paquetes. Crea tu primer bundle.</div>}{bundles.map((bundle) => <article key={bundle.id}><header><div><small>Bundle #{bundle.id}</small><h3>{bundle.name}</h3></div><strong>{money(bundle.fixedPrice)}</strong></header>{[bundle.boxLengthCm, bundle.boxWidthCm, bundle.boxHeightCm, bundle.boxWeightKg].some((value) => value != null) && <p className="bundle-shipping-summary">Caja: {[bundle.boxLengthCm, bundle.boxWidthCm, bundle.boxHeightCm].every((value) => value != null) ? `${bundle.boxLengthCm} × ${bundle.boxWidthCm} × ${bundle.boxHeightCm} cm` : "medidas incompletas"}{bundle.boxWeightKg != null ? ` · ${bundle.boxWeightKg} kg` : ""}</p>}<ul>{bundle.items.map((item) => <li key={item.id || `${item.productId}-${item.quantity}`}><span>{item.quantity}× {item.productName || `Producto #${item.productId}`}</span><b>{money(item.assignedUnitPrice)} c/u</b></li>)}</ul><footer><span>{bundle.items.reduce((total, item) => total + Number(item.quantity || 0), 0)} piezas · {bundle.items.length} productos</span><div><button type="button" className="plain-button" onClick={() => editBundle(bundle)}>Editar</button><button type="button" className="danger-link" onClick={() => void deleteBundle(bundle)}>Eliminar</button></div></footer></article>)}</section>
