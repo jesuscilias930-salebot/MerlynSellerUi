@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { controlRequest } from "../lib/control-api";
 import type { EntrepreneurPackage } from "../lib/types";
 import { BundlePhotos, type PendingPhoto } from "./BundlePhotos";
+import { BundlePriceRules } from "./BundlePriceRules";
 
 type Product = {
   id: number;
@@ -177,6 +178,7 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
         <div className="bundle-items-heading"><div><b>Productos en el paquete</b><small>Sumamos los pares de la misma categoría dentro de esta caja. Por ejemplo, 25 de caricatura dama + 25 de caballero aplican el rango de 50 pares a ambos productos.</small></div><button type="button" className="plain-button" onClick={() => { setItems((current) => [...current, blankItem()]); setReport(null); }}>＋ Agregar producto</button></div>
         <div className="bundle-items">{items.map((item, index) => {
           const line = quote?.lines.find(line => line.productId === Number(item.productId));
+          const product = products.find(product => product.id === Number(item.productId));
           return <fieldset key={`${item.id || "new"}-${index}`}>
             <legend>Producto {index + 1}</legend>
             <label>Producto<select value={item.productId} onChange={event => changeItem(index, { productId: event.target.value })} required><option value="">Selecciona un producto</option>{products.map(product => <option key={product.id} value={product.id}>{productLabel(product)}</option>)}</select></label>
@@ -184,6 +186,7 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
             <label>Precio unitario automático<input readOnly value={line ? money(Number(line.unitPrice)) : pricingPending ? "Consultando…" : "Por calcular"} aria-label={`Precio automático del producto ${index + 1}`} /></label>
             <button type="button" className="danger-link" disabled={items.length === 1} onClick={() => { setItems(current => current.filter((_, itemIndex) => itemIndex !== index)); setReport(null); }}>Quitar</button>
             {line && <div className="bundle-rules-hint"><b>{line.groupQuantity} pares acumulados · {products.find(product => product.id === Number(item.productId))?.category?.name || "Solo este producto (sin categoría)"}</b><span>{item.quantity} × {money(Number(line.unitPrice))} = {money(Number(item.quantity) * Number(line.unitPrice))}</span></div>}
+            {Number(item.productId) > 0 && <BundlePriceRules productId={Number(item.productId)} productName={product ? productLabel(product) : `Producto #${item.productId}`} revision={pricingRevision} applied={line} onRefresh={() => { setPricingRevision(value => value + 1); setReport(null); }} />}
           </fieldset>;
         })}</div>
         {pricingError && <div className="control-notice" role="alert">{pricingError} Revisa las reglas de precios de los productos del paquete. <button type="button" className="plain-button" onClick={() => { setPricingRevision(value => value + 1); setReport(null); }}>Reintentar cálculo</button></div>}

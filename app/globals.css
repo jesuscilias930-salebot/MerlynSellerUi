@@ -7128,6 +7128,42 @@ button {
     border-left: 1px solid #b9dec9;
 }
 
+.bundle-items fieldset {
+    min-width: 0;
+}
+
+.bundle-price-rules {
+    grid-column: 1 / -1;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid #DEDFD6;
+    border-radius: 10px;
+    background: #FAF9F6;
+    color: #183C32;
+}
+
+.bundle-price-rules header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.bundle-price-rules h4 { margin: 0; font-size: 14px; }
+.bundle-price-rules p { margin: 6px 0 10px; font-size: 12px; }
+.bundle-price-rules header p { margin-bottom: 0; overflow-wrap: anywhere; }
+.bundle-price-rules-context { color: #6C7770; }
+.bundle-price-rules-scroll { overflow-x: auto; border-radius: 8px; }
+.bundle-price-rules-scroll:focus-visible { outline: 2px solid #1C513E; outline-offset: 2px; }
+.bundle-price-rules table { width: 100%; border-collapse: collapse; background: #fff; font-size: 12px; }
+.bundle-price-rules caption { text-align: left; padding: 8px; color: #6C7770; }
+.bundle-price-rules th, .bundle-price-rules td { padding: 9px 10px; text-align: left; border-bottom: 1px solid #DEDFD6; }
+.bundle-price-rules thead th { background: #E9EDDD; color: #183C32; }
+.bundle-price-rules tbody th { font-weight: 500; }
+.bundle-price-rules td { white-space: nowrap; }
+.bundle-price-rules .is-applied th, .bundle-price-rules .is-applied td { background: #DCE8A0; color: #183C32; font-weight: 700; transition: background-color .2s ease; }
+
 .bundle-summary {
     display: grid;
     gap: 3px;
