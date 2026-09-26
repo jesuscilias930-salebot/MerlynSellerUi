@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { OrderOperations, type OperationalOrder } from "./OrderOperations";
 import { controlApi, controlRequest, controlSession } from "../lib/control-api";
 import styles from "./StoreOrdersPanel.module.css";
 import { shippingDraftKey, type ShippingDraft } from "../lib/shipping-draft";
 
-type Order = { id: string; folio: string; customerName: string; status: string; subtotal: number; createdAt: string;
+type Order = OperationalOrder & { id: string; folio: string; customerName: string; status: string; subtotal: number; createdAt: string;
   shippingAmount?:number|null;shippingCarrier?:string;shippingService?:string;shippingEnvironment?:string;total?:number;
   shippingAddress?: {recipient:string;phone:string;email:string;country:string;postalCode:string;state:string;city:string;district:string;street:string;exteriorNumber:string;interiorNumber?:string;references?:string}|null;
   lines: { kind: string; itemId: number; name: string; quantity: number; unitPrice: number; contents?: string }[] };
 type Page = { content: Order[]; totalElements: number; totalPages: number };
 const money = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
-const paymentLabels: Record<string,string> = { PAID: "Pagado · Stripe", PENDING: "Pendiente de pago", PAYMENT_PENDING: "Esperando confirmación de Stripe", PAID_TEST: "Pagado · Prueba Stripe", PAYMENT_FAILED: "Pago fallido", PAYMENT_EXPIRED: "Sesión de pago expirada" };
+const paymentLabels: Record<string,string> = { PAID: "Pagado", PENDING: "Pendiente de pago", PAYMENT_PENDING: "Esperando confirmación de Stripe", PAID_TEST: "Pagado · Prueba Stripe", PAYMENT_FAILED: "Pago fallido", PAYMENT_EXPIRED: "Sesión de pago expirada" };
 
 export function PendingOrdersPanel({ onOpenShipping }: { onOpenShipping: () => void }) {
   const [page, setPage] = useState(0);
@@ -39,12 +40,17 @@ export function PendingOrdersPanel({ onOpenShipping }: { onOpenShipping: () => v
 
   useEffect(() => {
     const abort = new AbortController();
+    const load = async () => {
+    await Promise.resolve();
+    if (abort.signal.aborted) return;
     if (!controlSession.get()) { setError("Inicia sesión en Control de ventas para consultar los pedidos."); return; }
     setBusy(true);
     controlRequest<Page>(`/pending-orders?page=${page}&size=20`, { signal: abort.signal, cache: "no-store" })
       .then(result => { if (!abort.signal.aborted) { setData(result); setError(""); } })
       .catch(() => { if (!abort.signal.aborted) setError("No se pudieron cargar los pedidos. Verifica tu sesión de Control de ventas y la conexión al servicio."); })
       .finally(() => { if (!abort.signal.aborted) setBusy(false); });
+    };
+    void load();
     return () => abort.abort();
   }, [page, revision]);
 
@@ -98,7 +104,7 @@ export function PendingOrdersPanel({ onOpenShipping }: { onOpenShipping: () => v
   return <div style={{ padding: 24, overflowY: "auto", minHeight: 0, height: "100%" }}>
     <section className={styles.panel} aria-label="Pedidos de E-commerce" aria-busy={busy}>
       <header className={styles.header}><div><h2>Pedidos de E-commerce {data && <small>({data.totalElements})</small>}</h2>
-        <p>Pedidos pendientes de pago. No descuentan inventario ni crean una venta.</p>
+        <p>El inventario se descuenta al confirmar un pago real. Sigue aquí la preparación y entrega.</p>
         <small role="status">{connection}</small></div>
         <button disabled={busy} onClick={() => { setPage(0); setRevision(r => r + 1); }}>Actualizar</button>
       </header>
@@ -110,6 +116,7 @@ export function PendingOrdersPanel({ onOpenShipping }: { onOpenShipping: () => v
           <span className={styles.badge}>{paymentLabels[order.status] || order.status}</span>
           <strong>{money(Number(order.total ?? order.subtotal))}</strong><span>Ver pedido</span></summary>
         <div className={styles.details}>
+          <OrderOperations order={order} onUpdated={()=>setRevision(r=>r+1)}/>
           <button type="button" disabled={preparingOrder!==null || !order.shippingAddress} onClick={()=>void prepareShipping(order)}>{preparingOrder===order.id ? "Preparando dirección y paquete…" : "Cotizar envío en Envia"}</button>
           {!order.shippingAddress && <small>Este pedido aún no tiene una dirección de entrega capturada.</small>}
           {order.shippingAddress ? <section aria-label="Dirección de entrega" style={{padding:16,border:'1px solid #DEDFD6',borderRadius:12,overflowWrap:'anywhere'}}>
