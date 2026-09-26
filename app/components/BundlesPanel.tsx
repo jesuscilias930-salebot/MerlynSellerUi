@@ -5,6 +5,7 @@ import { controlRequest } from "../lib/control-api";
 import type { EntrepreneurPackage } from "../lib/types";
 import { BundlePhotos, type PendingPhoto } from "./BundlePhotos";
 import { BundlePriceRules } from "./BundlePriceRules";
+import { BundleEditorDialog } from "./BundleEditorDialog";
 
 type Product = {
   id: number;
@@ -36,6 +37,8 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
   const saveInFlight = useRef(false);
   const [bundles, setBundles] = useState<Bundle[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const editorBaseline = useRef("");
   const [name, setName] = useState("");
   const [boxLengthCm, setBoxLengthCm] = useState("");
   const [boxWidthCm, setBoxWidthCm] = useState("");
@@ -49,6 +52,7 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [notice, setNotice] = useState("");
+  const editorSignature = JSON.stringify({ name, boxLengthCm, boxWidthCm, boxHeightCm, boxWeightKg, items });
 
   const refresh = async () => {
     setLoading(true);
@@ -75,7 +79,7 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
   const fixedPrice = quote ? Number(quote.subtotal) : 0;
   const validItems = !!quote;
   useEffect(() => {
-    if (!completeItems) return;
+    if (!editorOpen || !completeItems) return;
     const controller = new AbortController();
     let active = true;
     const timer = setTimeout(() => {
@@ -87,12 +91,24 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
         .catch(error => { if (active) setPricingResult({ key: requestKey, error: error instanceof Error ? error.message : "No fue posible consultar las reglas de precio." }); });
     }, 250);
     return () => { active = false; clearTimeout(timer); controller.abort(); };
-  }, [pricingKey, requestKey, completeItems]);
+  }, [pricingKey, requestKey, completeItems, editorOpen]);
   const changeItem = (index: number, change: Partial<DraftItem>) => {
     setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...change } : item));
     setReport(null);
   };
   const resetEditor = () => { setPricingRevision(value => value + 1); setPhotos([]); setUploadProgress(""); imageSetId.current = null; setEditingId(null); setName(""); setBoxLengthCm(""); setBoxWidthCm(""); setBoxHeightCm(""); setBoxWeightKg(""); setItems([blankItem()]); setReport(null); setNotice(""); };
+  const newBundle = () => {
+    if (saveInFlight.current) return;
+    resetEditor();
+    editorBaseline.current = JSON.stringify({ name: "", boxLengthCm: "", boxWidthCm: "", boxHeightCm: "", boxWeightKg: "", items: [blankItem()] });
+    setEditorOpen(true);
+  };
+  const closeEditor = () => {
+    if (saveInFlight.current) return;
+    if ((editorSignature !== editorBaseline.current || photos.length > 0) && !window.confirm("Hay cambios o fotos pendientes sin guardar. ¿Quieres descartarlos y cerrar?")) return;
+    setEditorOpen(false);
+    resetEditor();
+  };
   const editBundle = (bundle: Bundle) => {
     if (saveInFlight.current) return;
     if (photos.length && !window.confirm("¿Descartar las fotos pendientes y editar otro bundle?")) return;
@@ -106,6 +122,8 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
     setBoxWeightKg(bundle.boxWeightKg == null ? "" : String(bundle.boxWeightKg));
     const nextItems = bundle.items.map((item) => ({ id: item.id, productId: String(item.productId), quantity: String(item.quantity) }));
     setItems(nextItems.length ? nextItems : [blankItem()]);
+    editorBaseline.current = JSON.stringify({ name: bundle.name, boxLengthCm: bundle.boxLengthCm == null ? "" : String(bundle.boxLengthCm), boxWidthCm: bundle.boxWidthCm == null ? "" : String(bundle.boxWidthCm), boxHeightCm: bundle.boxHeightCm == null ? "" : String(bundle.boxHeightCm), boxWeightKg: bundle.boxWeightKg == null ? "" : String(bundle.boxWeightKg), items: nextItems.length ? nextItems : [blankItem()] });
+    setEditorOpen(true);
     setReport(null); setNotice("Al guardar se aplicarán las reglas vigentes a las cantidades de esta caja.");
   };
   const save = async (event: FormEvent) => {
@@ -145,7 +163,7 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
           return;
         }
       }
-      await refresh(); resetEditor(); setNotice(photos.length ? "Bundle y fotografías guardados." : editingId ? "Bundle actualizado." : "Bundle creado.");
+      await refresh(); setEditorOpen(false); resetEditor(); setNotice(photos.length ? "Bundle y fotografías guardados." : editingId ? "Bundle actualizado." : "Bundle creado.");
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible guardar el bundle."); }
     finally { setSaving(false); setUploadProgress(""); saveInFlight.current = false; }
   };
@@ -166,12 +184,12 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
   };
 
   return <section className="bundles-workspace">
-    <header className="bundles-header"><div><p>BUNDLES</p><h2>Paquetes especiales</h2><span>Combina productos y calcula su precio automáticamente con tus reglas de mayoreo.</span></div><button type="button" className="plain-button" onClick={() => void refresh()} disabled={loading}>{loading ? "Actualizando…" : "↻ Actualizar"}</button></header>
-    {notice && <div className="control-notice">{notice}</div>}
-    <div className="bundles-layout">
+    <header className="bundles-header"><div><p>BUNDLES</p><h2>Paquetes especiales</h2><span>Consulta tus paquetes o abre uno para configurar su contenido y precios.</span></div><div className="bundles-catalog-actions"><button type="button" className="plain-button" onClick={() => void refresh()} disabled={loading}>{loading ? "Actualizando…" : "↻ Actualizar"}</button><button type="button" onClick={newBundle}>＋ Nuevo bundle</button></div></header>
+    {notice && !editorOpen && <div className="control-notice" role="status">{notice}</div>}
+    {editorOpen && <BundleEditorDialog title={editingId ? "Editar bundle" : "Nuevo bundle"} saving={saving} onClose={closeEditor}>
       <form className="bundle-editor" onSubmit={save}>
         <fieldset disabled={saving} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, display: "contents" }}>
-        <header><div><p>CONFIGURACIÓN</p><h3>{editingId ? "Editar bundle" : "Nuevo bundle"}</h3></div>{editingId && <button type="button" className="plain-button" onClick={resetEditor}>Cancelar edición</button>}</header>
+        {notice && <div className="control-notice" role="status">{notice}</div>}
         <label>Nombre del paquete<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej. Pack Mayorista Platinum" minLength={3} required /></label>
         <BundlePhotos key={editingId || "new"} groups={packages.filter(group => editingId !== null && group.controlBundleId === editingId)} pending={photos} onChange={setPhotos} disabled={saving} progress={uploadProgress} />
         <fieldset className="bundle-shipping-data"><legend>Medidas para cotizar envío</legend><small>Esta información aplica a cualquier caja de este bundle; no se repite por fotografía.</small><div><label>Largo (cm)<input type="number" min="0" step="0.1" value={boxLengthCm} onChange={(event) => setBoxLengthCm(event.target.value)} placeholder="Ej. 40" /></label><label>Ancho (cm)<input type="number" min="0" step="0.1" value={boxWidthCm} onChange={(event) => setBoxWidthCm(event.target.value)} placeholder="Ej. 30" /></label><label>Alto (cm)<input type="number" min="0" step="0.1" value={boxHeightCm} onChange={(event) => setBoxHeightCm(event.target.value)} placeholder="Ej. 25" /></label><label>Peso (kg)<input type="number" min="0" step="0.01" value={boxWeightKg} onChange={(event) => setBoxWeightKg(event.target.value)} placeholder="Ej. 8.5" /></label></div></fieldset>
@@ -192,10 +210,10 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
         {pricingError && <div className="control-notice" role="alert">{pricingError} Revisa las reglas de precios de los productos del paquete. <button type="button" className="plain-button" onClick={() => { setPricingRevision(value => value + 1); setReport(null); }}>Reintentar cálculo</button></div>}
         <div className="bundle-summary"><span>Precio final de venta</span><b aria-live="polite">{quote ? money(fixedPrice) : pricingPending ? "Calculando…" : "Por calcular"}</b><small>{!completeItems ? "Completa todos los productos y sus cantidades." : "Total de una caja. Los precios se verifican nuevamente al guardar."}</small></div>
         {report && <div className="bundle-financial-report"><b>Ganancia estimada</b><span>Venta: {money(report.totalOrderSale)}</span><span>IVA neto: {money(report.totalOrderTax)}</span><span>ISR estimado: {money(report.totalIsr)}</span><strong className={(report.totalOrderProfit || 0) <= 0 ? "negative" : ""}>Ganancia neta: {money(report.totalOrderProfit)}</strong></div>}
-        <div className="bundle-editor-actions"><button type="button" className="plain-button" onClick={() => void preview()} disabled={analyzing || !validItems}>{analyzing ? "Analizando…" : "Ver ganancia estimada"}</button><button disabled={saving || !products.length || !validItems}>{saving ? "Guardando…" : "Guardar bundle"}</button></div>
+        <div className="bundle-editor-actions"><button type="button" className="plain-button" onClick={closeEditor}>Cancelar</button><button type="button" className="plain-button" onClick={() => void preview()} disabled={analyzing || !validItems}>{analyzing ? "Analizando…" : "Ver ganancia estimada"}</button><button disabled={saving || !products.length || !validItems}>{saving ? "Guardando…" : "Guardar bundle"}</button></div>
         </fieldset>
       </form>
+    </BundleEditorDialog>}
       <section className="bundle-list"><header><div><p>CATÁLOGO</p><h3>Bundles guardados</h3></div><b>{bundles.length}</b></header>{!loading && bundles.length === 0 && <div className="bundles-empty">Aún no hay paquetes. Crea tu primer bundle.</div>}{bundles.map((bundle) => <article key={bundle.id}><header><div><small>Bundle #{bundle.id}</small><h3>{bundle.name}</h3></div><strong>{money(bundle.fixedPrice)}</strong></header>{[bundle.boxLengthCm, bundle.boxWidthCm, bundle.boxHeightCm, bundle.boxWeightKg].some((value) => value != null) && <p className="bundle-shipping-summary">Caja: {[bundle.boxLengthCm, bundle.boxWidthCm, bundle.boxHeightCm].every((value) => value != null) ? `${bundle.boxLengthCm} × ${bundle.boxWidthCm} × ${bundle.boxHeightCm} cm` : "medidas incompletas"}{bundle.boxWeightKg != null ? ` · ${bundle.boxWeightKg} kg` : ""}</p>}<ul>{bundle.items.map((item) => <li key={item.id || `${item.productId}-${item.quantity}`}><span>{item.quantity}× {item.productName || `Producto #${item.productId}`}</span><b>{money(item.assignedUnitPrice)} c/u</b></li>)}</ul><footer><span>{bundle.items.reduce((total, item) => total + Number(item.quantity || 0), 0)} piezas · {bundle.items.length} productos</span><div><button type="button" className="plain-button" onClick={() => editBundle(bundle)}>Editar</button><button type="button" className="danger-link" onClick={() => void deleteBundle(bundle)}>Eliminar</button></div></footer></article>)}</section>
-    </div>
   </section>;
 }
