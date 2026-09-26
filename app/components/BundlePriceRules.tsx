@@ -35,7 +35,7 @@ export function BundlePriceRules({ productId, productName, revision, applied, on
   const appliedId = matches.length === 1 && Number(matches[0].pricePerUnit) === Number(applied?.unitPrice) ? matches[0].id : null;
   return <section className="bundle-price-rules" aria-labelledby={titleId}>
     <header><div><h4 id={titleId}>Todas las reglas de precio</h4><p>{productName}</p></div><button type="button" className="plain-button" onClick={onRefresh}>Actualizar reglas</button></header>
-    <p className="bundle-price-rules-context">{applied ? `${applied.groupQuantity} pares acumulados en la categoría de esta caja.` : "Completa las cantidades para identificar el rango aplicado."} Precios por par con IVA incluido.</p>
+    <p className="bundle-price-rules-context">{applied ? `${applied.groupQuantity} pares acumulados en el grupo de precio de esta caja.` : "Completa las cantidades para identificar el rango aplicado."} Precios por par con IVA incluido.</p>
     {!current && <p role="status">Cargando reglas…</p>}
     {current?.error && <p role="alert">{current.error} Usa «Actualizar reglas» para reintentar.</p>}
     {current?.rules?.length === 0 && <p role="status">Este producto no tiene reglas de precio. Configúralas en Control de ventas → Precios.</p>}
@@ -44,7 +44,7 @@ export function BundlePriceRules({ productId, productName, revision, applied, on
       <div className="bundle-price-rules-scroll" role="region" aria-label={`Reglas de ${productName}`} tabIndex={0}>
         <table>
           <caption>Escalas disponibles para {productName}</caption>
-          <thead><tr><th scope="col">Escala</th><th scope="col">Pares de la categoría</th><th scope="col">Precio por par</th><th scope="col">Estado</th></tr></thead>
+          <thead><tr><th scope="col">Escala</th><th scope="col">Pares del grupo</th><th scope="col">Precio por par</th><th scope="col">Estado</th></tr></thead>
           <tbody>{current.rules.map(rule => {
             const isApplied = rule.id === appliedId;
             return <tr key={rule.id} className={isApplied ? "is-applied" : undefined}>
