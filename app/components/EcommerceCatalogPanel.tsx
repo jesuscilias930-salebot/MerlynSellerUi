@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import { controlRequest, controlSession } from "../lib/control-api";
 import styles from "./EcommerceCatalogPanel.module.css";
-type Item = { id: number; name: string; description?:string|null; currentStock?: number; fixedPrice?: number; items?: {quantity:number}[] };
+type Item = { id: number; name: string; storeCategory?:string|null; description?:string|null; currentStock?: number; fixedPrice?: number; items?: {quantity:number}[] };
+const bundleCategory = (item: Item) => item.storeCategory?.trim() || "Sin categoría";
 type SavedPhoto = {id:number;url:string};
 function BundleDescriptionEditor({item}:{item:Item}) {
   const [description,setDescription]=useState(item.description||"");
@@ -28,7 +29,7 @@ function Photo({ src, file, name }: {src?:string;file:File|null;name:string}) {
   const ref=useRef<HTMLImageElement>(null);
   useEffect(()=>{if(!file)return;const url=URL.createObjectURL(file);if(ref.current)ref.current.src=url;return()=>URL.revokeObjectURL(url);},[file]);
   // eslint-disable-next-line @next/next/no-img-element
-  return src||file ? <img ref={ref} src={file?undefined:src} alt={name} /> : <div className={styles.placeholder}>Sin imagen de tienda</div>;
+  return src||file ? <img ref={ref} src={file?undefined:src} alt={name} loading="lazy" /> : <div className={styles.placeholder}>Sin imagen de tienda</div>;
 }
 function CatalogCard({item,photos,kind,refresh}:{item:Item;photos:SavedPhoto[];kind:string;refresh:()=>Promise<void>}) {
   const [files,setFiles]=useState<File[]>([]);
@@ -67,12 +68,17 @@ function CatalogCard({item,photos,kind,refresh}:{item:Item;photos:SavedPhoto[];k
     catch(e){setNotice(`${uploaded} fotos guardadas. ${e instanceof Error?e.message:"No se pudo subir la imagen."} Las pendientes permanecen seleccionadas.`);}
     finally{await refresh();setBusy(false);lock.current=false;}
   };
-  return <article className={styles.card}>
+  const EditorContainer = kind === "bundles" ? "details" : "div";
+  return <article className={`${styles.card} ${kind === "bundles" ? styles.compactCard : ""}`}>
     <Photo src={photos[0]?.url} file={null} name={item.name}/>
     <h3>{item.name}</h3><small>#{item.id} · {kind==="products"?`${item.currentStock||0} piezas disponibles`:`${item.items?.reduce((n,i)=>n+i.quantity,0)||0} piezas por paquete`}</small>
-    {kind==="bundles"&&<BundleDescriptionEditor key={`${item.id}-${item.description||""}`} item={item}/>}
+    {kind==="bundles"&&<span className={styles.categoryBadge}>{bundleCategory(item)}</span>}
     {item.fixedPrice!=null&&<b>{new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN"}).format(item.fixedPrice)}</b>}
     <small>{photos.length} fotos guardadas · La primera es la portada.</small>
+    <EditorContainer className={styles.cardEditor}>
+    {kind==="bundles"&&<summary>Administrar fotos y descripción</summary>}
+    <div className={styles.editorBody}>
+    {kind==="bundles"&&<BundleDescriptionEditor key={`${item.id}-${item.description||""}`} item={item}/>}
     <div className={styles.gallery}>{photos.map((photo,index)=><figure key={photo.id}>
       <a href={photo.url} target="_blank" rel="noopener noreferrer"><Photo src={photo.url} file={null} name={`${item.name}, foto ${index+1}`}/></a>
       <figcaption>{index===0?"★ Portada":`Foto ${index+1}`}</figcaption>
@@ -93,6 +99,8 @@ function CatalogCard({item,photos,kind,refresh}:{item:Item;photos:SavedPhoto[];k
     <div className={styles.actions}><button type="button" disabled={!files.length||busy} onClick={()=>void upload()}>{busy?"Subiendo…":`Subir ${files.length||""} fotos`}</button>{files.length>0&&<button type="button" disabled={busy} onClick={()=>setFiles([])}>Cancelar</button>}</div>
     {photos.length>0&&files.length===1&&<button type="button" disabled={busy} onClick={()=>void upload(true)}>Usar la foto seleccionada para reemplazar la portada</button>}
     <p role="status">{notice}</p>
+    </div>
+    </EditorContainer>
   </article>;
 }
 export function EcommerceCatalogPanel({kind}:{kind:"products"|"bundles"}) {
@@ -101,12 +109,19 @@ export function EcommerceCatalogPanel({kind}:{kind:"products"|"bundles"}) {
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [search,setSearch]=useState("");
+  const [category,setCategory]=useState("");
   async function refresh(){setLoading(true);setError("");try{if(!controlSession.get())throw Error("Inicia sesión en Control de ventas y después vuelve a E-commerce.");const [data,urls]=await Promise.all([controlRequest<Item[]>(kind==="products"?"/products/all":"/bundles"),controlRequest<Record<string,SavedPhoto[]>>(`/${kind}/store-gallery`)]);setItems(data);setImages(urls);}catch(e){setError(e instanceof Error?e.message:"No se pudo cargar el catálogo");}finally{setLoading(false);}}
   useEffect(()=>{let active=true;Promise.all([controlRequest<Item[]>(kind==="products"?"/products/all":"/bundles"),controlRequest<Record<string,SavedPhoto[]>>(`/${kind}/store-gallery`)]).then(([data,urls])=>{if(active){setItems(data);setImages(urls);}}).catch(e=>{if(active)setError(controlSession.get()?(e instanceof Error?e.message:"No se pudo cargar el catálogo"):"Inicia sesión en Control de ventas y después vuelve a E-commerce.");}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[kind]);
-  const visible=items.filter(i=>i.name.toLowerCase().includes(search.toLowerCase()));
+  const categories = [...new Set(items.map(bundleCategory))].sort((a,b)=>a.localeCompare(b,"es"));
+  const visible=items.filter(i=>i.name.toLowerCase().includes(search.toLowerCase()) && (kind!=="bundles" || !category || bundleCategory(i)===category));
   return <section className={styles.panel}><header><div><small>E-COMMERCE</small><h1>{kind==="bundles"?"Bundles":"Productos"}</h1><p>Galería de cada artículo para la tienda. Agrega varias fotos sin reemplazar las existentes. No modifica las fotos para chats.</p></div><button type="button" disabled={loading} onClick={()=>void refresh()}>Actualizar</button></header>
     <p>JPG o PNG · Hasta 5 MB y 16 megapíxeles. Solo sube imágenes que quieras mostrar a los compradores.</p>
-    <input aria-label="Buscar en catálogo" placeholder="Buscar por nombre…" value={search} onChange={e=>setSearch(e.target.value)}/>
+    <div className={styles.filters}>
+      <label>Buscar<input aria-label="Buscar en catálogo" placeholder="Buscar por nombre…" value={search} onChange={e=>setSearch(e.target.value)}/></label>
+      {kind==="bundles"&&<label>Categoría de bundles<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">Todas las categorías</option>{categories.map(value=><option key={value} value={value}>{value}</option>)}</select></label>}
+      {(search||category)&&<button type="button" onClick={()=>{setSearch("");setCategory("");}}>Limpiar filtros</button>}
+    </div>
+    {!loading && <p>{visible.length} de {items.length} {kind==="bundles"?"bundles":"productos"}{kind==="bundles"?" · Abre una tarjeta para administrar sus fotografías y descripción.":""}</p>}
     {error&&<p role="alert" className={styles.error}>{error}</p>}{loading&&<p role="status">Cargando catálogo…</p>}
     {!loading&&!error&&!visible.length&&<p>No hay artículos para mostrar.</p>}
     <div className={styles.grid}>{visible.map(item=><CatalogCard key={`${kind}-${item.id}`} item={item} photos={images[item.id]||[]} kind={kind} refresh={refresh}/>)}</div>

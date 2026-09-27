@@ -20,3 +20,16 @@
 .gallery input{font-size:12px;}
 .descriptionEditor{display:grid;gap:8px;border-bottom:1px solid #dedfd6;padding-bottom:16px;}
 .descriptionEditor textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:120px;padding:10px;border:1px solid #dedfd6;border-radius:8px;background:#fff;color:#183c32;font:inherit;line-height:1.5;}
+.filters{display:flex;align-items:end;gap:12px;flex-wrap:wrap;}
+.filters label{display:grid;gap:6px;flex:1 1 220px;font-size:14px;}
+.filters select{width:100%;min-width:0;padding:10px;border:1px solid #dedfd6;border-radius:8px;background:white;color:#183c32;font:inherit;}
+.compactCard{align-self:start;gap:10px;}
+.compactCard>img,.compactCard>.placeholder{height:112px;}
+.compactCard h3{font-size:17px;line-height:1.4;overflow-wrap:anywhere;}
+.categoryBadge{align-self:flex-start;padding:4px 8px;border-radius:6px;background:#edf4ef;color:#315f47;font-size:12px;}
+.cardEditor{min-width:0;}
+.cardEditor>summary{cursor:pointer;list-style-position:inside;padding:12px 0 0;border-top:1px solid #dedfd6;font-size:14px;font-weight:600;}
+.cardEditor>summary:focus-visible,.filters select:focus-visible{outline:2px solid #1c513e;outline-offset:3px;}
+.editorBody{display:grid;gap:12px;min-width:0;}
+.compactCard .editorBody{padding-top:16px;}
+.compactCard .gallery img{height:100px;}
