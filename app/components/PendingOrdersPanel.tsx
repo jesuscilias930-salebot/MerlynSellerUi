@@ -5,6 +5,7 @@ import { OrderOperations, type OperationalOrder } from "./OrderOperations";
 import { controlApi, controlRequest, controlSession } from "../lib/control-api";
 import styles from "./StoreOrdersPanel.module.css";
 import { shippingDraftKey, type ShippingDraft } from "../lib/shipping-draft";
+import { OrderBreakdown } from "./OrderBreakdown";
 
 type Order = OperationalOrder & { id: string; folio: string; customerName: string; status: string; subtotal: number; createdAt: string;
   shippingAmount?:number|null;shippingCarrier?:string;shippingService?:string;shippingEnvironment?:string;total?:number;
@@ -111,11 +112,14 @@ export function PendingOrdersPanel({ onOpenShipping }: { onOpenShipping: () => v
       {error && <p role="alert">{error}</p>}
       {busy && !data && <p>Cargando pedidos…</p>}
       {data?.content.length === 0 && <p>Aún no hay pedidos para esta tienda.</p>}
-      {data?.content.map(order => <details className={styles.order} key={order.id}>
+      {data?.content.map(order => <details className={styles.order} key={order.id} open>
         <summary><span><strong>{order.folio}</strong><small className={styles.folio}>{order.customerName || "Compra como invitado"} · {new Date(order.createdAt).toLocaleString("es-MX")}</small></span>
           <span className={styles.badge}>{paymentLabels[order.status] || order.status}</span>
-          <strong>{money(Number(order.total ?? order.subtotal))}</strong><span>Ver pedido</span></summary>
-        <div className={styles.details}>
+          <strong>{money(Number(order.total ?? (Number(order.subtotal) + Number(order.shippingAmount ?? 0))))}</strong><span className={styles.toggleLabel}><span className={styles.whenClosed}>Ver pedido</span><span className={styles.whenOpen}>Ocultar pedido</span></span></summary>
+        <div className={`${styles.details} ${styles.orderLayout}`}>
+          <OrderBreakdown {...order} />
+          <aside className={styles.orderSidebar} aria-label={`Entrega y seguimiento de ${order.folio}`}>
+          <h3>Entrega y seguimiento</h3>
           <OrderOperations order={order} onUpdated={()=>setRevision(r=>r+1)}/>
           <button type="button" disabled={preparingOrder!==null || !order.shippingAddress} onClick={()=>void prepareShipping(order)}>{preparingOrder===order.id ? "Preparando dirección y paquete…" : "Cotizar envío en Envia"}</button>
           {!order.shippingAddress && <small>Este pedido aún no tiene una dirección de entrega capturada.</small>}
@@ -125,12 +129,7 @@ export function PendingOrdersPanel({ onOpenShipping }: { onOpenShipping: () => v
             {order.shippingAddress.references&&<p>Referencias: {order.shippingAddress.references}</p>}
             <small>Dirección guardada para este pedido. La guía se genera internamente, no durante el pago.</small>
           </section> : <p>Dirección pendiente. Identifica al cliente con el folio que te enviará por WhatsApp.</p>}
-          {order.lines.map((line, i) => <div className={styles.line} key={`${line.kind}-${line.itemId}-${i}`}>
-            <div><strong>{line.name}</strong><small>{line.quantity} {line.kind === "BUNDLE" ? "cajas" : "unidades"} × {money(Number(line.unitPrice))}</small>{line.contents && <p>{line.contents}</p>}</div>
-            <strong>{money(line.quantity * Number(line.unitPrice))}</strong>
-          </div>)}
-          <p>Productos: {money(Number(order.subtotal))}</p>
-          {order.shippingAmount!=null ? <><p>Envío: {money(Number(order.shippingAmount))} · {order.shippingCarrier} · {order.shippingService}{order.shippingEnvironment==='sandbox'?' · Tarifa de prueba':''}</p><p><strong>Total del pedido: {money(Number(order.total ?? Number(order.subtotal)+Number(order.shippingAmount)))}</strong></p></> : <small>El envío se acuerda por separado.</small>}
+          </aside>
         </div>
       </details>)}
       <footer className={styles.header}>

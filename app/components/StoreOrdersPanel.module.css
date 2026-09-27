@@ -5,7 +5,7 @@
 .panel button { border: 1px solid #dfe8e2; border-radius: 8px; background: #f4f8f5; color: #183c32; padding: 10px 14px; cursor: pointer; }
 .panel button:disabled { opacity: .5; cursor: default; }
 .order { border: 1px solid #dfe8e2; border-radius: 12px; margin: 12px 0; overflow: hidden; }
-.order summary { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; justify-content: space-between; padding: 16px; cursor: pointer; }
+.order > summary { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; justify-content: space-between; padding: 16px; cursor: pointer; background: #f4f8f5; }
 .order summary:focus-visible { outline: 2px solid #1c513e; outline-offset: -3px; }
 .folio { display: block; overflow-wrap: anywhere; color: #6c7770; margin-top: 4px; }
 .badge { background: #e9eddd; color: #183c32; padding: 6px 10px; border-radius: 20px; font-size: 13px; }
@@ -13,3 +13,45 @@
 .line { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid #dfe8e2; overflow-wrap: anywhere; }
 .line small { display: block; color: #6c7770; margin-top: 4px; }
 .line p { font-size: 13px; }
+.orderLayout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; padding-top: 20px; }
+.breakdown, .orderSidebar { min-width: 0; overflow-wrap: anywhere; }
+.breakdown h3, .orderSidebar > h3 { margin: 0 0 16px; font-size: 18px; }
+.orderSidebar { display: flex; flex-direction: column; gap: 16px; }
+.orderSidebar > h3 { margin-bottom: 0; }
+.orderSidebar > section h3 { margin-top: 0; }
+.orderSidebar > section p { line-height: 1.6; }
+.itemGroup { margin-bottom: 20px; }
+.itemGroup h4 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 15px; }
+.itemGroup h4 span { font-size: 12px; font-weight: 400; color: #52695f; }
+.itemCard { border: 1px solid #dfe8e2; border-radius: 12px; padding: 16px; margin-top: 10px; background: white; }
+.itemHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.itemHeading h5 { font-size: 16px; line-height: 1.5; margin: 0; }
+.quantity { flex-shrink: 0; border-radius: 8px; padding: 6px 10px; background: #e6f1eb; color: #174f37; font-weight: 700; }
+.itemAmounts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 0 0; }
+.itemAmounts dt { font-size: 12px; color: #52695f; line-height: 1.5; }
+.itemAmounts dd { margin: 4px 0 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.itemAmounts > div:last-child { text-align: right; }
+.contents { margin-top: 14px; padding: 12px; background: #f7f9f7; border-left: 3px solid #b7cebf; border-radius: 4px; font-size: 13px; }
+.contents p { margin: 6px 0 0; white-space: pre-line; line-height: 1.7; }
+.totals { padding: 18px; background: #f0f6f2; border: 1px solid #cddfd2; border-radius: 12px; }
+.totals h4 { margin: 0 0 16px; }
+.totals h4 small { font-weight: 400; color: #52695f; }
+.totals dl { display: grid; gap: 12px; margin: 0; }
+.totals dl > div { display: flex; justify-content: space-between; gap: 16px; }
+.totals dd { margin: 0; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.totals p { margin: 12px 0 0; font-size: 13px; line-height: 1.5; color: #52695f; }
+.grandTotal { border-top: 1px solid #cddfd2; padding-top: 14px; font-size: 18px; font-weight: 700; }
+.toggleLabel { font-size: 13px; text-decoration: underline; }
+.whenOpen { display: none; }
+.order[open] > summary .whenOpen { display: inline; }
+.order[open] > summary .whenClosed { display: none; }
+@media (max-width: 1000px) {
+  .orderLayout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .panel { padding: 12px; }
+  .orderLayout { gap: 20px; padding: 16px 12px; }
+  .itemCard, .totals { padding: 12px; }
+  .itemHeading { flex-wrap: wrap; }
+  .grandTotal { font-size: 16px; }
+}
