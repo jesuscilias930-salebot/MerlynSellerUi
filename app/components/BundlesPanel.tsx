@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { controlRequest } from "../lib/control-api";
+import { api } from "../lib/api";
 import type { EntrepreneurPackage } from "../lib/types";
 import { BundlePhotos, type PendingPhoto } from "./BundlePhotos";
 import { BundlePriceRules } from "./BundlePriceRules";
@@ -222,6 +223,24 @@ export function BundlesPanel({ products, packages, onCreateImageSet, onUploadIma
         </fieldset>
       </form>
     </BundleEditorDialog>}
-      <section className="bundle-list"><header><div><p>CATÁLOGO</p><h3>Bundles guardados</h3></div><b>{bundles.length}</b></header>{!loading && bundles.length === 0 && <div className="bundles-empty">Aún no hay paquetes. Crea tu primer bundle.</div>}{bundles.map((bundle) => <article key={bundle.id}><header><div><small>{bundle.storeCategory || "Sin categoría"} · Bundle #{bundle.id}</small><h3>{bundle.name}</h3></div><strong>{money(bundle.fixedPrice)}</strong></header>{[bundle.boxLengthCm, bundle.boxWidthCm, bundle.boxHeightCm, bundle.boxWeightKg].some((value) => value != null) && <p className="bundle-shipping-summary">Caja: {[bundle.boxLengthCm, bundle.boxWidthCm, bundle.boxHeightCm].every((value) => value != null) ? `${bundle.boxLengthCm} × ${bundle.boxWidthCm} × ${bundle.boxHeightCm} cm` : "medidas incompletas"}{bundle.boxWeightKg != null ? ` · ${bundle.boxWeightKg} kg` : ""}</p>}<ul>{bundle.items.map((item) => <li key={item.id || `${item.productId}-${item.quantity}`}><span>{item.quantity}× {item.assorted ? "Caricatura surtida · niño a adulto, todos los géneros según existencias" : item.productName || `Producto #${item.productId}`}</span><b>{money(item.assignedUnitPrice)} c/u</b></li>)}</ul><footer><span>{bundle.items.reduce((total, item) => total + Number(item.quantity || 0), 0)} piezas · {bundle.items.length} productos</span><div><button type="button" className="plain-button" onClick={() => editBundle(bundle)}>Editar</button><button type="button" className="danger-link" onClick={() => void deleteBundle(bundle)}>Eliminar</button></div></footer></article>)}</section>
+      <section className="bundle-list"><header><div><p>CATÁLOGO</p><h3>Bundles guardados</h3></div><b>{bundles.length}</b></header>
+        {!loading && bundles.length === 0 && <div className="bundles-empty">Aún no hay paquetes. Crea tu primer bundle.</div>}
+        {bundles.map(bundle => {
+          const images = packages.filter(group => group.controlBundleId === bundle.id).flatMap(group => [...group.images].sort((a, b) => a.position - b.position));
+          return <article key={bundle.id}>
+            <header><div><small>{bundle.storeCategory || "Sin categoría"} · Bundle #{bundle.id}</small><h3>{bundle.name}</h3></div><strong>{money(bundle.fixedPrice)}</strong></header>
+            <div className="bundle-card-photos" aria-label={`Fotografías de ${bundle.name}`}>
+              <small>{images.length} fotos para chats</small>
+              {images.length ? <div className="bundle-card-photo-strip">{images.map(image => <a key={image.id} href={`${api}/settings/entrepreneur-packages/images/${image.id}/media`} target="_blank" rel="noopener noreferrer" aria-label={`Abrir fotografía de ${bundle.name}: ${image.filename || image.position + 1}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`${api}/settings/entrepreneur-packages/images/${image.id}/media`} alt={image.filename || `Fotografía de ${bundle.name}`} loading="lazy" />
+              </a>)}</div> : <p>Sin fotografías. Agrégalas al editar o en Fotos para chats.</p>}
+            </div>
+            {[bundle.boxLengthCm, bundle.boxWidthCm, bundle.boxHeightCm, bundle.boxWeightKg].some(value => value != null) && <p className="bundle-shipping-summary">Caja: {[bundle.boxLengthCm, bundle.boxWidthCm, bundle.boxHeightCm].every(value => value != null) ? `${bundle.boxLengthCm} × ${bundle.boxWidthCm} × ${bundle.boxHeightCm} cm` : "medidas incompletas"}{bundle.boxWeightKg != null ? ` · ${bundle.boxWeightKg} kg` : ""}</p>}
+            <ul>{bundle.items.map(item => <li key={item.id || `${item.productId}-${item.quantity}`}><span>{item.quantity}× {item.assorted ? "Caricatura surtida · niño a adulto, todos los géneros según existencias" : item.productName || `Producto #${item.productId}`}</span><b>{money(item.assignedUnitPrice)} c/u</b></li>)}</ul>
+            <footer><span>{bundle.items.reduce((total, item) => total + Number(item.quantity || 0), 0)} piezas · {bundle.items.length} productos</span><div><button type="button" className="plain-button" onClick={() => editBundle(bundle)}>Editar</button><button type="button" className="danger-link" onClick={() => void deleteBundle(bundle)}>Eliminar</button></div></footer>
+          </article>;
+        })}
+      </section>
   </section>;
 }

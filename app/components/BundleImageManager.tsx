@@ -8,12 +8,13 @@ import type { EntrepreneurPackage } from "../lib/types";
 type ControlBundle = { id?: number; name: string; fixedPrice?: number };
 
 type Props = {
+  active?: boolean;
   packages: EntrepreneurPackage[];
   onCreate: (name: string, bundleType: string, controlBundleId: number) => Promise<EntrepreneurPackage>;
   onUpload: (packageId: string, file: File) => Promise<void>;
 };
 
-export function BundleImageManager({ packages, onCreate, onUpload }: Props) {
+export function BundleImageManager({ packages, onCreate, onUpload, active = true }: Props) {
   const [bundles, setBundles] = useState<ControlBundle[]>([]);
   const [bundleType, setBundleType] = useState("");
   const [bundleId, setBundleId] = useState("");
@@ -21,27 +22,19 @@ export function BundleImageManager({ packages, onCreate, onUpload }: Props) {
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
-    void controlRequest<ControlBundle[]>("/bundles")
+    if (!active) return;
+    const controller = new AbortController();
+    void controlRequest<ControlBundle[]>("/bundles", { signal: controller.signal })
       .then(setBundles)
-      .catch((error) => setNotice(error instanceof Error ? error.message : "No fue posible cargar los bundles."));
-  }, []);
+      .catch((error) => { if (!controller.signal.aborted) setNotice(error instanceof Error ? error.message : "No fue posible cargar los bundles."); });
+    return () => controller.abort();
+  }, [active]);
 
   const bundlePackages = useMemo(
     () => packages.filter((item) => item.controlBundleId),
     [packages],
   );
-  const availableBundles = useMemo(
-    () => bundles.filter((bundle) => !bundlePackages.some((item) => item.controlBundleId === bundle.id)),
-    [bundles, bundlePackages],
-  );
-  const groups = useMemo(() => {
-    const next = new Map<string, EntrepreneurPackage[]>();
-    bundlePackages.forEach((item) => {
-      const key = item.bundleType || "Sin tipo";
-      next.set(key, [...(next.get(key) || []), item]);
-    });
-    return [...next.entries()];
-  }, [bundlePackages]);
+  const selectedPackages = bundlePackages.filter(item => String(item.controlBundleId) === bundleId);
 
   const create = async () => {
     const selected = bundles.find((bundle) => String(bundle.id) === bundleId);
@@ -49,7 +42,6 @@ export function BundleImageManager({ packages, onCreate, onUpload }: Props) {
     setSaving(true); setNotice("");
     try {
       await onCreate(selected.name, bundleType.trim(), selected.id);
-      setBundleId("");
       setNotice(`“${selected.name}” está listo para recibir fotografías.`);
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible preparar el bundle."); }
     finally { setSaving(false); }
@@ -74,10 +66,11 @@ export function BundleImageManager({ packages, onCreate, onUpload }: Props) {
     <header><div><p>FOTOS PARA CHAT</p><h2>Imágenes de bundles</h2><span>Relaciona un bundle existente con una categoría, sube sus fotos y después envíalas desde cualquier conversación.</span></div></header>
     {notice && <div className="control-notice">{notice}</div>}
     <div className="bundle-media-create">
-      <label>Categoría del bundle<input value={bundleType} onChange={(event) => setBundleType(event.target.value)} placeholder="Ej. Caja más vendida" maxLength={120} /></label>
-      <label>Bundle existente<select value={bundleId} onChange={(event) => setBundleId(event.target.value)}><option value="">Selecciona un bundle</option>{availableBundles.map((bundle) => <option key={bundle.id} value={bundle.id}>{bundle.name}</option>)}</select></label>
-      <button type="button" onClick={() => void create()} disabled={saving || !bundleType.trim() || !bundleId}>＋ Agregar bundle</button>
+      <label>Bundle<select value={bundleId} disabled={saving} onChange={(event) => { setBundleId(event.target.value); setNotice(""); }}><option value="">Selecciona un bundle para administrar sus fotos</option>{bundles.map((bundle) => <option key={bundle.id} value={bundle.id}>{bundle.name}</option>)}</select></label>
+      {!!bundleId && !selectedPackages.length && <><label>Categoría de fotos para chat<input value={bundleType} disabled={saving} onChange={(event) => setBundleType(event.target.value)} placeholder="Ej. Caja más vendida" maxLength={120} /></label>
+      <button type="button" onClick={() => void create()} disabled={saving || !bundleType.trim()}>Preparar fotos para chat</button></>}
     </div>
-    {!groups.length ? <div className="bundles-empty">Aún no has preparado bundles con fotos para el chat.</div> : <div className="bundle-image-groups">{groups.map(([type, items]) => <section key={type}><h3>{type}</h3><div>{items.map((item) => <article key={item.id}><header><div><b>{item.name}</b><small>{item.images.length} foto{item.images.length === 1 ? "" : "s"}</small></div><label className="plain-button image-upload-button">{saving ? "Subiendo…" : "＋ Subir fotos"}<input type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={saving} onChange={(event) => void upload(item, event)} /></label></header><div className="bundle-image-previews">{item.images.length ? item.images.map((image) => <img key={image.id} src={`${api}/settings/entrepreneur-packages/images/${image.id}/media`} alt={`Foto de ${item.name}`} />) : <span>Sin fotografías todavía.</span>}</div></article>)}</div></section>)}</div>}
+    {!bundleId && <p className="bundles-empty">Selecciona un bundle arriba. Puedes ver todas sus fotografías en la pestaña Bundles.</p>}
+    <div className="bundle-image-groups">{selectedPackages.map(item => <section key={item.id}><h3>{item.bundleType || "Fotos para chat"}</h3><div><article><header><div><b>{item.name}</b><small>{item.images.length} fotos guardadas</small></div><label className="plain-button image-upload-button">{saving ? "Subiendo…" : "＋ Subir fotos"}<input type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={saving} onChange={event => void upload(item, event)} /></label></header><div className="bundle-image-previews">{item.images.length ? item.images.map(image => <img key={image.id} src={`${api}/settings/entrepreneur-packages/images/${image.id}/media`} alt={`Foto de ${item.name}`} loading="lazy" />) : <span>Sin fotografías todavía.</span>}</div></article></div></section>)}</div>
   </section>;
 }

@@ -7318,6 +7318,8 @@ button {
 
 .bundle-list article {
     display: grid;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
     gap: 11px;
     padding: 14px;
     border: 1px solid #dce9e1;
@@ -8545,6 +8547,16 @@ article.inbound:hover .message-reaction-picker, .message-reaction-picker:focus-w
     .whatsapp-templates-panel > header { display: grid; }
     .template-variable-row { grid-template-columns: 1fr; gap: 5px; padding: 8px 0; border-top: 1px solid #edf3ef; }
 }
+.bundle-config-tabs{display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #dce5df;padding-bottom:12px;margin-bottom:20px}
+.bundle-config-tabs button{border:1px solid #dce5df;border-radius:10px;padding:12px 20px;background:#f4f8f5;color:#183c32;cursor:pointer;font-weight:600}
+.bundle-config-tabs button[aria-selected="true"]{background:#183c32;color:white;border-color:#183c32}
+.bundle-config-tabs button:focus-visible,.bundle-card-photo-strip a:focus-visible{outline:3px solid #4c9e7a;outline-offset:3px}
+.bundle-card-photos{margin:16px 0;padding:12px;background:#f5f8f6;border-radius:12px;min-width:0}
+.bundle-card-photos>small{display:block;color:#52695f;margin-bottom:8px}
+.bundle-card-photos p{font-size:13px;color:#52695f;margin:0}
+.bundle-card-photo-strip{display:flex;gap:10px;overflow-x:auto;padding:4px;max-width:100%;scroll-snap-type:x proximity}
+.bundle-card-photo-strip a{flex:0 0 120px;scroll-snap-align:start}
+.bundle-card-photo-strip img{display:block;width:120px;height:140px;object-fit:contain;background:white;border:1px solid #dce5df;border-radius:8px}
 .product-weights-settings{display:grid;gap:18px;max-width:1100px}
 .product-weights-settings>p{margin:0;color:#52695f;line-height:1.6}
 .product-weights-settings>.product-category-group{margin-top:0;min-width:0}

@@ -5,8 +5,7 @@ import { controlResources, type ControlResource } from "../lib/section-data";
 import { controlApi, controlRequest, controlSession } from "../lib/control-api";
 import type { Chat, EntrepreneurPackage } from "../lib/types";
 import { PriceRulesPanel } from "./PriceRulesPanel";
-import { BundlesPanel } from "./BundlesPanel";
-import { BundleImageManager } from "./BundleImageManager";
+import { BundleConfiguration } from "./BundleConfiguration";
 import { StoreOrdersPanel } from "./StoreOrdersPanel";
 import { ProductWeightEditor } from "./ProductWeightEditor";
 import { PackingRulesPanel } from "./PackingRulesPanel";
@@ -1004,7 +1003,7 @@ export function ControlPanel({
           </div>
         </details>)}
       </section>}
-      {tab === "bundles" && <><BundlesPanel products={products} packages={entrepreneurPackages} onCreateImageSet={onCreateBundleImageSet} onUploadImage={onUploadBundleImage} onProductsChanged={async()=>setProducts(await controlRequest<Product[]>("/products/all"))} /><BundleImageManager packages={entrepreneurPackages} onCreate={onCreateBundleImageSet} onUpload={onUploadBundleImage} /></>}
+      {tab === "bundles" && <BundleConfiguration products={products} packages={entrepreneurPackages} onCreateImageSet={onCreateBundleImageSet} onUploadImage={onUploadBundleImage} onProductsChanged={async()=>setProducts(await controlRequest<Product[]>("/products/all"))} />}
       {tab === "sales" && <StoreOrdersPanel />}
       {tab === "sales" && (
         <div className="control-customers">
