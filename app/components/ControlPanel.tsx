@@ -988,11 +988,21 @@ export function ControlPanel({
         <p>Configura el peso de un par completo, sin empaque. Estos valores se utilizan para cotizar envíos; no modifican los precios.</p>
         <p>{products.length} productos · {products.filter(product => Number(product.weightGrams) > 0).length} con peso configurado</p>
         {products.length === 0 && <p>{loading ? "Cargando productos…" : "No hay productos guardados. Agrégalos desde Control de ventas → Productos."}</p>}
-        {products.map(product => <article key={product.id}>
+        {products.length > 0 && <p>Abre una categoría para consultar y editar los pesos de sus productos.</p>}
+        {productCategories.map(category => <details key={category.id} className="product-category-group">
+          <summary>
+            <strong>{category.name}</strong>
+            <span>{category.products.length} {category.products.length === 1 ? "producto" : "productos"}</span>
+            <span>{category.products.filter(product => Number(product.weightGrams) > 0).length} con peso configurado</span>
+          </summary>
+          <div className="product-weight-category-content">
+        {category.products.map(product => <article key={product.id}>
           <header><h2>{product.name}</h2><p>{[product.category?.name, product.gender, product.size].filter(Boolean).join(" · ")}</p><strong>{Number(product.weightGrams) > 0 ? `Peso guardado: ${product.weightGrams} g por par` : "Peso pendiente de configurar"}</strong></header>
           <ProductWeightEditor productId={product.id} productName={product.name} weightGrams={product.weightGrams}
             onSaved={weight => setProducts(current => current.map(item => item.id === product.id ? { ...item, weightGrams: weight } : item))} />
         </article>)}
+          </div>
+        </details>)}
       </section>}
       {tab === "bundles" && <><BundlesPanel products={products} packages={entrepreneurPackages} onCreateImageSet={onCreateBundleImageSet} onUploadImage={onUploadBundleImage} onProductsChanged={async()=>setProducts(await controlRequest<Product[]>("/products/all"))} /><BundleImageManager packages={entrepreneurPackages} onCreate={onCreateBundleImageSet} onUpload={onUploadBundleImage} /></>}
       {tab === "sales" && <StoreOrdersPanel />}
