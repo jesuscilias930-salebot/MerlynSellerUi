@@ -922,7 +922,7 @@ export function ControlPanel({
                     })
                   }
                 >
-                  {["Hombre", "Mujer", "Unisex", "Niño", "Niña"].map(
+                  {["Hombre", "Mujer", "Unisex", "Niño", "Niña", "Bebé niño", "Bebé niña"].map(
                     (gender) => (
                       <option key={gender} value={gender}>
                         {gender}
