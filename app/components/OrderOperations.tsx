@@ -5,6 +5,7 @@ import { controlRequest } from "../lib/control-api";
 export type OperationalOrder = {
   id: string; status: string; fulfillmentStatus?: string; inventoryDeductedAt?: string; manualPaymentAllowed?: boolean;
   inventoryIssue?: string; trackingNumber?: string; dispatchCarrier?: string;
+  fulfillmentItems?: { productId: number; name: string; quantity: number }[];
   history?: { occurredAt: string; actor: string; action: string; note: string }[];
 };
 const labels: Record<string,string> = { AWAITING_PAYMENT:"Esperando pago", READY:"Listo para preparar", PREPARING:"En preparación", SHIPPED:"Enviado", DELIVERED:"Entregado", CANCELLED:"Cancelado", REFUND_REQUESTED:"Reembolso solicitado", STOCK_ISSUE:"Revisar existencias", REVIEW_REQUIRED:"Requiere conciliación", TEST:"Pedido de prueba" };
@@ -26,6 +27,7 @@ export function OrderOperations({order,onUpdated}:{order:OperationalOrder;onUpda
     <h3>{labels[state] || state}</h3>
     <p>{order.inventoryDeductedAt?"Inventario descontado después del pago.":"Sin descuento de inventario registrado."}</p>
     {order.inventoryIssue && <p role="alert">{order.inventoryIssue}</p>}
+    {!!order.fulfillmentItems?.length && <details open><summary>Contenido asignado para preparar</summary><ul>{order.fulfillmentItems.map(item=><li key={item.productId}>{item.quantity} × {item.name}</li>)}</ul><small>Cantidades descontadas de inventario; en calcetines son pares y en shorts son piezas.</small></details>}
     {order.trackingNumber && <p>Guía: {order.trackingNumber} · {order.dispatchCarrier}</p>}
     {state==="REFUND_REQUESTED" && <p>Solicitud registrada. El reembolso debe gestionarse y verificarse manualmente; este botón no devuelve dinero ni repone existencias.</p>}
     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{options.map(([key,label])=><button type="button" key={key} disabled={busy} onClick={()=>{setAction(key);setError("");setNote("");}}>{label}</button>)}</div>

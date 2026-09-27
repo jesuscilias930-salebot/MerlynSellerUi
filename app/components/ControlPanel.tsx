@@ -994,7 +994,7 @@ export function ControlPanel({
             onSaved={weight => setProducts(current => current.map(item => item.id === product.id ? { ...item, weightGrams: weight } : item))} />
         </article>)}
       </section>}
-      {tab === "bundles" && <><BundlesPanel products={products} packages={entrepreneurPackages} onCreateImageSet={onCreateBundleImageSet} onUploadImage={onUploadBundleImage} /><BundleImageManager packages={entrepreneurPackages} onCreate={onCreateBundleImageSet} onUpload={onUploadBundleImage} /></>}
+      {tab === "bundles" && <><BundlesPanel products={products} packages={entrepreneurPackages} onCreateImageSet={onCreateBundleImageSet} onUploadImage={onUploadBundleImage} onProductsChanged={async()=>setProducts(await controlRequest<Product[]>("/products/all"))} /><BundleImageManager packages={entrepreneurPackages} onCreate={onCreateBundleImageSet} onUpload={onUploadBundleImage} /></>}
       {tab === "sales" && <StoreOrdersPanel />}
       {tab === "sales" && (
         <div className="control-customers">
