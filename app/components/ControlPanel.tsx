@@ -42,7 +42,7 @@ type Sale = {
 type PurchaseItem = {
   id?: number;
   productId?: number;
-  product?: { id?: number; name?: string };
+  product?: { id?: number; name?: string; category?: Category; gender?: string | null; size?: string | null };
   isBulk?: boolean;
   unitsPerBulk?: number;
   bulksReceived?: number;
@@ -1350,7 +1350,7 @@ export function ControlPanel({
                   {purchase.purchaseItemsRequest
                     ?.map(
                       (item) =>
-                        `${item.product?.name || "Producto"}: ${item.totalUnitsAcquired || 0} pzas`,
+                        `${[item.product?.name || "Producto", item.product?.category?.name, item.product?.gender, item.product?.size].filter(Boolean).join(" · ")}: ${item.totalUnitsAcquired || 0} pzas`,
                     )
                     .join(" · ")}
                 </span>
