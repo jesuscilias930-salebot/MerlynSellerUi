@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { User } from "../lib/types";
 import styles from "./Sidebar.module.css";
 
-type View = "ecommerce-testimonials" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
+type View = "ecommerce-presentation" | "ecommerce-testimonials" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./ControlPanel").ControlTab;
 type Item = { label: string; view: View; tab?: ControlTab };
 const groups: { id: string; label: string; icon: string; items: Item[] }[] = [
@@ -10,6 +10,7 @@ const groups: { id: string; label: string; icon: string; items: Item[] }[] = [
     { label: "Pedidos", view: "ecommerce-orders" }, { label: "Bundles", view: "ecommerce-bundles" },
     { label: "Productos", view: "ecommerce-products" }, { label: "Envíos", view: "shipping" },
     { label: "Testimonios", view: "ecommerce-testimonials" },
+    { label: "Imagen de presentación", view: "ecommerce-presentation" },
   ] },
   { id: "whatsapp", label: "WhatsApp", icon: "◉", items: [
     { label: "Remarketing", view: "remarketing" }, { label: "Respuestas automáticas", view: "automations" },
