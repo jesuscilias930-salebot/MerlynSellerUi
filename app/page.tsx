@@ -1,5 +1,6 @@
 "use client";
 import { MAX_VIDEO_UPLOAD_BYTES, videoContentType } from "./lib/video-upload";
+import { mediaUploadRequest } from "./lib/media-upload-request";
 
 import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useEffectEvent, useRef, useState } from "react";
@@ -468,12 +469,13 @@ export default function Home() {
     setUploadingMedia(true);
     try {
       const endpoint = type === "document" ? "document/upload" : type;
-      const response = await fetch(`${api}/conversations/${target.id}/messages/${endpoint}`, {
+      const uploadId = crypto.randomUUID();
+      const response = await mediaUploadRequest(`${api}/conversations/${target.id}/messages/${endpoint}`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": videoMime || (isPdf ? "application/pdf" : file.type), "X-Upload-Filename": encodeURIComponent(file.name), ...(caption ? { "X-Message-Caption": encodeURIComponent(caption) } : {}) },
         body: file,
-      });
+      }, uploadId);
       const result = (await response.json().catch(() => ({}))) as UploadResponse;
       if (!response.ok) throw new Error(result.error || `No fue posible enviar el ${type === "document" ? "PDF" : type === "image" ? "archivo" : "video"}.`);
       await refreshData();
