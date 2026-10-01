@@ -123,7 +123,6 @@ export function Inbox({
   return (
     <>
       <div className="mobile-inbox-state" data-conversation={mobileConversation && Boolean(chat)} />
-      {mobileConversation && chat && <button type="button" className="mobile-chat-back" onClick={() => setMobileConversation(false)}>‹ Volver a conversaciones</button>}
       <section className="list">
         <header>
           <div>
@@ -190,6 +189,7 @@ export function Inbox({
         </div>
       </section>
       <ConversationPanel
+        onMobileBack={() => setMobileConversation(false)}
         chat={chat}
         messages={messages}
         draft={draft}
