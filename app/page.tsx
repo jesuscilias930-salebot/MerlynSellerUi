@@ -1,6 +1,7 @@
 "use client";
 import { MAX_VIDEO_UPLOAD_BYTES, videoContentType } from "./lib/video-upload";
 import { mediaUploadRequest } from "./lib/media-upload-request";
+import { refreshAfterAcceptedUpload, refreshIndependently } from "./lib/chat-refresh";
 
 import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useEffectEvent, useRef, useState } from "react";
@@ -161,18 +162,18 @@ export default function Home() {
     const signal = liveController.current?.signal;
     if (signal?.aborted) return;
     const resources = crmResources(view, controlTab, Boolean(visibleChat || modalChat));
-    await Promise.all([
-      ...(resources.includes("chats") ? [loadChats(signal)] : []),
-      ...(resources.includes("pipeline") ? [loadPipeline(signal)] : []),
+    await refreshIndependently([
+      ...(resources.includes("chats") ? [() => loadChats(signal)] : []),
+      ...(resources.includes("pipeline") ? [() => loadPipeline(signal)] : []),
+      ...(visibleChat ? [async () => {
+        const items = await loadMessages(visibleChat, signal);
+        if (!signal?.aborted) setMessages(items);
+      }] : []),
+      ...(modalChat ? [async () => {
+        const items = await loadMessages(modalChat, signal);
+        if (!signal?.aborted) setModalMessages(items);
+      }] : []),
     ]);
-    if (visibleChat) {
-      const items = await loadMessages(visibleChat, signal);
-      if (!signal?.aborted) setMessages(items);
-    }
-    if (modalChat) {
-      const items = await loadMessages(modalChat, signal);
-      if (!signal?.aborted) setModalMessages(items);
-    }
   };
   const canEditPipeline = user?.role === "owner" || user?.role === "admin";
   const setAutoReply = async (target: Chat | null, enabled: boolean) => {
@@ -291,17 +292,38 @@ export default function Home() {
     const loadVisible = async (id: string, apply: (items: Message[]) => void) => {
       try {
         const items = await request<Message[]>(`/conversations/${id}/messages`, { signal });
-        if (!signal.aborted) apply(items);
-      } catch (error) {
-        if (!signal.aborted) setNotice(error instanceof Error ? error.message : "No se pudieron cargar los mensajes.");
+        if (!signal.aborted) {
+          apply(items);
+          setNotice(current => current.startsWith("No pudimos actualizar los mensajes.") || current.startsWith("Archivo aceptado para envío.") ? "" : current);
+        }
+      } catch {
+        if (!signal.aborted) setNotice("No pudimos actualizar los mensajes. Volveremos a intentarlo al recuperar la conexión; esto no significa que el envío haya fallado.");
       }
     };
-    void Promise.resolve().then(() => {
-      if (signal.aborted) return;
-      if (visibleChat?.id) void loadVisible(visibleChat.id, setMessages);
-      if (modalChat?.id) void loadVisible(modalChat.id, setModalMessages);
-    });
-    return () => controller.abort();
+    let refreshing = false;
+    const refreshVisible = async () => {
+      if (signal.aborted || refreshing || document.visibilityState === "hidden" || !navigator.onLine) return;
+      refreshing = true;
+      try {
+        await Promise.all([
+          ...(visibleChat?.id ? [loadVisible(visibleChat.id, setMessages)] : []),
+          ...(modalChat?.id ? [loadVisible(modalChat.id, setModalMessages)] : []),
+        ]);
+      } finally { refreshing = false; }
+    };
+    void Promise.resolve().then(refreshVisible);
+    if (!visibleChat?.id && !modalChat?.id) return () => controller.abort();
+    const interval = window.setInterval(() => { void refreshVisible(); }, 30000);
+    window.addEventListener("online", refreshVisible);
+    window.addEventListener("focus", refreshVisible);
+    document.addEventListener("visibilitychange", refreshVisible);
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+      window.removeEventListener("online", refreshVisible);
+      window.removeEventListener("focus", refreshVisible);
+      document.removeEventListener("visibilitychange", refreshVisible);
+    };
   }, [user, visibleChat?.id, modalChat?.id]);
 
   const onConversationUpdate = useEffectEvent(async (event: Event) => {
@@ -478,8 +500,13 @@ export default function Home() {
       }, uploadId);
       const result = (await response.json().catch(() => ({}))) as UploadResponse;
       if (!response.ok) throw new Error(result.error || `No fue posible enviar el ${type === "document" ? "PDF" : type === "image" ? "archivo" : "video"}.`);
-      await refreshData();
-      if (type === "document") await loadDocumentOptions(target, true);
+      const refreshNotice = await refreshAfterAcceptedUpload(async () => {
+        await refreshIndependently([
+          () => refreshData(),
+          ...(type === "document" ? [() => loadDocumentOptions(target, true)] : []),
+        ]);
+      });
+      if (refreshNotice) setNotice(refreshNotice);
     } finally { setUploadingMedia(false); }
   };
   const uploadSelectedMedia = (target: Chat | null, type: "image" | "video" | "document") => async (event: ChangeEvent<HTMLInputElement>) => {
