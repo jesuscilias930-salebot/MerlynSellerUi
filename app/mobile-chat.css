@@ -1,7 +1,19 @@
 .mobile-chat-control { display: none; }
 .chat-compose-area { display: contents; }
+.mobile-inbox-filter-toggle, .mobile-inbox-filter-actions { display: none; }
+.inbox-filter-menu { display: contents; }
 
 @media (max-width: 760px) {
+  .list header .inbox-desktop-plus { display: none; }
+  .list header .mobile-inbox-filter-toggle { position: relative; display: grid; place-items: center; width: 44px; min-height: 44px; flex: 0 0 44px; padding: 0; border: 1px solid #dfe8e2; border-radius: 12px; color: #176b53; background: white; }
+  .mobile-inbox-filter-toggle[aria-expanded="true"] { background: #e6f1eb; }
+  .inbox-filter-active-dot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: #087f5b; }
+  .list .inbox-filter-menu { display: block; padding-bottom: 12px; border-bottom: 1px solid #dfe8e2; }
+  .list .inbox-filter-menu[data-open="false"] { display: none; }
+  .list .mobile-inbox-filter-actions { display: flex; gap: 8px; padding: 10px 20px 0; }
+  .mobile-inbox-filter-actions button { flex: 1; min-height: 44px; border: 1px solid #dfe8e2; border-radius: 10px; background: white; color: #176b53; font-size: 12px; }
+  .mobile-inbox-filter-actions button:last-child { background: #087f5b; color: white; }
+  .mobile-inbox-filter-actions button:disabled { opacity: .5; }
   .shell:has(.mobile-inbox-state[data-conversation="true"]) { overflow: hidden; padding: 0; }
   .shell > .panel.compact-chat-panel, .conversation-modal .compact-chat-panel {
     height: 100dvh; max-height: 100dvh; min-height: 0; display: flex; flex-direction: column; overflow: hidden;

@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useId, useState } from "react";
 import { initials } from "../lib/format";
 import type {
   AutomationIntent,
@@ -113,9 +113,11 @@ export function Inbox({
 }: Props) {
   const [mobileConversation, setMobileConversation] = useState(false);
   const [search, setSearch] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersId = useId();
   useEffect(() => {
     const viewport = window.matchMedia("(max-width: 760px)");
-    const resetSearch = () => { if (!viewport.matches) setSearch(""); };
+    const resetSearch = () => { if (!viewport.matches) { setSearch(""); setFiltersOpen(false); } };
     viewport.addEventListener("change", resetSearch);
     return () => viewport.removeEventListener("change", resetSearch);
   }, []);
@@ -129,8 +131,20 @@ export function Inbox({
             <p>BANDEJA</p>
             <h2>Conversaciones</h2>
           </div>
-          <b>＋</b>
+          <b className="inbox-desktop-plus">＋</b>
+          <button
+            className="mobile-inbox-filter-toggle"
+            type="button"
+            aria-label={filter !== "all" || search ? "Filtros de conversaciones (activos)" : "Filtros de conversaciones"}
+            aria-expanded={filtersOpen}
+            aria-controls={filtersId}
+            onClick={() => setFiltersOpen(open => !open)}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+            {(filter !== "all" || search) && <span className="inbox-filter-active-dot" />}
+          </button>
         </header>
+        <div id={filtersId} className="inbox-filter-menu" data-open={filtersOpen} onKeyDown={event => { if (event.key === "Escape") { setFiltersOpen(false); document.getElementById(filtersId)?.previousElementSibling?.querySelector<HTMLButtonElement>(".mobile-inbox-filter-toggle")?.focus(); } }}>
         <div className="mobile-conversation-search"><input aria-label="Buscar conversación" placeholder="Buscar nombre o teléfono" value={search} onChange={event => setSearch(event.target.value)} /></div>
         <div className="inbox-filter">
           <select
@@ -150,6 +164,11 @@ export function Inbox({
             ))}
           </select>
         </div>
+        <div className="mobile-inbox-filter-actions">
+          <button type="button" disabled={filter === "all" && !search} onClick={() => { setSearch(""); onFilterChange("all"); }}>Limpiar filtros</button>
+          <button type="button" onClick={() => setFiltersOpen(false)}>Ver conversaciones</button>
+        </div>
+        </div>
         <form onSubmit={onCreate}>
           <input
             value={number}
@@ -164,7 +183,7 @@ export function Inbox({
           )}
           {visibleChats.map((item) => (
             <button
-              onClick={() => { onOpen(item); setMobileConversation(true); }}
+              onClick={() => { onOpen(item); setMobileConversation(true); setFiltersOpen(false); }}
               className={`${item.id === chat?.id ? "row active" : "row"}${item.unreadCount > 0 ? " has-unread" : ""}`}
               key={item.id}
             >
