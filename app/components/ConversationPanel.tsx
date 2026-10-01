@@ -2,6 +2,7 @@
 
 import { ChangeEvent, FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
+import { VIDEO_ACCEPT } from "../lib/video-upload";
 import { initials } from "../lib/format";
 import type { AutomationIntent, Chat, CtaUrlMessage, DocumentOption, EntrepreneurPackage, LeadColumn, Message, QuickReply, SavedSticker } from "../lib/types";
 import { AudioRecorder } from "./AudioRecorder";
@@ -66,7 +67,7 @@ export function ConversationPanel(props: Props) {
   const submitBundles = async () => { if (!bundleIds.length) return; try { await onSendEntrepreneurPackages({ packageIds: bundleIds }); setBundleIds([]); setBundlePickerOpen(false); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar el bundle."); } };
   const moveLead = async (columnId: string) => { if (!chat || !columnId || columnId === chat.leadColumnId) return; setMoving(true); try { await onMoveLead(columnId); } finally { setMoving(false); } };
   const completeShipping = (event: FormEvent) => { event.preventDefault(); if (!chat) return; sessionStorage.setItem("merlynseller:shipping-draft", JSON.stringify({ conversationId: chat.id, destination: shippingDestination })); setShippingOpen(false); onOpenShipping(); };
-  const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Documento</small><input type="file" accept="application/pdf,.pdf" onChange={onUploadDocument} disabled={!chat || uploadingMedia} /></label><label><b>▧</b><small>Imágenes</small><input type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={onUploadImage} disabled={!chat || uploadingMedia} /></label><label><b>▶</b><small>Video</small><input type="file" accept="video/mp4,video/3gpp" onChange={onUploadVideo} disabled={!chat || uploadingMedia} /></label></div>;
+const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Documento</small><input type="file" accept="application/pdf,.pdf" onChange={onUploadDocument} disabled={!chat || uploadingMedia} /></label><label><b>▧</b><small>Imágenes</small><input type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={onUploadImage} disabled={!chat || uploadingMedia} /></label><label><b>▶</b><small>Video</small><input type="file" accept={VIDEO_ACCEPT} onChange={onUploadVideo} disabled={!chat || uploadingMedia} /></label></div>;
   const shareTools = (
     <>
       <ToolAccordion defaultOpen icon="▤" title="Catálogo" description="Comparte un catálogo con un mensaje personalizado.">
