@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { videoContentType, VIDEO_ACCEPT } from '../app/lib/video-upload.ts';
+import { videoContentType, VIDEO_ACCEPT, MAX_VIDEO_UPLOAD_BYTES } from '../app/lib/video-upload.ts';
+test('el límite admite el video de iPhone de 180.8 MB', () => {
+  assert.equal(MAX_VIDEO_UPLOAD_BYTES, 250 * 1024 * 1024);
+  assert.ok(180.8 * 1024 * 1024 < MAX_VIDEO_UPLOAD_BYTES);
+});
 test('acepta MOV de iPhone y MIME con parámetros', () => {
   assert.equal(videoContentType({name:'IMG_01.MOV',type:'video/quicktime'}),'video/quicktime');
   assert.equal(videoContentType({name:'clip.mp4',type:'video/mp4; codecs=hvc1'}),'video/mp4');

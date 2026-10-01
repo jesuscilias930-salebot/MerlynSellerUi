@@ -1,5 +1,5 @@
 "use client";
-import { videoContentType } from "./lib/video-upload";
+import { MAX_VIDEO_UPLOAD_BYTES, videoContentType } from "./lib/video-upload";
 
 import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useEffectEvent, useRef, useState } from "react";
@@ -460,11 +460,11 @@ export default function Home() {
   const uploadMedia = async (target: Chat | null, type: "image" | "video" | "document", file: File, caption?: string) => {
     if (!target) return;
     const allowedTypes = type === "image" ? ["image/jpeg", "image/png", "image/webp"] : type === "document" ? ["application/pdf"] : ["video/mp4", "video/3gpp"];
-    const maxSize = type === "image" ? 5 * 1024 * 1024 : type === "document" ? 25 * 1024 * 1024 : 16 * 1024 * 1024;
+    const maxSize = type === "image" ? 5 * 1024 * 1024 : type === "document" ? 25 * 1024 * 1024 : MAX_VIDEO_UPLOAD_BYTES;
     const isPdf = type === "document" && /\.pdf$/i.test(file.name);
     const videoMime = type === "video" ? videoContentType(file) : null;
     if (!(type === "video" ? videoMime : allowedTypes.includes(file.type) || isPdf)) throw new Error(type === "image" ? "Selecciona una imagen JPEG, PNG o WebP." : type === "document" ? "Selecciona un archivo PDF." : "Selecciona un video MP4, MOV, M4V o 3GPP.");
-    if (file.size > maxSize) throw new Error(type === "image" ? "La imagen no puede superar 5 MB." : type === "document" ? "El PDF no puede superar 25 MB." : "El video no puede superar 16 MB.");
+    if (file.size > maxSize) throw new Error(type === "image" ? "La imagen no puede superar 5 MB." : type === "document" ? "El PDF no puede superar 25 MB." : "El video no puede superar 250 MB.");
     setUploadingMedia(true);
     try {
       const endpoint = type === "document" ? "document/upload" : type;
