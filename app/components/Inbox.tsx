@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { initials } from "../lib/format";
 import type {
   AutomationIntent,
@@ -111,8 +111,19 @@ export function Inbox({
   onOpenShipping,
   onDeleteConversation,
 }: Props) {
+  const [mobileConversation, setMobileConversation] = useState(false);
+  const [search, setSearch] = useState("");
+  useEffect(() => {
+    const viewport = window.matchMedia("(max-width: 760px)");
+    const resetSearch = () => { if (!viewport.matches) setSearch(""); };
+    viewport.addEventListener("change", resetSearch);
+    return () => viewport.removeEventListener("change", resetSearch);
+  }, []);
+  const visibleChats = chats.filter(item => `${item.name || ""} ${item.phone_number}`.toLowerCase().includes(search.toLowerCase()));
   return (
     <>
+      <div className="mobile-inbox-state" data-conversation={mobileConversation && Boolean(chat)} />
+      {mobileConversation && chat && <button type="button" className="mobile-chat-back" onClick={() => setMobileConversation(false)}>‹ Volver a conversaciones</button>}
       <section className="list">
         <header>
           <div>
@@ -121,6 +132,7 @@ export function Inbox({
           </div>
           <b>＋</b>
         </header>
+        <div className="mobile-conversation-search"><input aria-label="Buscar conversación" placeholder="Buscar nombre o teléfono" value={search} onChange={event => setSearch(event.target.value)} /></div>
         <div className="inbox-filter">
           <select
             value={filter}
@@ -148,12 +160,12 @@ export function Inbox({
           <button>Nuevo</button>
         </form>
         <div className="rows">
-          {chats.length === 0 && (
+          {visibleChats.length === 0 && (
             <em>No hay conversaciones para este filtro.</em>
           )}
-          {chats.map((item) => (
+          {visibleChats.map((item) => (
             <button
-              onClick={() => onOpen(item)}
+              onClick={() => { onOpen(item); setMobileConversation(true); }}
               className={`${item.id === chat?.id ? "row active" : "row"}${item.unreadCount > 0 ? " has-unread" : ""}`}
               key={item.id}
             >

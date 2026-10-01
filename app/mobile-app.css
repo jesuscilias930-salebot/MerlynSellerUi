@@ -1,0 +1,65 @@
+/* Mobile visual language from MerlynSellerApp/src/ui.tsx. Desktop is unchanged. */
+.mobile-app-heading,.mobile-app-tabs,.mobile-chat-back,.mobile-conversation-search,.mobile-inbox-state{display:none}
+.shell>.mobile-app-tabs{display:none}
+.mobile-app-menu{margin:auto;width:min(440px,calc(100vw - 24px));max-height:85dvh;padding:20px;border:1px solid #DFE8E2;border-radius:22px;background:#F5F8F6;color:#20352E}
+.mobile-app-menu::backdrop{background:#133F3266}
+.mobile-app-menu header{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:20px}
+.mobile-app-menu h2{font-size:22px;margin:6px 0}
+.mobile-app-menu small{color:#087F5B;letter-spacing:2px;font-weight:700}
+.mobile-app-menu button{font:inherit;cursor:pointer;border:0;background:white;color:#20352E;border-radius:14px;padding:14px;text-align:left;min-height:44px}
+.mobile-app-menu header button{font-size:24px}
+.mobile-account-card{display:grid;gap:6px;overflow-wrap:anywhere;padding:18px;background:white;border:1px solid #DFE8E2;border-radius:18px;margin-bottom:16px}
+.mobile-account-card span{color:#6E8278}
+.mobile-app-menu nav,.mobile-app-menu details>div{display:grid;gap:8px}
+.mobile-app-menu details{border:1px solid #DFE8E2;border-radius:18px;background:white;padding:4px 12px}
+.mobile-app-menu summary{padding:14px 0;cursor:pointer;font-weight:600}
+.mobile-app-menu details>div{padding-bottom:12px}
+.mobile-app-menu button[aria-current=page]{background:#E4F5ED;color:#087F5B;font-weight:700}
+.mobile-app-menu .mobile-logout{margin-top:20px;width:100%;background:#087F5B;color:white;text-align:center}
+.shell .mobile-app-menu nav{display:grid;align-items:stretch;gap:8px}
+.shell .mobile-app-menu nav button{color:#20352E;background:white;white-space:normal;text-align:left;font-size:14px;min-height:44px}
+.shell .mobile-app-menu nav button[aria-current=page]{background:#E4F5ED;color:#087F5B}
+@media(max-width:760px){
+ .shell{--green:#087F5B;--deep:#133F32;--ink:#20352E;--muted:#6E8278;--line:#DFE8E2}
+ body{background:#F5F8F6}
+ .shell,.shell.pipeline-mode,.shell:has(.sidebarMain.collapsed),.shell.pipeline-mode:has(.sidebarMain.collapsed){display:block;height:100dvh;min-height:0;overflow-y:auto;background:#F5F8F6;padding-bottom:calc(82px + env(safe-area-inset-bottom));color:#20352E}
+ .shell>.sidebarMain{display:none!important}
+ .mobile-app-heading{display:flex;align-items:center;gap:10px;padding:12px 20px;background:#F5F8F6;color:#087F5B;font-size:11px;letter-spacing:1.5px;font-weight:700}
+ .mobile-app-mark{display:grid;place-items:center;background:#133F32;color:white;width:34px;height:34px;border-radius:12px;font-size:20px}
+ .mobile-app-heading button{margin-left:auto;min-height:44px;border:0;background:transparent;color:#133F32;font:inherit;cursor:pointer}
+ .shell .mobile-app-tabs{position:fixed;inset:auto 0 0;z-index:45;display:flex;justify-content:space-around;gap:0;margin:0;padding:10px 8px calc(10px + env(safe-area-inset-bottom));background:white;border-top:1px solid #DFE8E2}
+ .shell .mobile-app-tabs button{display:flex;flex:1;flex-direction:column;align-items:center;gap:5px;padding:5px 2px;min-height:48px;border:0;border-radius:12px;background:transparent;color:#6E8278;font-size:11px;font-weight:600;cursor:pointer}
+ .mobile-app-tabs svg{width:23px;height:23px}
+ .shell .mobile-app-tabs button[aria-current=page]{color:#087F5B;background:#E4F5ED}
+ .shell>.list{height:calc(100dvh - 150px - env(safe-area-inset-bottom));min-height:0;max-height:none;width:100%;border:0;background:#F5F8F6}
+ .list header{padding:12px 20px;background:transparent}
+ .list header h2{font-size:28px;color:#20352E}
+ .list header p{color:#087F5B;letter-spacing:2px;font-size:12px}
+ .mobile-conversation-search{display:block;padding:0 20px 12px}
+ .mobile-conversation-search input{width:100%;padding:14px;border:1px solid #DFE8E2;border-radius:14px;background:white;font-size:16px;color:#20352E}
+ .list .rows{overflow-y:auto;min-height:0}
+ .list .row{padding:16px;background:white;border-bottom:1px solid #DFE8E2;gap:12px}
+ .list .row>b:first-child{width:48px;height:48px;border-radius:18px;background:#E4F5ED;color:#087F5B}
+ .list .row strong{font-size:17px;color:#20352E}
+ .list .row small{font-size:14px;color:#6E8278;line-height:1.5}
+ .shell:has(.mobile-inbox-state[data-conversation=false])>.panel,.shell:has(.mobile-inbox-state[data-conversation=false])>.chat-tools-panel{display:none}
+ .shell:has(.mobile-inbox-state[data-conversation=true])>.list,.shell:has(.mobile-inbox-state[data-conversation=true])>.mobile-app-heading,.shell:has(.mobile-inbox-state[data-conversation=true])>.mobile-app-tabs{display:none}
+ .shell:has(.mobile-inbox-state[data-conversation=true]){padding-bottom:env(safe-area-inset-bottom)}
+ .mobile-chat-back{display:block;width:100%;min-height:48px;padding:12px 20px;text-align:left;border:0;background:#F5F8F6;color:#087F5B;font:inherit;font-weight:600;cursor:pointer}
+ .shell>.panel{height:calc(100dvh - 48px - env(safe-area-inset-bottom));min-height:0;max-height:none;width:100%}
+ .compact-chat-panel .chat-header{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px}
+ .compact-chat-panel .chat-header .chat-title{flex:1;min-width:180px}
+ .compact-chat-panel .chat-header .chat-title h2{font-size:17px}
+ .compact-chat-panel .chat-header .chat-column-select{margin-left:auto}
+ .compact-chat-panel .chat-header .delete-chat-button{font-size:12px;min-height:44px;padding:8px;border-radius:12px;background:#F5F8F6}
+ .shell>.chat-tools-panel{width:100%;max-width:none}
+ .shell>.control-panel,.shell>.automation-workspace,.shell>.pipeline{height:auto;min-height:calc(100dvh - 160px);padding:20px;overflow:auto}
+ .shell input:not([type=checkbox]):not([type=radio]):not([type=file]),.shell textarea,.shell select{font-size:16px;border-radius:14px;min-height:44px}
+ .shell .toast{bottom:calc(90px + env(safe-area-inset-bottom));max-width:calc(100vw - 24px)}
+ .login{background:#F5F8F6;padding:28px;min-height:100dvh}
+ .login>section{padding:0;background:transparent;border:0;box-shadow:none;max-width:440px;width:100%}
+ .login .mark{width:72px;height:72px;border-radius:24px;background:#133F32;font-size:36px}
+ .login h1{font-size:36px;color:#20352E}
+ .login input{font-size:16px;padding:14px;border-radius:14px;border-color:#DFE8E2}
+ .login form button{background:#087F5B;border-radius:14px;min-height:48px}
+}
