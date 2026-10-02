@@ -8,6 +8,7 @@ import { PriceRulesPanel } from "./PriceRulesPanel";
 import { BundleConfiguration } from "./BundleConfiguration";
 import { StoreOrdersPanel } from "./StoreOrdersPanel";
 import { ProductWeightEditor } from "./ProductWeightEditor";
+import { StackMeasurementsPanel } from "./StackMeasurementsPanel";
 import { PackingRulesPanel } from "./PackingRulesPanel";
 import { InventoryQuantityEditor } from "./InventoryQuantityEditor";
 
@@ -88,6 +89,7 @@ export type ControlTab =
   | "products"
   | "packing"
   | "weights"
+  | "stack-measures"
   | "prices"
   | "bundles"
   | "sales"
@@ -645,10 +647,10 @@ export function ControlPanel({
     <section className="control-panel">
       <header>
         <div>
-          <p>{["packing", "weights", "bundles"].includes(tab) ? "CONFIGURACIÓN" : "CONTROL DE VENTAS"}</p>
-          <h1>{tab === "packing" ? "Configuración de paquetes" : tab === "weights" ? "Peso de productos" : tab === "bundles" ? "Configuración de bundles" : "Operación comercial"}</h1>
+          <p>{["packing", "weights", "stack-measures", "bundles"].includes(tab) ? "CONFIGURACIÓN" : "CONTROL DE VENTAS"}</p>
+          <h1>{tab === "packing" ? "Configuración de paquetes" : tab === "weights" ? "Peso de productos" : tab === "stack-measures" ? "Medidas de pilas" : tab === "bundles" ? "Configuración de bundles" : "Operación comercial"}</h1>
           <span>
-            {["packing", "weights", "bundles"].includes(tab) ? "Administra los datos de tus paquetes y productos." : "Inventario, clientes, ventas y reportes conectados a Sock Control."}
+            {["packing", "weights", "stack-measures", "bundles"].includes(tab) ? "Administra los datos de tus paquetes y productos." : "Inventario, clientes, ventas y reportes conectados a Sock Control."}
           </span>
         </div>
         <div>
@@ -983,6 +985,7 @@ export function ControlPanel({
       )}
       {tab === "prices" && <PriceRulesPanel products={products} />}
       {tab === "packing" && <PackingRulesPanel />}
+      {tab === "stack-measures" && <StackMeasurementsPanel />}
       {tab === "weights" && <section aria-label="Pesos por par de productos" className="product-weights-settings">
         <p>Configura el peso de un par completo, sin empaque. Estos valores se utilizan para cotizar envíos; no modifican los precios.</p>
         <p>{products.length} productos · {products.filter(product => Number(product.weightGrams) > 0).length} con peso configurado</p>

@@ -27,6 +27,7 @@ const groups: { id: string; label: string; icon: string; items: Item[] }[] = [
   { id: "settings", label: "Configuración", icon: "⚙", items: [
     { label: "Configuración de paquetes", view: "control", tab: "packing" },
     { label: "Peso de productos", view: "control", tab: "weights" },
+    { label: "Medidas de pilas", view: "control", tab: "stack-measures" },
     { label: "Bundles", view: "control", tab: "bundles" },
   ] },
 ];
