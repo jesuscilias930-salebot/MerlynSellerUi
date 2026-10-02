@@ -168,7 +168,6 @@ export function Inbox({
           <button type="button" disabled={filter === "all" && !search} onClick={() => { setSearch(""); onFilterChange("all"); }}>Limpiar filtros</button>
           <button type="button" onClick={() => setFiltersOpen(false)}>Ver conversaciones</button>
         </div>
-        </div>
         <form onSubmit={onCreate}>
           <input
             value={number}
@@ -177,6 +176,7 @@ export function Inbox({
           />
           <button>Nuevo</button>
         </form>
+        </div>
         <div className="rows">
           {visibleChats.length === 0 && (
             <em>No hay conversaciones para este filtro.</em>
