@@ -33,3 +33,15 @@
 .editorBody{display:grid;gap:12px;min-width:0;}
 .compactCard .editorBody{padding-top:16px;}
 .compactCard .gallery img{height:100px;}
+.categoryGroups{display:grid;gap:18px;margin-top:24px;}
+.productCategory{border:1px solid #dedfd6;border-radius:14px;background:#f3f5ef;min-width:0;}
+.productCategory>summary{display:flex;align-items:center;gap:12px;padding:18px;cursor:pointer;list-style:none;min-height:48px;box-sizing:border-box;}
+.productCategory>summary::-webkit-details-marker{display:none;}
+.productCategory>summary:focus-visible{outline:2px solid #1c513e;outline-offset:3px;border-radius:14px;}
+.categoryName{font-weight:700;overflow-wrap:anywhere;min-width:0;}
+.categoryCount{margin-left:auto;font-size:13px;color:#52695f;white-space:nowrap;}
+.categoryArrow{font-size:22px;transform:rotate(-90deg);}
+.productCategory[open]>summary .categoryArrow{transform:rotate(0);}
+.productCategory>.grid{margin:0;padding:0 16px 16px;}
+.productCategory .card h3{font-size:17px;line-height:1.45;overflow-wrap:anywhere;}
+@media(max-width:580px){.productCategory>summary{padding:14px;gap:8px;}.productCategory>.grid{padding:0 10px 10px;}}
