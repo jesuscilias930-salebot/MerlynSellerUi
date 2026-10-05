@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { api } from "../lib/api";
+import ScenarioCodexConnection from "./ScenarioCodexConnection";
 import type {
   AutomationScenario,
   EntrepreneurPackage,
@@ -1546,6 +1547,7 @@ export function ScenariosPanel({
           ＋ Nuevo escenario
         </button>
       </header>
+      <ScenarioCodexConnection />
       <div className="scenario-studio-layout" data-library-open={libraryOpen}>
         {libraryOpen && (
           <aside className="scenario-library">

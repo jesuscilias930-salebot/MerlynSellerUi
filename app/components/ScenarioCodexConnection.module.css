@@ -1,0 +1,5 @@
+.connection { margin: 0 0 1rem; padding: 1rem; border: 1px solid #dbe4ea; border-radius: 12px; background: #fff; color: #334155; }
+.connection summary { cursor: pointer; font-weight: 600; }
+.connection p, .connection li { line-height: 1.6; font-size: .9rem; }
+.connection code { overflow-wrap: anywhere; }
+.actions { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1rem 0; }
