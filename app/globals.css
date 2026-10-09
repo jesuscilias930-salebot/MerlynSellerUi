@@ -5713,6 +5713,29 @@ button {
 @media (max-width: 760px) { .envia-panel { padding: 18px; }.envia-panel > header, .envia-card-heading { flex-direction: column; }.envia-address-fields, .envia-package-fields { grid-template-columns: 1fr; }.envia-shipments article { align-items: flex-start; flex-direction: column; } }
 
 /* Envia quote workspace */
+.envia-capture-fields { min-width: 0; margin: 0; padding: 0; border: 0; }
+.envia-package-note { display: block; margin: 8px 0 14px; color: #667a70; line-height: 1.5; }
+.envia-bundle-error { display: grid; gap: 7px; margin-bottom: 12px; padding: 10px; border-radius: 8px; background: #fff8ea; color: #78571d; font-size: 12px; overflow-wrap: anywhere; }
+.envia-bundle-error button { justify-self: start; border: 1px solid #d2bd96; border-radius: 7px; padding: 7px 10px; background: #fff; color: inherit; cursor: pointer; }
+.chat-shipping-modal { width: min(1480px, calc(100% - 32px)); max-width: none; max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 1px solid #d3e0d9; border-radius: 16px; color: #173d2c; background: #f6f9f7; box-shadow: 0 28px 70px rgba(10,39,27,.28); overflow: auto; overscroll-behavior: contain; }
+.chat-shipping-modal::backdrop { background: rgba(16,38,29,.55); }
+.chat-shipping-heading { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; gap: 16px; padding: 16px 22px; border-bottom: 1px solid #d3e0d9; background: #fff; }
+.chat-shipping-heading p { margin: 0 0 4px; color: #168352; font-size: 11px; font-weight: 800; letter-spacing: .08em; }
+.chat-shipping-heading h2 { margin: 0; font-size: 22px; }
+.chat-shipping-heading span { display: block; margin-top: 4px; color: #6b7f75; font-size: 13px; overflow-wrap: anywhere; }
+.chat-shipping-heading button { align-self: start; flex-shrink: 0; width: 44px; height: 44px; border: 1px solid #d3e0d9; border-radius: 10px; background: #fff; color: #355348; font-size: 26px; cursor: pointer; }
+.chat-shipping-heading button:disabled { opacity: .5; cursor: wait; }
+.chat-shipping-modal .envia-panel { max-width: none; padding: 20px; }
+.chat-shipping-modal .envia-panel > header h1 { font-size: 22px; }
+.envia-chat-workspace { display: grid; grid-template-columns: minmax(220px,.8fr) minmax(0,3fr); gap: 16px; align-items: start; }
+.envia-chat-source { position: sticky; top: 114px; padding: 16px; border: 1px solid #d3e0d9; border-radius: 12px; background: #fff; }
+.envia-chat-source summary { color: #214f38; font-weight: 800; cursor: pointer; }
+.envia-chat-source label { display: block; margin: 16px 0 7px; color: #4f665b; font-size: 12px; font-weight: 700; }
+.envia-chat-source textarea { display: block; box-sizing: border-box; width: 100%; min-height: 290px; resize: vertical; padding: 12px; border: 1px solid #cddbd4; border-radius: 8px; color: #1d3d2f; background: #fbfdfc; font: inherit; font-size: 14px; line-height: 1.6; }
+.envia-chat-source small { display: block; margin-top: 9px; color: #667a70; font-size: 12px; line-height: 1.5; }
+@media (min-width: 981px) and (max-width: 1200px) { .envia-chat-workspace .envia-quote-columns { grid-template-columns: repeat(2, minmax(0,1fr)); }.envia-chat-workspace .envia-package-column { grid-column: 1 / -1; border-top: 1px solid #dfe7e2; } }
+@media (max-width: 980px) { .envia-chat-workspace { grid-template-columns: 1fr; }.envia-chat-source { position: static; }.envia-chat-source textarea { min-height: 140px; } }
+@media (max-width: 680px) { .chat-shipping-modal { width: calc(100% - 12px); max-height: calc(100dvh - 12px); border-radius: 12px; }.chat-shipping-heading { padding: 12px; }.chat-shipping-heading h2 { font-size: 19px; }.chat-shipping-modal .envia-panel { padding: 12px; }.envia-chat-source { padding: 12px; }.envia-chat-source textarea, .chat-shipping-modal input, .chat-shipping-modal select { font-size: 16px !important; } }
 .envia-quote-form { border: 1px solid #cfd9d4; border-radius: 15px; background: #fff; box-shadow: 0 10px 28px rgba(21, 62, 45, .07); }
 .envia-quote-columns { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr) minmax(260px, .88fr); }
 .envia-form-column { min-width: 0; padding: 20px; border-right: 1px solid #dfe7e2; }
