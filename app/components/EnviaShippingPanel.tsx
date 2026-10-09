@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { request } from "../lib/api";
 import { controlRequest, controlSession } from "../lib/control-api";
 import {bundleShippingPackage,shippingPackageLabel,type ShippingBundle,type StoredShippingPackage} from "../lib/shipping-package";
@@ -8,9 +8,10 @@ import type {Chat} from "../lib/types";
 import { EnviaPostalFields } from "./EnviaPostalFields";
 import { StoreShippingOrigin } from "./StoreShippingOrigin";
 import { shippingDraftKey, type ShippingDraft } from "../lib/shipping-draft";
+import {readChatShippingDraft,writeChatShippingDraft,type ShippingAddress,type ShippingParcel} from "../lib/chat-shipping-draft";
 
-type Address = { name: string; phone: string; street: string; city: string; state: string; country: string; postalCode: string; district?: string; number?: string; email?: string; interiorNumber?: string; references?: string };
-type Parcel = { type: string; content: string; amount: string; declaredValue: string; weight: string; length: string; width: string; height: string };
+type Address = ShippingAddress;
+type Parcel = ShippingParcel;
 type StoredPackage = StoredShippingPackage;
 type Settings = { environment: "sandbox" | "production"; origin: Partial<Address>; defaultPackage: StoredPackage; tokenConfigured: boolean };
 type Rate = { carrier: string; service: string; serviceDescription?: string; deliveryEstimate?: string; deliveryDays?: string | number; totalPrice?: string | number; currency?: string };
@@ -32,30 +33,43 @@ const addressPayload = (value: Address) => {
 };
 
 export function EnviaShippingPanel({chat,onBusyChange}:{chat?:Chat;onBusyChange?:(busy:boolean)=>void}={}) {
+  const [savedChatDraft]=useState(()=>chat?readChatShippingDraft(chat.id):null);
+  const defaultsApplied=useRef(false);
+  const [defaultsLoaded,setDefaultsLoaded]=useState(false);
+  const [draftStorageUnavailable,setDraftStorageUnavailable]=useState(false);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [quotedEnvironment, setQuotedEnvironment] = useState<Settings["environment"] | null>(null);
-  const [origin, setOrigin] = useState<Address>(emptyAddress());
-  const [destination, setDestination] = useState<Address>(emptyAddress());
-  const [parcel, setParcel] = useState<Parcel>(emptyParcel());
+  const [origin, setOrigin] = useState<Address>(()=>asAddress(savedChatDraft?.origin));
+  const [destination, setDestination] = useState<Address>(()=>asAddress(savedChatDraft?.destination || (chat?{name:chat.name||"",phone:chat.phone_number,country:"MX",number:"SN"}:undefined)));
+  const [parcel, setParcel] = useState<Parcel>(()=>savedChatDraft?.parcel || emptyParcel());
   const [rates, setRates] = useState<Rate[]>([]);
   const [quotedFingerprint,setQuotedFingerprint]=useState("");
   const [selectedRate, setSelectedRate] = useState<Rate | null>(null);
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [customers, setCustomers] = useState<ShippingCustomer[]>([]);
-  const [conversationId, setConversationId] = useState("");
+  const [conversationId, setConversationId] = useState(chat?.id || "");
   const [savedPresets, setSavedPresets] = useState<SavedPresets>({ addresses: [], packages: [] });
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [rateFilter, setRateFilter] = useState<"all" | "cheapest" | "fastest">("all");
   const [orderDraft, setOrderDraft] = useState<ShippingDraft | null>(null);
   const [loadRevision, setLoadRevision] = useState(0);
-  const [pastedInfo,setPastedInfo]=useState("");
+  const [pastedInfo,setPastedInfo]=useState(savedChatDraft?.pastedInfo || "");
   const [storeBundles,setStoreBundles]=useState<ShippingBundle[]>([]);
   const [bundleError,setBundleError]=useState("");
   const [bundleLoading,setBundleLoading]=useState(true);
   const [bundleRevision,setBundleRevision]=useState(0);
   const quoteFingerprint=JSON.stringify({origin,destination,parcel,conversationId});
   const ratesCurrent=quotedFingerprint===quoteFingerprint;
+  useEffect(()=>{
+    if(!chat)return;
+    const saved=writeChatShippingDraft({version:1,conversationId:chat.id,pastedInfo,destination,
+      ...(defaultsLoaded || savedChatDraft?.origin ? {origin} : {}),
+      ...(defaultsLoaded || savedChatDraft?.parcel ? {parcel} : {})});
+    let active=true;
+    void Promise.resolve().then(()=>{if(active)setDraftStorageUnavailable(!saved);});
+    return ()=>{active=false;};
+  },[chat,pastedInfo,destination,origin,parcel,defaultsLoaded,savedChatDraft]);
   useEffect(()=>{onBusyChange?.(busy);},[busy,onBusyChange]);
   useEffect(()=>{
     const controller=new AbortController();
@@ -82,22 +96,25 @@ export function EnviaShippingPanel({chat,onBusyChange}:{chat?:Chat;onBusyChange?
         ]);
         if (!active) return;
         setShipments(nextShipments); setSavedPresets(nextPresets); setCustomers(nextCustomers);
-        if (draft?.destination) setDestination(asAddress(draft.destination));
-        if (draft?.conversationId) setConversationId(draft.conversationId);
         if (draft?.source === "order") setOrderDraft(draft);
         if (store && (!store.configured || !store.isCheckoutOrganization)) throw new Error("Configura el origen de la tienda para esta organización antes de cotizar el pedido. Después pulsa Reintentar carga.");
         setSettings(store ? {...nextSettings,environment:store.environment} : nextSettings);
-        setOrigin(asAddress(store?.origin || nextSettings.origin));
-        // Apply the order package AFTER loading defaults so they cannot overwrite it.
-        setParcel(asParcel(draft?.package || nextSettings.defaultPackage));
+        if(!defaultsApplied.current){
+          if (draft?.destination && !chat) setDestination(asAddress(draft.destination));
+          if (draft?.conversationId) setConversationId(draft.conversationId);
+          setOrigin(asAddress(savedChatDraft?.origin || store?.origin || nextSettings.origin));
+          // A chat's local draft takes priority over server defaults, including unfinished fields.
+          setParcel(savedChatDraft?.parcel || asParcel(draft?.package || nextSettings.defaultPackage));
+          defaultsApplied.current=true;setDefaultsLoaded(true);
+        }
         if (draft?.source === "order") setNotice(`Pedido ${draft.orderFolio}: dirección y paquete cargados. Revisa los datos y pulsa Cotizar. Las medidas usan las reglas de empaque actuales.`);
-        else if (draft?.destination) setNotice("Destino cargado desde la conversación. Elige el paquete y cotiza.");
+        else if (draft?.destination) setNotice(savedChatDraft?"Borrador de esta conversación recuperado. Revisa los datos y cotiza de nuevo.":"Destino cargado desde la conversación. Elige el paquete y cotiza.");
         if(!chat)try { if (sessionStorage.getItem(shippingDraftKey) === raw) sessionStorage.removeItem(shippingDraftKey); } catch { /* Storage unavailable. */ }
       } catch (error) { if (active) setNotice(error instanceof Error ? error.message : "No fue posible cargar Envia."); }
     };
     void load();
     return () => { active = false; };
-  }, [loadRevision,chat]);
+  }, [loadRevision,chat,savedChatDraft]);
 
   const packagePayload = useMemo(() => ({ type: parcel.type, content: parcel.content, amount: Number(parcel.amount), declaredValue: Number(parcel.declaredValue), lengthUnit: "CM" as const, weightUnit: "KG" as const, weight: Number(parcel.weight), dimensions: { length: Number(parcel.length), width: Number(parcel.width), height: Number(parcel.height) } }), [parcel]);
   const quotePayload = (rate?: Rate) => ({ destination:addressPayload(destination), packages: [packagePayload], settings:{comments:[orderDraft?.orderFolio,destination.interiorNumber ? `Interior: ${destination.interiorNumber}` : "",destination.references].filter(Boolean).join(" · ").slice(0,500)}, ...(conversationId ? { conversationId } : {}), ...(rate ? { carrier: rate.carrier, service: rate.service } : {}) });
@@ -187,10 +204,11 @@ export function EnviaShippingPanel({chat,onBusyChange}:{chat?:Chat;onBusyChange?
 
   return <section className="envia-panel"><header><div><p>LOGÍSTICA</p><h1>Cotizar y generar envío</h1><span>Compara automáticamente las paqueterías disponibles para tu ruta.</span></div><b className={settings?.tokenConfigured ? "envia-status ready" : "envia-status"}>{settings?.tokenConfigured ? "● API conectada" : "○ Falta ENVIA_TOKEN"}</b></header>{notice && <div className="envia-notice">{notice}</div>}
     {!chat && <StoreShippingOrigin />}
+    {chat && draftStorageUnavailable && <div className="envia-notice" role="status">El navegador no permite guardar el borrador. Si cierras el modal, los cambios de esta captura podrían perderse.</div>}
     {!settings && notice && <button type="button" onClick={()=>setLoadRevision(n=>n+1)}>Reintentar carga</button>}
     {orderDraft && <section className="envia-card" aria-label="Pedido a enviar"><h2>{orderDraft.orderFolio}</h2><ul>{orderDraft.orderLines?.map((line,index)=><li key={index}>{line.quantity} × {line.name}</li>)}</ul><p>{orderDraft.pairs} pares · 1 caja consolidada. El peso incluye el empaque. Puedes revisar y ajustar el paquete antes de cotizar.</p><small>Preparar este formulario no cobra el envío ni genera una guía.</small></section>}
     <div className={chat?"envia-chat-workspace":""}>
-      {chat && <aside className="envia-chat-source"><details open><summary>Información recibida del cliente</summary><label htmlFor="shipping-client-message">Pega aquí el mensaje del Inbox</label><textarea id="shipping-client-message" value={pastedInfo} onChange={event=>setPastedInfo(event.target.value)} maxLength={10000} placeholder="Nombre, teléfono, calle, número, colonia, código postal, ciudad, estado…"/><small>Este texto es una referencia para completar el formulario. No se envía a la paquetería ni llena campos automáticamente.</small></details></aside>}
+      {chat && <aside className="envia-chat-source"><details open><summary>Información recibida del cliente</summary><label htmlFor="shipping-client-message">Pega aquí el mensaje del Inbox</label><textarea id="shipping-client-message" value={pastedInfo} onChange={event=>setPastedInfo(event.target.value)} maxLength={10000} placeholder="Nombre, teléfono, calle, número, colonia, código postal, ciudad, estado…"/><small>El borrador se guarda automáticamente en este navegador para esta conversación. Este texto es una referencia para completar el formulario. No se envía a la paquetería ni llena campos automáticamente.</small></details></aside>}
     <form className="envia-quote-form" onSubmit={quote}>
       <fieldset className="envia-capture-fields" disabled={busy || !settings}>
       <div className="envia-quote-columns">
