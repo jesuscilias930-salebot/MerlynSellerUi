@@ -6,6 +6,7 @@ import { refreshAfterAcceptedUpload, refreshIndependently } from "./lib/chat-ref
 import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useEffectEvent, useRef, useState } from "react";
 import { api, request } from "./lib/api";
+import { controlSession, loginControl } from "./lib/control-api";
 import { crmResources, type CrmResource } from "./lib/section-data";
 import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, CtaUrlMessage, CtaUrlTemplate, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, QuickReply, RemarketingPreset, SavedSticker, User, WhatsAppTemplate, WhatsAppTemplateMapping } from "./lib/types";
 import { AutomationsPanel } from "./components/AutomationsPanel";
@@ -368,12 +369,18 @@ export default function Home() {
         body: JSON.stringify({ accessToken: data.session.access_token }),
       });
       await supabase.auth.signOut();
+      try {
+        await loginControl(email, password);
+      } catch (controlError) {
+        setNotice(`Iniciaste sesión en MerlynSeller, pero no fue posible conectar Control Socks. ${controlError instanceof Error ? controlError.message : "Intenta iniciar sesión nuevamente."}`);
+      }
       setUser(session.user);
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "Error al iniciar sesión.",
       );
     } finally {
+      setPassword("");
       setBusy(false);
     }
   };
@@ -962,6 +969,9 @@ export default function Home() {
   };
   const logout = async () => {
     await request("/auth/session", { method: "DELETE" });
+    controlSession.clear();
+    setPassword("");
+    setNotice("");
     setUser(null);
     setChats([]);
     setChat(null);

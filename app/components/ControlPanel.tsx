@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { controlResources, type ControlResource } from "../lib/section-data";
-import { controlApi, controlRequest, controlSession } from "../lib/control-api";
+import { controlApi, controlRequest, controlSession, loginControl } from "../lib/control-api";
 import type { Chat, EntrepreneurPackage } from "../lib/types";
 import { PriceRulesPanel } from "./PriceRulesPanel";
 import { BundleConfiguration } from "./BundleConfiguration";
@@ -230,12 +230,9 @@ export function ControlPanel({
     setLoading(true);
     setNotice("");
     try {
-      const result = await controlRequest<{ token: string }>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ identifier, password }),
-      });
-      controlSession.set(result.token);
-      setToken(result.token);
+      const nextToken = await loginControl(identifier, password);
+      setPassword("");
+      setToken(nextToken);
     } catch (error) {
       setNotice(
         error instanceof Error

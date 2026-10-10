@@ -19,4 +19,28 @@ export async function controlRequest<T>(path: string, init?: RequestInit): Promi
   return body as T;
 }
 
+export async function loginControl(identifier: string, password: string, timeoutMs = 30000): Promise<string> {
+  // Never reuse another account's bearer token during credential authentication.
+  controlSession.clear();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const result = await controlRequest<{ token: string }>("/auth/login", {
+      method: "POST",
+      signal: controller.signal,
+      body: JSON.stringify({ identifier: identifier.trim().includes("@") ? identifier.trim().toLowerCase() : identifier.trim(), password }),
+    });
+    if (!result || typeof result.token !== "string" || !result.token.trim()) {
+      throw new Error("Control Socks no devolvió una sesión válida.");
+    }
+    controlSession.set(result.token);
+    return result.token;
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error("Control Socks tardó demasiado en responder. Intenta iniciar sesión nuevamente.");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export { controlApi };
