@@ -1,0 +1,66 @@
+.workspace { color: var(--text-primary, #172d28); min-width: 0; }
+.workspace h2 { margin: 4px 0 8px; font-size: 25px; }
+.workspace h3 { margin: 0 0 8px; font-size: 20px; }
+.workspace p { line-height: 1.55; margin: 6px 0 16px; }
+.kicker { font-size: 11px; letter-spacing: .14em; font-weight: 800; }
+.tabs { display: flex; gap: 6px; overflow-x: auto; border-bottom: 1px solid #dae3df; margin: 22px 0; padding: 0 0 8px; }
+.workspace button { cursor: pointer; border: 1px solid #d6e1db; border-radius: 10px; padding: 10px 15px; font-weight: 650; color: #183c30; background: #fff; }
+.workspace button:disabled { opacity: .5; cursor: not-allowed; }
+.workspace button:focus-visible, .workspace summary:focus-visible { outline: 3px solid #63a995; outline-offset: 3px; }
+.tabs button { flex: 0 0 auto; }
+.tabs button[aria-selected="true"], .workspace button[type="submit"] { background: #164e3b; color: #fff; border-color: #164e3b; }
+.section { background: #fff; border: 1px solid #e0e7e3; border-radius: 16px; padding: 22px; display: grid; gap: 16px; }
+.heading { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
+.heading button { flex-shrink: 0; }
+.heading p { margin-bottom: 0; max-width: 650px; color: #52685e; }
+.filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.filters label, .manualLine label { display: grid; gap: 7px; font-size: 13px; font-weight: 650; flex: 1 1 160px; min-width: 0; }
+.workspace input, .workspace select { box-sizing: border-box; width: 100%; min-width: 0; border: 1px solid #cbd9d1; border-radius: 9px; background: #fff; color: #203a2f; padding: 11px; font-size: 15px; }
+.filters button { min-height: 42px; }
+.caption { font-size: 12px; color: #596c62; }
+.error { border-left: 3px solid #ab4233; color: #8f3227; background: #fff4f1; padding: 12px; border-radius: 8px; }
+.sales { display: grid; gap: 12px; }
+.sale { border: 1px solid #dae4de; border-radius: 12px; overflow: hidden; }
+.sale summary { cursor: pointer; display: flex; gap: 16px; align-items: center; padding: 18px; }
+.sale summary > span:first-child { flex: 1; min-width: 0; }
+.sale small, .ticket small, .expenses small { display: block; margin-top: 5px; color: #607268; font-size: 12px; }
+.view { font-size: 12px; color: #3b7060; }
+.ticket { padding: 0 18px 18px; }
+.line, .total, .result { display: flex; justify-content: space-between; align-items: start; gap: 15px; padding: 12px 0; }
+.line { border-top: 1px solid #edf1ee; font-size: 14px; }
+.line b { white-space: nowrap; }
+.total { border-top: 1px dashed #b7c9be; }
+.pagination { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; }
+.orders { border-top: 1px solid #e1e8e3; padding-top: 15px; display: grid; gap: 16px; }
+.manualLines { display: grid; gap: 14px; }
+.manualLine { display: grid; grid-template-columns: 170px minmax(0, 1fr) 120px auto; gap: 12px; align-items: end; border: 1px solid #e0e7e2; border-radius: 12px; padding: 16px; }
+.secondary { justify-self: start; }
+.expenseForm { border: 1px solid #d7e3dc; background: #f7faf8; border-radius: 12px; padding: 16px; }
+.expenses > div { display: flex; align-items: center; gap: 18px; padding: 14px 0; border-bottom: 1px solid #e2e9e4; }
+.expenses > div > span { flex: 1; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.metrics article { display: flex; flex-direction: column; gap: 10px; padding: 20px; border: 1px solid #dbe6df; border-radius: 12px; background: #fafcfb; }
+.metrics article > span { font-size: 13px; font-weight: 600; }
+.metrics strong { font-size: 25px; word-break: break-word; }
+.metrics small { font-size: 12px; line-height: 1.5; color: #5d7165; }
+.metrics .net { background: #eaf5ee; border-color: #a2c4b0; }
+.result { background: #f4f7f5; padding: 15px; border-radius: 10px; }
+.empty { padding: 24px; text-align: center; background: #f6f8f6; border-radius: 12px; }
+@media (max-width: 700px) {
+  .section { padding: 15px; gap: 14px; }
+  .heading { flex-direction: column; gap: 10px; }
+  .filters label { flex: 1 1 100%; }
+  .filters button { width: 100%; }
+  .manualLine { grid-template-columns: 1fr 1fr; padding: 12px; }
+  .manualLine label:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+  .sale summary { padding: 14px; flex-wrap: wrap; gap: 10px; }
+  .sale summary > span:first-child { flex-basis: 100%; }
+  .view { margin-left: auto; }
+  .pagination button { padding: 9px 10px; }
+  .metrics { grid-template-columns: 1fr 1fr; }
+  .metrics article { padding: 14px; }
+  .metrics strong { font-size: 21px; }
+  .metrics .net { grid-column: 1 / -1; }
+  .result { flex-direction: column; }
+  .expenses > div { flex-wrap: wrap; gap: 10px; }
+}

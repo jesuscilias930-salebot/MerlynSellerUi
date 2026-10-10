@@ -6,7 +6,7 @@ import { controlApi, controlRequest, controlSession, loginControl } from "../lib
 import type { Chat, EntrepreneurPackage } from "../lib/types";
 import { PriceRulesPanel } from "./PriceRulesPanel";
 import { BundleConfiguration } from "./BundleConfiguration";
-import { StoreOrdersPanel } from "./StoreOrdersPanel";
+import { SalesWorkspace } from "./SalesWorkspace";
 import { ProductWeightEditor } from "./ProductWeightEditor";
 import { StackMeasurementsPanel } from "./StackMeasurementsPanel";
 import { PackingRulesPanel } from "./PackingRulesPanel";
@@ -159,11 +159,6 @@ export function ControlPanel({
     phone: "",
     externalId: "",
   });
-  const [saleDraft, setSaleDraft] = useState({
-    customerId: "",
-    productId: "",
-    quantity: "1",
-  });
   const [productDraft, setProductDraft] = useState({
     name: "",
     categoryId: "",
@@ -283,33 +278,6 @@ export function ControlPanel({
         error instanceof Error
           ? error.message
           : "No fue posible guardar el cliente.",
-      );
-    }
-  };
-  const createSale = async (event: FormEvent) => {
-    event.preventDefault();
-    try {
-      await controlRequest<Sale>("/sales", {
-        method: "POST",
-        body: JSON.stringify({
-          customerId: Number(saleDraft.customerId),
-          productsSold: [
-            {
-              productId: Number(saleDraft.productId),
-              quantity: Number(saleDraft.quantity),
-            },
-          ],
-          bundlesSold: [],
-        }),
-      });
-      setSaleDraft({ customerId: "", productId: "", quantity: "1" });
-      await load();
-      setNotice("Venta registrada e inventario actualizado.");
-    } catch (error) {
-      setNotice(
-        error instanceof Error
-          ? error.message
-          : "No fue posible registrar la venta.",
       );
     }
   };
@@ -1004,80 +972,7 @@ export function ControlPanel({
         </details>)}
       </section>}
       {tab === "bundles" && <BundleConfiguration products={products} packages={entrepreneurPackages} onCreateImageSet={onCreateBundleImageSet} onUploadImage={onUploadBundleImage} onProductsChanged={async()=>setProducts(await controlRequest<Product[]>("/products/all"))} />}
-      {tab === "sales" && <StoreOrdersPanel />}
-      {tab === "sales" && (
-        <div className="control-customers">
-          <form className="customer-form" onSubmit={createSale}>
-            <h2>Registrar venta</h2>
-            <select
-              value={saleDraft.customerId}
-              onChange={(event) =>
-                setSaleDraft({ ...saleDraft, customerId: event.target.value })
-              }
-              required
-            >
-              <option value="">Selecciona cliente</option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={saleDraft.productId}
-              onChange={(event) =>
-                setSaleDraft({ ...saleDraft, productId: event.target.value })
-              }
-              required
-            >
-              <option value="">Selecciona producto</option>
-              {products.map((product) => (
-                <option key={product.id} value={product.id}>
-                  {product.name} · {product.currentStock} disponibles
-                </option>
-              ))}
-            </select>
-            <input
-              min="1"
-              type="number"
-              value={saleDraft.quantity}
-              onChange={(event) =>
-                setSaleDraft({ ...saleDraft, quantity: event.target.value })
-              }
-              required
-            />
-            <button>Registrar venta</button>
-          </form>
-          <section className="control-table">
-            <h2>Ventas recientes</h2>
-            {sales.map((sale) => (
-              <div key={sale.id}>
-                <strong>Venta #{sale.id}</strong>
-                <span>{sale.customer?.name || "Cliente"}</span>
-                <b>
-                  {sale.saleItemDtoList?.reduce(
-                    (sum, item) =>
-                      sum +
-                      Number(item.unitPriceAtSale || 0) *
-                        Number(item.quantity || 0),
-                    0,
-                  )
-                    ? money(
-                        sale.saleItemDtoList.reduce(
-                          (sum, item) =>
-                            sum +
-                            Number(item.unitPriceAtSale || 0) *
-                              Number(item.quantity || 0),
-                          0,
-                        ),
-                      )
-                    : "Sin detalles"}
-                </b>
-              </div>
-            ))}
-          </section>
-        </div>
-      )}
+      {tab === "sales" && <SalesWorkspace />}
       {tab === "purchases" && (
         <div className="control-customers">
           <form

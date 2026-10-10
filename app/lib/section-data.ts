@@ -27,7 +27,7 @@ export function controlResources(tab: string): ControlResource[] {
     case "categories": return ["categories"];
     case "products": return ["products", "categories"];
     case "inventory": case "weights": case "prices": case "bundles": return ["products"];
-    case "sales": return ["customers", "products", "sales"];
+    case "sales": return []; // SalesWorkspace loads only the opened subtab.
     case "purchases": return ["products", "purchases"];
     case "reports": return ["report"];
     default: return [];
