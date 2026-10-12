@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const theme = read("app/app-theme.css");
-const modules = ["Sidebar", "SalesWorkspace", "EcommerceCatalogPanel", "StoreOrdersPanel", "PackingRulesPanel", "StackMeasurementsPanel", "ProductWeightEditor", "ScenarioCodexConnection", "BundlePhotos", "InventoryPanel", "InventoryQuantityEditor", "VideosPanel"];
+const modules = ["Sidebar", "SalesWorkspace", "EcommerceCatalogPanel", "StoreOrdersPanel", "PackingRulesPanel", "StackMeasurementsPanel", "ProductWeightEditor", "ScenarioCodexConnection", "BundlePhotos", "InventoryPanel", "InventoryQuantityEditor", "VideosPanel", "ConversationAnalysisPanel"];
 
 test("shared theme loads after legacy mobile styles and before Inbox layout", () => {
   const layout = read("app/layout.tsx");

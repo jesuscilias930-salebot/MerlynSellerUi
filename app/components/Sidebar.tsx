@@ -3,9 +3,9 @@ import type { User } from "../lib/types";
 import styles from "./Sidebar.module.css";
 import { AppNavIcon, type AppNavIconName } from "./AppNavIcon";
 
-type View = "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
+type View = "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./ControlPanel").ControlTab;
-type Item = { label: string; view: View; tab?: ControlTab };
+type Item = { label: string; view: View; tab?: ControlTab; adminOnly?: boolean };
 const groups: { id: string; label: string; icon: AppNavIconName; items: Item[] }[] = [
   { id: "ecommerce", label: "E-commerce", icon: "store", items: [
     { label: "Pedidos", view: "ecommerce-orders" }, { label: "Bundles", view: "ecommerce-bundles" },
@@ -17,6 +17,7 @@ const groups: { id: string; label: string; icon: AppNavIconName; items: Item[] }
     { label: "Remarketing", view: "remarketing" }, { label: "Respuestas automáticas", view: "automations" },
     { label: "Respuestas rápidas", view: "quick-replies" }, { label: "Plantillas oficiales", view: "templates" }, { label: "Stickers", view: "stickers" },
     { label: "Invitaciones con botón", view: "cta-buttons" },
+    { label: "Análisis de conversaciones", view: "conversation-analysis", adminOnly: true },
   ] },
   { id: "documents", label: "Documentos", icon: "documents", items: [
     { label: "Plantillas de documentos", view: "documents" }, { label: "Conjuntos reutilizables", view: "collections" },
@@ -38,6 +39,7 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
   const mobileDialog = useRef<HTMLDialogElement>(null);
   const [collapsed, setCollapsed] = useState(view === "inbox");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const visibleItems = (group: typeof groups[number]) => group.items.filter(item => !item.adminOnly || ["owner", "admin"].includes(user.role));
   const isActive = (item: Item) => view === item.view && (!item.tab || controlTab === item.tab);
   function navigate(item: Item) {
     if (item.tab) onControlTabChange(item.tab); else onViewChange(item.view);
@@ -64,7 +66,7 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
             <AppNavIcon name={group.icon}/><span className="sidebar-label">{group.label}</span><span className={`${styles.chevron} sidebar-label`} aria-hidden="true">{open ? "⌄" : "›"}</span>
           </button>
           <div id={`sidebar-${group.id}`} className={styles.items} hidden={!open}>
-            {group.items.map(item => <button type="button" key={item.tab || item.view} title={item.label} aria-current={isActive(item) ? "page" : undefined} className={isActive(item) ? "selected" : ""} onClick={() => navigate(item)}>{item.label}</button>)}
+            {visibleItems(group).map(item => <button type="button" key={item.tab || item.view} title={item.label} aria-current={isActive(item) ? "page" : undefined} className={isActive(item) ? "selected" : ""} onClick={() => navigate(item)}>{item.label}</button>)}
           </div>
         </div>;
       })}
@@ -82,7 +84,7 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
     <nav aria-label="Todas las secciones">
       {["owner", "admin"].includes(user.role) && <button type="button" onClick={() => navigate({ label: "Features", view: "feature" })}>Features</button>}
       <button type="button" aria-current={view === "videos" ? "page" : undefined} onClick={() => navigate({ label: "Videos", view: "videos" })}>Videos</button>
-      {groups.map(group => <details key={group.id} open={group.items.some(isActive) || undefined}><summary>{group.label}</summary><div>{group.items.map(item => <button type="button" key={item.tab || item.view} aria-current={isActive(item) ? "page" : undefined} onClick={() => navigate(item)}>{item.label}</button>)}</div></details>)}
+      {groups.map(group => <details key={group.id} open={group.items.some(isActive) || undefined}><summary>{group.label}</summary><div>{visibleItems(group).map(item => <button type="button" key={item.tab || item.view} aria-current={isActive(item) ? "page" : undefined} onClick={() => navigate(item)}>{item.label}</button>)}</div></details>)}
       <button type="button" onClick={() => navigate({ label: "Escenarios", view: "scenarios" })}>Escenarios</button>
     </nav>
     <button type="button" className="mobile-logout" onClick={() => { mobileDialog.current?.close(); onLogout(); }}>Cerrar sesión</button>
