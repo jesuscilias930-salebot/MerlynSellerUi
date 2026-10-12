@@ -10,7 +10,7 @@ import { SalesWorkspace } from "./SalesWorkspace";
 import { ProductWeightEditor } from "./ProductWeightEditor";
 import { StackMeasurementsPanel } from "./StackMeasurementsPanel";
 import { PackingRulesPanel } from "./PackingRulesPanel";
-import { InventoryQuantityEditor } from "./InventoryQuantityEditor";
+import { InventoryPanel } from "./InventoryPanel";
 
 type Customer = {
   id: number;
@@ -136,6 +136,7 @@ export function ControlPanel({
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [inventoryRevision, setInventoryRevision] = useState(0);
   const productCategories = useMemo(() => {
     const groups = new Map<string, { id: string; name: string; products: Product[] }>();
     for (const product of products) {
@@ -613,7 +614,7 @@ export function ControlPanel({
       <header>
         <div>
           <p>{["packing", "weights", "stack-measures", "bundles"].includes(tab) ? "CONFIGURACIÓN" : "CONTROL DE VENTAS"}</p>
-          <h1>{tab === "packing" ? "Configuración de paquetes" : tab === "weights" ? "Peso de productos" : tab === "stack-measures" ? "Medidas de pilas" : tab === "bundles" ? "Configuración de bundles" : "Operación comercial"}</h1>
+          <h1>{tab === "inventory" ? "Inventario" : tab === "packing" ? "Configuración de paquetes" : tab === "weights" ? "Peso de productos" : tab === "stack-measures" ? "Medidas de pilas" : tab === "bundles" ? "Configuración de bundles" : "Operación comercial"}</h1>
           <span>
             {["packing", "weights", "stack-measures", "bundles"].includes(tab) ? "Administra los datos de tus paquetes y productos." : "Inventario, clientes, ventas y reportes conectados a Sock Control."}
           </span>
@@ -622,7 +623,7 @@ export function ControlPanel({
           <button
             type="button"
             className="plain-button"
-            onClick={() => void load()}
+            onClick={() => { if (tab === "inventory") setInventoryRevision(value => value + 1); else void load(); }}
             disabled={loading}
           >
             {loading ? "Actualizando…" : "↻ Actualizar"}
@@ -819,22 +820,7 @@ export function ControlPanel({
           </section>
         </div>
       )}
-      {tab === "inventory" && (
-        <section className="control-table inventory-list" aria-label="Inventario de productos">
-          <h2>Inventario</h2>
-          {products.length === 0 && (
-            <p>{loading ? "Cargando inventario…" : "No hay productos. Créelos desde Control de ventas → Productos."}</p>
-          )}
-          {products.map((product) => (
-            <div key={product.id} className={product.currentStock <= product.minStockAlert ? "low" : ""}>
-              <strong>{`${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}${product.size ? ` - ${product.size}` : ""}`}</strong>
-              <b>{product.currentStock} disponibles</b>
-              <span>{product.currentStock <= product.minStockAlert ? "Stock bajo · " : ""}Alerta mínima: {product.minStockAlert}</span>
-              <InventoryQuantityEditor id={product.id} name={`${product.name} · ${product.category?.name || ""} · ${product.gender || ""} ${product.size || ""}`} stock={product.currentStock} onSaved={load} />
-            </div>
-          ))}
-        </section>
-      )}
+      {tab === "inventory" && <InventoryPanel refreshKey={inventoryRevision}/>}
       {tab === "products" && (
         <div className="control-customers inventory-workspace">
           <form className="customer-form product-form" onSubmit={saveProduct}>

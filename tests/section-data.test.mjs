@@ -42,7 +42,7 @@ test("Control only loads CRM data for customer links or bundle photos", () => {
 test("all Control sections have an explicit, minimal loading plan", () => {
   const expected = {
     summary: ["customers", "products", "sales"], customers: ["customers"], categories: ["categories"],
-    products: ["products", "categories"], inventory: ["products"], weights: ["products"],
+    products: ["products", "categories"], inventory: [], weights: ["products"],
     prices: ["products"], bundles: ["products"], packing: [],
     sales: [], purchases: ["products", "purchases"], reports: ["report"],
   };

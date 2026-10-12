@@ -27,7 +27,7 @@
 .merlyn-app :where(button, input, select, textarea):disabled { cursor: not-allowed; }
 .merlyn-app :where(button, summary) { touch-action: manipulation; }
 .merlyn-app :where(input, textarea)::placeholder { color: var(--muted); opacity: .8; }
-.merlyn-app :is(.shell.pipeline-mode, dialog, .scenario-modal, .login) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]), select, textarea) {
+.merlyn-app :is(.shell.pipeline-mode, dialog, .scenario-modal, .login) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([role="combobox"]), select, textarea) {
   min-height: 40px;
   min-width: 0;
   max-width: 100%;
