@@ -3,7 +3,7 @@ import type { User } from "../lib/types";
 import styles from "./Sidebar.module.css";
 import { AppNavIcon, type AppNavIconName } from "./AppNavIcon";
 
-type View = "ecommerce-presentation" | "ecommerce-testimonials" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
+type View = "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./ControlPanel").ControlTab;
 type Item = { label: string; view: View; tab?: ControlTab };
 const groups: { id: string; label: string; icon: AppNavIconName; items: Item[] }[] = [
@@ -55,6 +55,7 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
       {["owner", "admin"].includes(user.role) && link("Feature", "feature", "features")}
       {link("Inbox", "inbox", "chat")}
       {link("Leads", "pipeline", "leads")}
+      {link("Videos", "videos", "video")}
       {groups.map(group => {
         const active = group.items.some(isActive);
         const open = !collapsed && (expanded[group.id] ?? active);
@@ -80,6 +81,7 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
     <div className="mobile-account-card"><strong>{user.email}</strong><span>{user.role}</span></div>
     <nav aria-label="Todas las secciones">
       {["owner", "admin"].includes(user.role) && <button type="button" onClick={() => navigate({ label: "Features", view: "feature" })}>Features</button>}
+      <button type="button" aria-current={view === "videos" ? "page" : undefined} onClick={() => navigate({ label: "Videos", view: "videos" })}>Videos</button>
       {groups.map(group => <details key={group.id} open={group.items.some(isActive) || undefined}><summary>{group.label}</summary><div>{group.items.map(item => <button type="button" key={item.tab || item.view} aria-current={isActive(item) ? "page" : undefined} onClick={() => navigate(item)}>{item.label}</button>)}</div></details>)}
       <button type="button" onClick={() => navigate({ label: "Escenarios", view: "scenarios" })}>Escenarios</button>
     </nav>
