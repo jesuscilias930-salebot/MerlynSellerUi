@@ -43,7 +43,7 @@ export function FeaturesPanel() {
     } catch (e) { setNotice(e instanceof Error ? e.message : "No se pudo actualizar."); }
     finally { setBusy(false); }
   }
-  return <div className="automation-workspace" style={{ overflowY: "auto", padding: 24 }}>
+  return <div className="automation-workspace features-workspace">
     <header><small>CONFIGURACIÓN ADMINISTRATIVA</small><h1>Feature</h1><p>Configura los métodos de compra y, por separado, el ambiente de cada integración.</p></header>
     <p role="status">{notice}</p>
     <button type="button" disabled={busy} onClick={() => { setBusy(true); void load().catch(e => setNotice(e.message)).finally(() => setBusy(false)); }}>Actualizar estado</button>
@@ -55,7 +55,7 @@ export function FeaturesPanel() {
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 20 }}>
           <span style={{ fontWeight: data && !data.cardPaymentsEnabled ? 700 : 400 }}>Off</span>
           <label style={{ position: "relative", display: "inline-flex", width: 64, minWidth: 64, height: 36, opacity: !data || busy ? 0.55 : 1 }}>
-            <input type="checkbox" role="switch" checked={data?.cardPaymentsEnabled === true} disabled={busy || !data} onChange={() => void toggleCardPayments()} aria-label="Habilitar pagos con tarjeta" aria-describedby="card-payments-help" style={{ appearance: "none", width: "100%", height: "100%", margin: 0, padding: 0, borderRadius: 999, border: "1px solid #6C7770", background: data?.cardPaymentsEnabled ? "#1C513E" : "#6C7770", cursor: !data || busy ? "not-allowed" : "pointer" }} />
+            <input type="checkbox" role="switch" checked={data?.cardPaymentsEnabled === true} disabled={busy || !data} onChange={() => void toggleCardPayments()} aria-label="Habilitar pagos con tarjeta" aria-describedby="card-payments-help" style={{ appearance: "none", width: "100%", height: "100%", margin: 0, padding: 0, borderRadius: 999, border: "1px solid var(--muted)", background: data?.cardPaymentsEnabled ? "var(--green)" : "var(--muted)", cursor: !data || busy ? "not-allowed" : "pointer" }} />
             <span aria-hidden="true" style={{ pointerEvents: "none", display: "block", position: "absolute", top: 4, left: data?.cardPaymentsEnabled ? 32 : 4, width: 28, height: 28, borderRadius: "50%", background: "white", transition: "left 160ms ease" }} />
           </label>
           <span style={{ fontWeight: data?.cardPaymentsEnabled ? 700 : 400 }}>On</span>
@@ -66,7 +66,7 @@ export function FeaturesPanel() {
         <h2>Tienda · Eventos de Meta</h2>
         <p>Control global del píxel y las conversiones Purchase de toda la tienda, también para clientes reales. Apágalo antes de probar.</p>
         <label style={{display:"flex",alignItems:"center",gap:12,marginTop:20}}>
-          <input type="checkbox" role="switch" checked={data?.metaEventsEnabled===true} disabled={busy||!data} onChange={()=>void toggleMetaEvents()} aria-label="Habilitar eventos de Meta" style={{width:24,height:24,accentColor:"#1C513E"}}/>
+          <input type="checkbox" role="switch" checked={data?.metaEventsEnabled===true} disabled={busy||!data} onChange={()=>void toggleMetaEvents()} aria-label="Habilitar eventos de Meta" style={{width:24,height:24,accentColor:"var(--green)"}}/>
           <strong>{!data?"Cargando…":data.metaEventsEnabled?"On · Envío habilitado":"Off · Sin eventos de Meta"}</strong>
         </label>
         <p>La tienda consulta el estado al navegar y cada 15 segundos. Recarga la tienda antes de probar. No cambia cobros ni envíos; los eventos ya enviados no se pueden retirar.</p>
@@ -82,7 +82,7 @@ export function FeaturesPanel() {
         <strong>Activo: {data ? (data[service] === "production" ? "Producción · real" : "Desarrollo · pruebas") : "Cargando…"}</strong>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 20 }}>
           <span style={{ fontWeight: !production ? 700 : 400 }}>Dev</span>
-          <button type="button" role="switch" aria-checked={production} aria-label={`Producción de ${service === "envia" ? "Envia.com" : "Stripe"}`} aria-describedby={`${service}-mode-help`} disabled={!data || busy || !canSwitch} onClick={() => void change(service, nextMode)} style={{ position: "relative", width: 64, minWidth: 64, height: 36, padding: 0, borderRadius: 999, border: "1px solid #6C7770", background: production ? "#1C513E" : "#6C7770", opacity: !data || busy || !canSwitch ? 0.55 : 1, cursor: !data || busy || !canSwitch ? "not-allowed" : "pointer" }}>
+          <button type="button" role="switch" aria-checked={production} aria-label={`Producción de ${service === "envia" ? "Envia.com" : "Stripe"}`} aria-describedby={`${service}-mode-help`} disabled={!data || busy || !canSwitch} onClick={() => void change(service, nextMode)} style={{ position: "relative", width: 64, minWidth: 64, height: 36, padding: 0, borderRadius: 999, border: "1px solid var(--muted)", background: production ? "var(--green)" : "var(--muted)", opacity: !data || busy || !canSwitch ? 0.55 : 1, cursor: !data || busy || !canSwitch ? "not-allowed" : "pointer" }}>
             <span aria-hidden="true" style={{ display: "block", position: "absolute", top: 3, left: production ? 31 : 3, width: 28, height: 28, borderRadius: "50%", background: "white", transition: "left 160ms ease" }} />
           </button>
           <span style={{ fontWeight: production ? 700 : 400 }}>Prod</span>

@@ -1,4 +1,4 @@
-/* Inbox-only layout. The rest of the CRM keeps its existing navigation/layout. */
+/* Inbox-specific conversation layout, layered on the shared app theme. */
 .chat-ui-icon { width: 22px; height: 22px; flex: none; display: block; }
 .inbox-icon-button { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 40px; height: 40px; min-height: 40px; padding: 0; border: 0; border-radius: 50%; color: #54656f; background: transparent; cursor: pointer; }
 .inbox-icon-button:hover, .inbox-icon-button[aria-expanded="true"] { background: #e5eae8; color: #087f5b; }

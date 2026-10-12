@@ -90,7 +90,7 @@ function CatalogCard({item,photos,kind,refresh}:{item:Item;photos:SavedPhoto[];k
         <button type="button" aria-label={`Mover foto ${index+1} después`} disabled={busy||index===photos.length-1} onClick={()=>move(photo.id,index+1)}>Después →</button>
       </div>
       <label>Reemplazar foto {index+1}<input type="file" accept="image/jpeg,image/png" disabled={busy} onChange={e=>{const file=e.target.files?.[0];e.target.value="";replace(photo.id,file);}}/></label>
-      <button type="button" disabled={busy} onClick={()=>{if(window.confirm(`¿Eliminar la foto ${index+1} de esta galería?${index===0?" La siguiente será la portada.":""}`))void editGallery(()=>controlRequest(`/${kind}/${item.id}/store-gallery/${photo.id}`,{method:"DELETE"}),"Foto retirada de la galería. El archivo privado se conserva en S3.");}}>Eliminar foto</button>
+      <button type="button" className={styles.danger} disabled={busy} onClick={()=>{if(window.confirm(`¿Eliminar la foto ${index+1} de esta galería?${index===0?" La siguiente será la portada.":""}`))void editGallery(()=>controlRequest(`/${kind}/${item.id}/store-gallery/${photo.id}`,{method:"DELETE"}),"Foto retirada de la galería. El archivo privado se conserva en S3.");}}>Eliminar foto</button>
     </figure>)}</div>
     <label>Agregar fotografías<input type="file" multiple accept="image/jpeg,image/png" disabled={busy} onChange={e=>{
       const next=Array.from(e.target.files||[]);e.target.value="";

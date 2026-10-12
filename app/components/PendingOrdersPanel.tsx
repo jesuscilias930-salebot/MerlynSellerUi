@@ -102,7 +102,7 @@ export function PendingOrdersPanel({ onOpenShipping }: { onOpenShipping: () => v
     return () => { stopped = true; clearTimeout(retry); clearTimeout(refresh); clearInterval(reconcile); clearInterval(watchdog); socket?.close(); };
   }, []);
 
-  return <div style={{ padding: 24, overflowY: "auto", minHeight: 0, height: "100%" }}>
+  return <div className="orders-workspace">
     <section className={styles.panel} aria-label="Pedidos de E-commerce" aria-busy={busy}>
       <header className={styles.header}><div><h2>Pedidos de E-commerce {data && <small>({data.totalElements})</small>}</h2>
         <p>El inventario se descuenta al confirmar un pago real. Sigue aquí la preparación y entrega.</p>
@@ -123,7 +123,7 @@ export function PendingOrdersPanel({ onOpenShipping }: { onOpenShipping: () => v
           <OrderOperations order={order} onUpdated={()=>setRevision(r=>r+1)}/>
           <button type="button" disabled={preparingOrder!==null || !order.shippingAddress} onClick={()=>void prepareShipping(order)}>{preparingOrder===order.id ? "Preparando dirección y paquete…" : "Cotizar envío en Envia"}</button>
           {!order.shippingAddress && <small>Este pedido aún no tiene una dirección de entrega capturada.</small>}
-          {order.shippingAddress ? <section aria-label="Dirección de entrega" style={{padding:16,border:'1px solid #DEDFD6',borderRadius:12,overflowWrap:'anywhere'}}>
+          {order.shippingAddress ? <section aria-label="Dirección de entrega" style={{padding:16,border:'1px solid var(--line)',borderRadius:12,overflowWrap:'anywhere'}}>
             <h3>Dirección de entrega</h3><p><strong>{order.shippingAddress.recipient}</strong><br/>{order.shippingAddress.phone} · {order.shippingAddress.email}</p>
             <p>{order.shippingAddress.street} {order.shippingAddress.exteriorNumber}{order.shippingAddress.interiorNumber&&' · Interior '+order.shippingAddress.interiorNumber}<br/>{order.shippingAddress.district}, C.P. {order.shippingAddress.postalCode}<br/>{order.shippingAddress.city}, {order.shippingAddress.state}, {order.shippingAddress.country}</p>
             {order.shippingAddress.references&&<p>Referencias: {order.shippingAddress.references}</p>}

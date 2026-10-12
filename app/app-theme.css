@@ -1,0 +1,164 @@
+/* Shared visual language. Inbox keeps its own conversation layout in inbox-web.css. */
+:root {
+  --ink: #202c33;
+  --muted: #667781;
+  --line: #e1e7e9;
+  --green: #008069;
+  --deep: #202c33;
+  --mint: #e6f4ee;
+  --app-background: #f0f2f5;
+  --app-surface: #fff;
+  --app-subtle: #f7f9fa;
+  --app-hover: #e9edef;
+  --app-selected: #dff3ea;
+  --app-primary-hover: #006c59;
+  --app-border-strong: #c8d2d7;
+  --app-danger: #b42332;
+  --app-danger-soft: #fff1f2;
+  --app-focus: #008069;
+  --app-radius: 12px;
+  --workspace-padding: clamp(20px, 2.6vw, 36px);
+}
+
+.merlyn-app { background: var(--app-background); color: var(--ink); font-family: var(--font-geist-sans, Arial), sans-serif; }
+.merlyn-app .shell { background: var(--app-background); color: var(--ink); }
+.merlyn-app :where(button, input, select, textarea) { font-family: inherit; accent-color: var(--green); }
+.merlyn-app :where(button, a, input, textarea, select, summary):focus-visible { outline: 2px solid var(--app-focus); outline-offset: 3px; }
+.merlyn-app :where(button, input, select, textarea):disabled { cursor: not-allowed; }
+.merlyn-app :where(button, summary) { touch-action: manipulation; }
+.merlyn-app :where(input, textarea)::placeholder { color: var(--muted); opacity: .8; }
+.merlyn-app :is(.shell.pipeline-mode, dialog, .scenario-modal, .login) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]), select, textarea) {
+  min-height: 40px;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 8px;
+  background: var(--app-surface);
+  color: var(--ink);
+  box-shadow: none;
+}
+.merlyn-app :is(.pipeline-mode, dialog, .scenario-modal, .login) :where(button:not([role="switch"]), .primary-action) { border-radius: 8px; font-weight: 600; box-shadow: none; }
+.merlyn-app :is(.primary-action, .envia-primary, .launch-campaign, .tool-primary-button, .customer-form > button, .category-form-actions > button:first-child, .product-form-actions > button:first-child, .bundle-editor-actions > button:last-child, .quick-replies-panel > form > button, .login form button) {
+  background: var(--green); color: #fff; border-color: var(--green); min-height: 40px;
+}
+.merlyn-app :is(.primary-action, .envia-primary, .launch-campaign, .tool-primary-button, .login form button):hover:not(:disabled) { background: var(--app-primary-hover); }
+.merlyn-app :is(.plain-button, .collapse-toggle, .upload-button, .image-ready button, .save-preset button, .bulk-move-trigger) {
+  background: var(--app-surface); color: var(--green); border: 1px solid var(--app-border-strong); border-radius: 8px; box-shadow: none;
+}
+.merlyn-app :is(.plain-button, .collapse-toggle, .upload-button, .bulk-move-trigger):hover:not(:disabled) { background: var(--app-selected); border-color: var(--green); }
+.merlyn-app .plain-button { padding: 9px 12px; min-height: 40px; font-size: 13px; }
+.merlyn-app :is(.danger, .danger-link, .automation-actions .danger) { color: var(--app-danger); background: var(--app-danger-soft); border-color: #f1ccd0; }
+.merlyn-app :is(.danger-link) { background: transparent; }
+
+/* One navigation rail in every desktop workspace. */
+.merlyn-app .app-nav-icon { display: block; flex: none; width: 21px; height: 21px; }
+.merlyn-app .sidebarMain { background: var(--app-background); color: var(--muted); border: 0; border-right: 1px solid var(--line); border-radius: 0; padding: 18px 10px; }
+.merlyn-app .sidebarMain .brand { flex-shrink: 0; gap: 8px; padding: 0 0 12px; }
+.merlyn-app .sidebarMain .brand strong { font-size: 14px; color: var(--ink); letter-spacing: -.02em; }
+.merlyn-app .mark { background: var(--green); color: #fff; box-shadow: none; }
+.merlyn-app .sidebarMain nav { display: grid; align-content: start; flex: 1; min-height: 0; gap: 5px; margin-top: 24px; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--app-border-strong) transparent; }
+.merlyn-app .sidebarMain nav button { min-height: 40px; width: 100%; color: var(--muted); background: transparent; font-size: 13px; font-weight: 500; border-radius: 8px; box-shadow: none; }
+.merlyn-app .sidebarMain nav button:hover { color: var(--ink); background: var(--app-hover); }
+.merlyn-app .sidebarMain nav button.selected { color: var(--green); background: var(--app-selected); font-weight: 600; }
+.merlyn-app .sidebar-collapse-toggle { flex: none; background: var(--app-hover); color: var(--muted); border: 0; width: 26px; height: 26px; cursor: pointer; }
+.merlyn-app .sidebar-collapse-toggle .app-nav-icon { width: 18px; height: 18px; }
+.merlyn-app .sidebarMain.collapsed .sidebar-collapse-toggle { background: var(--app-hover); color: var(--green); }
+.merlyn-app .sidebarMain.collapsed nav { flex: 1; }
+.merlyn-app .sidebarMain .profile { flex-shrink: 0; min-width: 0; width: 100%; padding: 16px 4px 0; margin-top: 16px; border-top: 1px solid var(--line); color: var(--muted); }
+.merlyn-app .sidebarMain .profile > b { flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--app-selected); color: var(--green); }
+.merlyn-app .sidebarMain .profile > span { overflow: hidden; font-size: 11px; }
+.merlyn-app .sidebarMain .profile small { color: var(--muted); }
+.merlyn-app .sidebarMain .profile button { color: var(--muted); background: transparent; border: 0; padding: 6px; cursor: pointer; }
+
+/* Page chrome: same spacing, typography and neutral background, no extra wrapper. */
+.merlyn-app .pipeline-mode :is(.control-panel, .control-login, .automation-workspace, .remarketing, .envia-panel, .scenario-studio) { background: var(--app-background); padding: var(--workspace-padding); color: var(--ink); }
+.merlyn-app .orders-workspace { min-width: 0; min-height: 0; height: 100%; overflow-y: auto; padding: var(--workspace-padding); }
+.merlyn-app .features-workspace > header { margin-bottom: 18px; }
+.merlyn-app .features-workspace > header small { color: var(--green); font-size: 10px; letter-spacing: .1em; font-weight: 600; }
+.merlyn-app .features-workspace > header p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+.merlyn-app .features-workspace > button { min-height: 40px; padding: 10px 14px; border: 1px solid var(--app-border-strong); background: var(--app-surface); color: var(--green); }
+.merlyn-app .automation-workspace :is(.automations, .document-templates, .entrepreneur-packages, .scenarios) { background: transparent; }
+.merlyn-app :is(.quick-replies-panel, .stickers-panel, .cta-templates-panel, .whatsapp-templates-panel) { background: var(--app-surface); border-color: var(--line); border-radius: var(--app-radius); box-shadow: none; }
+.merlyn-app .pipeline-mode :where(h1) { font-size: clamp(24px, 2vw, 28px); font-weight: 650; line-height: 1.25; letter-spacing: -.035em; color: var(--ink); }
+.merlyn-app .pipeline-mode :where(h2) { color: var(--ink); font-weight: 600; letter-spacing: -.02em; }
+.merlyn-app .pipeline-mode :where(h3, h4) { color: var(--ink); font-weight: 600; }
+.merlyn-app :is(.control-panel, .automations, .document-templates, .entrepreneur-packages, .envia-panel, .quick-replies-panel, .stickers-panel, .remarketing, .scenario-studio) > header { margin-bottom: 22px; }
+.merlyn-app :is(.control-panel, .automations, .document-templates, .envia-panel, .quick-replies-panel, .stickers-panel, .remarketing, .scenario-studio) > header :where(p:first-child, small:first-child) { color: var(--green); font-size: 10px; font-weight: 650; letter-spacing: .1em; }
+.merlyn-app :is(.control-panel, .automations, .document-templates, .envia-panel, .quick-replies-panel, .stickers-panel, .remarketing, .scenario-studio) > header :where(span) { color: var(--muted); font-size: 13px; line-height: 1.6; }
+.merlyn-app :is(.control-summary > article, .control-summary > section, .control-table, .customer-form, .price-rule-editor, .price-rule-groups > article, .bundle-editor, .bundle-list, .bundle-card, .bundle-image-manager, .automation-editor, .document-template-card, .package-template-card, .remarketing-form, .preset-library, .envia-card, .envia-quote-form, .scenario-library, .flow-canvas, .flow-inspector, .scenario-modal-card, .scenario-card, .sticker-library article) {
+  background: var(--app-surface); border-color: var(--line); border-radius: var(--app-radius); box-shadow: none;
+}
+.merlyn-app :is(.control-table, .quick-replies-table) { overflow-wrap: anywhere; }
+.merlyn-app :is(.control-table > div:not(.report-controls), .quick-replies-table article, .price-rule-table > div, .cta-template-list article) { border-color: var(--line); }
+.merlyn-app :is(.control-table > div:not(.report-controls)):hover { background: var(--app-subtle); }
+.merlyn-app :is(.control-table span, .control-table small, .form-description, .envia-card p) { color: var(--muted); }
+.merlyn-app :is(.product-category-group, .whatsapp-template-card, .bundle-items fieldset, .bundle-shipping-data) { border-color: var(--line); border-radius: 10px; }
+.merlyn-app :is(.product-category-group > summary) { background: var(--app-surface); color: var(--ink); }
+.merlyn-app :is(.product-category-group[open] > summary) { background: var(--app-subtle); border-bottom: 1px solid var(--line); }
+.merlyn-app :is(.product-weight-category-content > article) { background: var(--app-surface); border-color: var(--line); border-radius: var(--app-radius); }
+.merlyn-app :is(.product-weights-settings h2) { color: var(--ink); }
+.merlyn-app :is(.product-weights-settings header strong) { color: var(--green); }
+.merlyn-app :is(.control-notice, .envia-notice, .template-info, .template-chat-preview, .bundle-shipping-summary) { color: var(--green); background: var(--mint); border-color: #c3e0d5; border-radius: 8px; }
+.merlyn-app :is(.price-rule-copy, .bundle-card-photos, .cta-templates-panel form, .template-copy, .envia-quote-actions, .envia-form-column:last-child) { background: var(--app-subtle); }
+.merlyn-app :is(.envia-column-title, .envia-form-column, .envia-quote-actions) { border-color: var(--line); }
+.merlyn-app .envia-card-heading > button { border: 1px solid var(--app-border-strong); padding: 9px 12px; color: var(--green); background: var(--app-surface); }
+.merlyn-app :is(.envia-column-title > span, .envia-package-help, .envia-rate-choose) { background: var(--app-selected); color: var(--green); }
+.merlyn-app :is(.envia-rates button.selected, .envia-rate-list > button.selected) { background: var(--mint); border-color: var(--green); box-shadow: inset 3px 0 var(--green); }
+.merlyn-app :is(.envia-primary, .envia-rate-list .selected .envia-rate-choose, .envia-rate-filters button.active) { background: var(--green); color: #fff; }
+
+/* Tabs use the same small selected pill as Inbox's quick filters. */
+.merlyn-app :is(.control-tabs, .bundle-config-tabs) { gap: 6px; padding-bottom: 10px; border-color: var(--line); }
+.merlyn-app :is(.control-tabs button, .bundle-config-tabs button, .filter-buttons button) { padding: 9px 14px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.merlyn-app :is(.control-tabs button.selected, .bundle-config-tabs button[aria-selected="true"], .filter-buttons button.selected) { background: var(--app-selected); color: var(--green); border: 0; font-weight: 600; }
+.merlyn-app :is(.pipeline) { background: var(--app-background); }
+.merlyn-app .pipeline-header { padding: 26px var(--workspace-padding) 20px; }
+.merlyn-app .kanban { padding-inline: var(--workspace-padding); }
+.merlyn-app .lead-column { background: #e9edef; border-color: var(--line); border-radius: var(--app-radius); }
+.merlyn-app .lead-card { background: var(--app-surface); border-color: var(--line); border-radius: 10px; font-weight: 400; box-shadow: 0 1px 2px #0b141a0a; }
+.merlyn-app .lead-card:hover { border-color: var(--app-border-strong); box-shadow: 0 3px 10px #0b141a0c; }
+.merlyn-app .lead-avatar { border-radius: 50%; color: var(--green); background: var(--app-selected); }
+.merlyn-app :is(.scenario-library > button.selected, .flow-map-node.selected) { background: var(--mint); border-color: var(--green); }
+.merlyn-app :is(.flow-builder, .flow-canvas > header, .flow-inspector > header) { background: var(--app-subtle); border-color: var(--line); }
+
+/* Dialog chrome is shared; existing focus trapping, positioning and actions remain. */
+.merlyn-app :is(.bundle-editor-dialog, .mobile-app-menu, .chat-sale-modal, .chat-shipping-modal, .scenario-modal-card) { border-color: var(--line); background: var(--app-surface); color: var(--ink); box-shadow: 0 20px 60px #0b141a26; }
+.merlyn-app :is(.bundle-modal-header, .chat-sale-modal > header, .chat-shipping-modal > header) { background: var(--app-subtle); border-color: var(--line); }
+.merlyn-app .bundle-modal-header p { color: var(--green); }
+.merlyn-app dialog::backdrop { background: #0b141a66; }
+.merlyn-app :is(.section-data-status, .toast) { background: var(--app-surface); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 5px 20px #0b141a14; }
+.merlyn-app .login { background: var(--app-background); }
+.merlyn-app .login > section { border-radius: 16px; box-shadow: 0 12px 35px #0b141a0a; }
+.merlyn-app .login h1 { color: var(--ink); }
+
+@media (min-width: 761px) {
+  .merlyn-app .shell.pipeline-mode { grid-template-columns: 240px minmax(0, 1fr); }
+  .merlyn-app .shell.pipeline-mode:has(.sidebarMain.collapsed) { grid-template-columns: 72px minmax(0, 1fr); }
+  .merlyn-app .shell > .sidebarMain { height: 100dvh; flex-direction: column; align-items: stretch; }
+  .merlyn-app .sidebarMain.collapsed nav { width: 100%; }
+  .merlyn-app .pipeline-mode :where(.automation-workspace) { height: 100%; min-height: 0; overflow-y: auto; }
+}
+@media (max-width: 760px) {
+  :root { --workspace-padding: 16px; }
+  .merlyn-app .shell { --ink: #202c33; --muted: #667781; --line: #e1e7e9; --green: #008069; --deep: #202c33; background: var(--app-background); }
+  .merlyn-app .shell.pipeline-mode { height: 100dvh; overflow-y: auto; padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+  .merlyn-app .mobile-app-heading { background: var(--app-background); color: var(--green); padding: 10px 16px; }
+  .merlyn-app .mobile-app-mark { border-radius: 10px; background: var(--green); }
+  .merlyn-app .mobile-app-heading button { color: var(--muted); letter-spacing: 0; }
+  .merlyn-app .mobile-app-tabs { background: var(--app-surface); border-color: var(--line); }
+  .merlyn-app .mobile-app-tabs button { color: var(--muted); border-radius: 8px; }
+  .merlyn-app .mobile-app-tabs button[aria-current="page"] { background: var(--app-selected); color: var(--green); }
+  .merlyn-app .mobile-app-menu { padding: 20px; border-radius: 16px; }
+  .merlyn-app :is(.mobile-account-card, .mobile-app-menu details) { background: var(--app-subtle); border-color: var(--line); border-radius: 10px; }
+  .merlyn-app .mobile-app-menu nav button[aria-current="page"] { background: var(--app-selected); color: var(--green); }
+  .merlyn-app .mobile-app-menu .mobile-logout { background: var(--green); color: #fff; }
+  .merlyn-app .pipeline-mode :is(.control-panel, .automation-workspace, .remarketing, .envia-panel, .scenario-studio) { height: auto; min-height: 0; overflow: visible; }
+  .merlyn-app .orders-workspace { height: auto; overflow: visible; }
+  .merlyn-app .pipeline-mode :where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea, button:not([role="switch"])) { min-height: 44px; font-size: 16px; }
+  .merlyn-app .pipeline-mode :where(button) { font-size: 13px; }
+  .merlyn-app .pipeline-header { padding: 18px 16px; }
+  .merlyn-app .kanban { padding-inline: 16px; }
+  .merlyn-app .login { padding: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .merlyn-app *, .merlyn-app *::before, .merlyn-app *::after { transition: none; scroll-behavior: auto; }
+}
