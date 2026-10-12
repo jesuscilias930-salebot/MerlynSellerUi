@@ -1004,7 +1004,7 @@ export default function Home() {
       />
     );
   return (
-    <main className={view === "inbox" ? "shell" : "shell pipeline-mode"}>
+    <main className={view === "inbox" ? "shell inbox-shell" : "shell pipeline-mode"}>
       <Sidebar
         user={user}
         view={view}

@@ -1,5 +1,7 @@
-import { ChangeEvent, FormEvent, useEffect, useId, useState } from "react";
+import { ChangeEvent, FormEvent, useId, useRef, useState } from "react";
 import { initials } from "../lib/format";
+import { filterInboxContacts, inboxTimestamp } from "../lib/inbox-presentation";
+import { ChatIcon } from "./ChatIcon";
 import type {
   AutomationIntent,
   Chat,
@@ -114,38 +116,44 @@ export function Inbox({
   const [mobileConversation, setMobileConversation] = useState(false);
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [newChatOpen, setNewChatOpen] = useState(false);
+  const newNumber = useRef<HTMLInputElement>(null);
+  const filterToggle = useRef<HTMLButtonElement>(null);
+  const newChatToggle = useRef<HTMLButtonElement>(null);
   const filtersId = useId();
-  useEffect(() => {
-    const viewport = window.matchMedia("(max-width: 760px)");
-    const resetSearch = () => { if (!viewport.matches) { setSearch(""); setFiltersOpen(false); } };
-    viewport.addEventListener("change", resetSearch);
-    return () => viewport.removeEventListener("change", resetSearch);
-  }, []);
-  const visibleChats = chats.filter(item => `${item.name || ""} ${item.phone_number}`.toLowerCase().includes(search.toLowerCase()));
+  const newChatId = useId();
+  const visibleChats = filterInboxContacts(chats, search);
+  const columnFilter = filter.startsWith("column:") ? columns.find(column => `column:${column.id}` === filter) : null;
   return (
     <>
       <div className="mobile-inbox-state" data-conversation={mobileConversation && Boolean(chat)} />
-      <section className="list">
+      <section className="list inbox-list" aria-label="Conversaciones">
         <header>
           <div>
-            <p>BANDEJA</p>
-            <h2>Conversaciones</h2>
+            <p>MERLYN SELLER</p>
+            <h2>Chats <span className="inbox-chat-count">{chats.length}</span></h2>
           </div>
-          <b className="inbox-desktop-plus">＋</b>
+          <div className="inbox-header-actions">
+          <button ref={newChatToggle} className="inbox-icon-button inbox-new-chat-toggle" type="button" title="Nueva conversación" aria-label="Nueva conversación" aria-expanded={newChatOpen} aria-controls={newChatId} onClick={() => { setNewChatOpen(open => !open); if (!newChatOpen) requestAnimationFrame(() => newNumber.current?.focus()); }}><ChatIcon name="new" /></button>
           <button
-            className="mobile-inbox-filter-toggle"
+            ref={filterToggle}
+            className="inbox-icon-button mobile-inbox-filter-toggle"
             type="button"
             aria-label={filter !== "all" || search ? "Filtros de conversaciones (activos)" : "Filtros de conversaciones"}
             aria-expanded={filtersOpen}
             aria-controls={filtersId}
             onClick={() => setFiltersOpen(open => !open)}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+            <ChatIcon name="filter" />
             {(filter !== "all" || search) && <span className="inbox-filter-active-dot" />}
           </button>
+          </div>
         </header>
-        <div id={filtersId} className="inbox-filter-menu" data-open={filtersOpen} onKeyDown={event => { if (event.key === "Escape") { setFiltersOpen(false); document.getElementById(filtersId)?.previousElementSibling?.querySelector<HTMLButtonElement>(".mobile-inbox-filter-toggle")?.focus(); } }}>
-        <div className="mobile-conversation-search"><input aria-label="Buscar conversación" placeholder="Buscar nombre o teléfono" value={search} onChange={event => setSearch(event.target.value)} /></div>
+        <div className="inbox-search"><ChatIcon name="search" /><input aria-label="Buscar conversación" placeholder="Buscar nombre o teléfono" value={search} onChange={event => setSearch(event.target.value)} />{search && <button type="button" aria-label="Limpiar búsqueda" onClick={() => setSearch("")}><ChatIcon name="close" /></button>}</div>
+        <div className="inbox-quick-filters" aria-label="Filtros rápidos">
+          {([['all', 'Todos'], ['unread', 'No leídos'], ['needs-response', 'Pendientes']] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => onFilterChange(value)}>{label}</button>)}
+        </div>
+        <div id={filtersId} className="inbox-filter-menu" data-open={filtersOpen} onKeyDown={event => { if (event.key === "Escape") { setFiltersOpen(false); filterToggle.current?.focus(); } }}>
         <div className="inbox-filter">
           <select
             value={filter}
@@ -168,33 +176,37 @@ export function Inbox({
           <button type="button" disabled={filter === "all" && !search} onClick={() => { setSearch(""); onFilterChange("all"); }}>Limpiar filtros</button>
           <button type="button" onClick={() => setFiltersOpen(false)}>Ver conversaciones</button>
         </div>
-        <form onSubmit={onCreate}>
+        </div>
+        <form id={newChatId} className="inbox-new-chat" hidden={!newChatOpen} onSubmit={onCreate} onKeyDown={event => { if (event.key === "Escape") { setNewChatOpen(false); newChatToggle.current?.focus(); } }}>
+          <label htmlFor={`${newChatId}-number`}>Iniciar conversación</label>
           <input
+            ref={newNumber}
+            id={`${newChatId}-number`}
             value={number}
             onChange={(event) => onNumberChange(event.target.value)}
             placeholder="Número con código de país"
+            inputMode="tel"
+            autoComplete="tel"
+            required
           />
-          <button>Nuevo</button>
+          <button type="submit">Abrir chat</button>
         </form>
-        </div>
+        {columnFilter && <div className="inbox-current-filter"><span>{columnFilter.name}</span><button type="button" aria-label="Quitar filtro de columna" onClick={() => onFilterChange("all")}><ChatIcon name="close" /></button></div>}
         <div className="rows">
           {visibleChats.length === 0 && (
-            <em>No hay conversaciones para este filtro.</em>
+            <div className="inbox-list-empty"><ChatIcon name="chat" /><strong>{search ? "Sin resultados" : "No hay conversaciones"}</strong><p>{search ? "Prueba con otro nombre o número de teléfono." : "Selecciona otro filtro o inicia una conversación."}</p></div>
           )}
           {visibleChats.map((item) => (
             <button
-              onClick={() => { onOpen(item); setMobileConversation(true); setFiltersOpen(false); }}
+              type="button"
+              aria-current={item.id === chat?.id ? "true" : undefined}
+              onClick={() => { onOpen(item); setMobileConversation(true); setFiltersOpen(false); setNewChatOpen(false); }}
               className={`${item.id === chat?.id ? "row active" : "row"}${item.unreadCount > 0 ? " has-unread" : ""}`}
               key={item.id}
             >
               <b>{initials(item.name || item.phone_number)}</b>
-              <span>
-                <strong>{item.name || item.phone_number}</strong>
-                <small>
-                  {item.phone_number} ·{" "}
-                  {item.last_message || "Sin mensajes aún"}
-                </small>
-              </span>
+              <span className="inbox-contact-copy"><strong>{item.name || item.phone_number}</strong><small>{item.lastDirection === "outbound" && <span aria-label="Tu último mensaje">Tú: </span>}{item.last_message || "Sin mensajes aún"}</small></span>
+              <span className="inbox-row-meta"><time dateTime={item.updated_at}>{inboxTimestamp(item.updated_at)}</time>
               {item.unreadCount > 0 && (
                 <b
                   className="unread-badge"
@@ -203,11 +215,14 @@ export function Inbox({
                   {item.unreadCount > 99 ? "99+" : item.unreadCount}
                 </b>
               )}
+              {item.needsResponse && <span className="inbox-needs-response" title="Pendiente de respuesta" aria-label="Pendiente de respuesta" />}
+              </span>
             </button>
           ))}
         </div>
       </section>
       <ConversationPanel
+        inboxLayout
         onMobileBack={() => setMobileConversation(false)}
         chat={chat}
         messages={messages}

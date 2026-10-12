@@ -35,7 +35,7 @@ type Props = { user: User; view: View; controlTab: ControlTab; onViewChange: (vi
 
 export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChange, onLogout }: Props) {
   const mobileDialog = useRef<HTMLDialogElement>(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(view === "inbox");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const isActive = (item: Item) => view === item.view && (!item.tab || controlTab === item.tab);
   function navigate(item: Item) {
