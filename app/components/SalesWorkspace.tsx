@@ -6,7 +6,7 @@ import { salesToday, salesRange, validSalesRange, saleProductName, saleSource, t
 import { StoreOrdersPanel } from "./StoreOrdersPanel";
 import styles from "./SalesWorkspace.module.css";
 
-type Sale = { id: number; saleDate?: string; source?: string; subtotal: number; customer?: { name?: string; phone?: string }; saleItemDtoList?: { id: number; quantity: number; unitPriceAtSale: number; product?: SaleProduct; bundle?: { name?: string } }[] };
+type Sale = { id: number; saleDate?: string; source?: string; storeOrderId?: string; subtotal: number; customer?: { name?: string; phone?: string }; saleItemDtoList?: { id: number; quantity: number; unitPriceAtSale: number | null; unitCostAtSale?: number | null; product?: SaleProduct; bundle?: { name?: string } }[] };
 type Page = { content: Sale[]; totalElements: number; totalPages: number };
 type Expense = { date: string; advertising: number; notes: string };
 type Summary = { start: string; end: string; saleCount: number; grossIncome: number; reinvestment: number; advertising: number; taxes: number; taxBase: number; taxRate: number; profitBeforeTaxes: number; netProfit: number | null; missingCostLines: number };
@@ -58,17 +58,17 @@ function SalesList({ initialDate }: { initialDate: string }) {
     return () => controller.abort();
   }, [range, page, filters, revision]);
   return <div className={styles.section}>
-    <div className={styles.heading}><div><h3>Historial de ventas</h3><p>Las ventas confirmadas desde chats se incluyen automáticamente. Conversar o cotizar no registra una venta.</p></div><button type="button" disabled={busy} onClick={() => setRevision(r => r + 1)}>Actualizar</button></div>
+    <div className={styles.heading}><div><h3>Historial de ventas</h3><p>Incluye ventas confirmadas desde chats y pedidos pagados de la tienda. Los pedidos pendientes y pagos de prueba no cuentan como ventas.</p></div><button type="button" disabled={busy} onClick={() => setRevision(r => r + 1)}>Actualizar</button></div>
     <PeriodFilters value={range} onApply={next => { setRange(next); setFilters({ source: sourceDraft, search: searchDraft.trim() }); setPage(0); }}>
       <label>Origen<select value={sourceDraft} onChange={e => setSourceDraft(e.target.value)}><option value="">Todos los orígenes</option><option value="CHAT">Chat</option><option value="MANUAL">Manual</option><option value="STORE">Tienda</option></select></label>
-      <label>Cliente o teléfono<input value={searchDraft} maxLength={120} placeholder="Buscar cliente" onChange={e => setSearchDraft(e.target.value)} /></label>
+      <label>Cliente, teléfono o folio<input value={searchDraft} maxLength={120} placeholder="Nombre, teléfono o MS-…" onChange={e => setSearchDraft(e.target.value)} /></label>
     </PeriodFilters>
     <p className={styles.caption}>{dateLabel(range.start)} — {dateLabel(range.end)} · {data ? `${data.totalElements} ventas` : "Consultando…"}</p>
     {busy && <p role="status">Cargando ventas…</p>}{error && <p role="alert" className={styles.error}>{error}</p>}
     {data && data.content.length === 0 && <p className={styles.empty}>No hay ventas registradas con estos filtros.</p>}
     <div className={styles.sales}>{data?.content.map(sale => <details key={sale.id} className={styles.sale}>
       <summary><span><strong>Venta #{sale.id} · {sale.customer?.name || "Cliente"}</strong><small>{sale.saleDate ? dateLabel(sale.saleDate) : "Fecha no registrada"} · {saleSource(sale.source)}</small></span><strong>{money(sale.subtotal)}</strong><span className={styles.view}>Ver detalle</span></summary>
-      <div className={styles.ticket}>{sale.customer?.phone && <p>{sale.customer.phone}</p>}{sale.saleItemDtoList?.map(item => <div key={item.id} className={styles.line}><span><strong>{saleProductName(item.product)}</strong>{item.bundle?.name && <small>Paquete: {item.bundle.name}</small>}<small>{item.quantity} unidades × {money(item.unitPriceAtSale)}</small></span><b>{money(item.quantity * Number(item.unitPriceAtSale))}</b></div>)}<div className={styles.total}><strong>Total mercancía</strong><strong>{money(sale.subtotal)}</strong></div></div>
+      <div className={styles.ticket}>{sale.customer?.phone && <p>{sale.customer.phone}</p>}{sale.storeOrderId&&<p>Pedido MS-{sale.storeOrderId} · Registrado sin descontar inventario otra vez.</p>}{sale.saleItemDtoList?.map(item => <div key={item.id} className={styles.line}><span><strong>{saleProductName(item.product)}</strong>{item.bundle?.name && <small>Paquete: {item.bundle.name}</small>}<small>{item.quantity} unidades{item.unitPriceAtSale==null?" · Precio unitario histórico no disponible":` × ${money(item.unitPriceAtSale)}`}</small></span><b>{item.unitPriceAtSale==null?"—":money(item.quantity * Number(item.unitPriceAtSale))}</b></div>)}{sale.storeOrderId&&(!sale.saleItemDtoList?.length||sale.saleItemDtoList.some(item=>item.unitCostAtSale==null))&&<p role="status">El total cobrado está incluido en el reporte. Falta conciliar costos históricos; no se inventan costos ni ganancias para este pedido.</p>}<div className={styles.total}><strong>Total mercancía</strong><strong>{money(sale.subtotal)}</strong></div></div>
     </details>)}</div>
     <div className={styles.pagination}><button type="button" disabled={busy || page === 0} onClick={() => setPage(p => p - 1)}>Anterior</button><span>Página {page + 1} de {Math.max(1, data?.totalPages || 1)}</span><button type="button" disabled={busy || !data || page + 1 >= data.totalPages} onClick={() => setPage(p => p + 1)}>Siguiente</button></div>
     <div className={styles.orders}><button type="button" aria-expanded={showOrders} onClick={() => setShowOrders(!showOrders)}>{showOrders ? "Ocultar" : "Ver"} pedidos del ecommerce</button>{showOrders && <StoreOrdersPanel />}</div>
@@ -162,6 +162,6 @@ function SalesReport() {
       <article className={styles.net}><span>Ganancia neta estimada</span><strong>{data.netProfit == null ? "Pendiente" : money(data.netProfit)}</strong><small>{data.netProfit == null ? "Completa los costos faltantes para obtenerla" : "Resultado bajo la fórmula indicada"}</small></article>
     </div><div className={styles.result}><span>Resultado antes de impuestos estimados</span><strong>{money(data.profitBeforeTaxes)}</strong></div>
       {data.missingCostLines > 0 && <p role="alert" className={styles.error}>Hay {data.missingCostLines} partidas sin costo histórico. La reinversión mostrada es parcial; no se calcula ganancia neta.</p>}
-      <p className={styles.caption}>Solo ventas registradas y no anuladas; no cotizaciones ni pedidos pendientes. Ingresos de mercancía sin sumar envío ni añadir IVA otra vez. Costos según los importes guardados en las adquisiciones. Estimación operativa: no calcula el IVA neto a pagar, comisiones de cobro ni otros gastos. No constituye una declaración fiscal.</p></>}
+      <p className={styles.caption}>Incluye pedidos pagados de ecommerce, por fecha de pago, sin duplicar ventas ni descontar stock otra vez. Excluye pruebas, cotizaciones y pedidos pendientes. Los pedidos anteriores requieren conciliación antes de incorporarse; si faltan costos, la ganancia queda pendiente. Ingresos de mercancía sin sumar envío ni añadir IVA otra vez. Una solicitud de reembolso no equivale a dinero devuelto. Estimación operativa: no calcula el IVA neto a pagar, comisiones de cobro ni otros gastos. No constituye una declaración fiscal.</p></>}
   </div>;
 }

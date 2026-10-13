@@ -3,9 +3,37 @@ import { useEffect, useRef, useState } from "react";
 import { controlRequest, controlSession } from "../lib/control-api";
 import { catalogProductName, groupCatalogProducts, type CatalogProductIdentity } from "../lib/catalog-product-groups";
 import styles from "./EcommerceCatalogPanel.module.css";
-type Item = CatalogProductIdentity & { id: number; storeCategory?:string|null; description?:string|null; currentStock?: number; fixedPrice?: number; items?: {quantity:number}[] };
+import { compositionLines } from "../lib/product-composition";
+type Item = CatalogProductIdentity & { id: number; composition?:string[]; storeCategory?:string|null; description?:string|null; currentStock?: number; fixedPrice?: number; items?: {quantity:number}[] };
 const bundleCategory = (item: Item) => item.storeCategory?.trim() || "Sin categoría";
 type SavedPhoto = {id:number;url:string};
+function ProductCompositionEditor({item}:{item:Item}) {
+  const [draft,setDraft]=useState((item.composition||[]).join("\n"));
+  const [saved,setSaved]=useState(draft);
+  const [busy,setBusy]=useState(false);
+  const [notice,setNotice]=useState("");
+  const [error,setError]=useState("");
+  async function save() {
+    if(busy)return;
+    setError("");setNotice("");
+    let composition:string[];
+    try { composition=compositionLines(draft); } catch(e) { setError(e instanceof Error?e.message:"Revisa la composición.");return; }
+    setBusy(true);
+    try {
+      const result=await controlRequest<Item>(`/products/${item.id}/composition`,{method:"PATCH",body:JSON.stringify({composition})});
+      const value=(result.composition||[]).join("\n");setDraft(value);setSaved(value);setNotice("Composición guardada. Se mostrará en los detalles del producto en la tienda.");
+    } catch(e) { setError(e instanceof Error?e.message:"No se pudo guardar la composición."); }
+    finally {setBusy(false);}
+  }
+  return <details className={styles.compositionEditor}><summary>Composición del producto{saved?` · ${saved.split("\n").length} componentes`:" · Sin configurar"}</summary>
+    <div className={styles.descriptionEditor}>
+      <label htmlFor={`composition-${item.id}`}>Lista de composición<textarea id={`composition-${item.id}`} rows={4} maxLength={3020} value={draft} disabled={busy} onChange={e=>{setDraft(e.target.value);setError("");setNotice("");}} placeholder={"Una línea por material, por ejemplo:\nAlgodón\nPoliéster\nElastano"}/></label>
+      <small>Hasta 20 materiales, 150 caracteres por línea. Añade porcentajes solo si están confirmados por el proveedor. Vacía la lista para retirarla de la tienda.</small>
+      <button type="button" disabled={busy||draft===saved} onClick={()=>void save()}>{busy?"Guardando…":"Guardar composición"}</button>
+      {notice&&<p role="status">{notice}</p>}{error&&<p role="alert" className={styles.error}>{error}</p>}
+    </div>
+  </details>;
+}
 function BundleDescriptionEditor({item}:{item:Item}) {
   const [description,setDescription]=useState(item.description||"");
   const [saved,setSaved]=useState(item.description||"");
@@ -77,6 +105,7 @@ function CatalogCard({item,photos,kind,refresh}:{item:Item;photos:SavedPhoto[];k
     {kind==="bundles"&&<span className={styles.categoryBadge}>{bundleCategory(item)}</span>}
     {item.fixedPrice!=null&&<b>{new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN"}).format(item.fixedPrice)}</b>}
     <small>{photos.length} fotos guardadas · La primera es la portada.</small>
+    {kind==="products"&&<ProductCompositionEditor key={`composition-${item.id}-${(item.composition||[]).join("\n")}`} item={item}/>}
     <EditorContainer className={styles.cardEditor}>
     {kind==="bundles"&&<summary>Administrar fotos y descripción</summary>}
     <div className={styles.editorBody}>
@@ -117,7 +146,7 @@ export function EcommerceCatalogPanel({kind}:{kind:"products"|"bundles"}) {
   const categories = [...new Set(items.map(bundleCategory))].sort((a,b)=>a.localeCompare(b,"es"));
   const visible=items.filter(i=>(kind === "products" ? catalogProductName(i) : i.name).toLocaleLowerCase("es").includes(search.trim().toLocaleLowerCase("es")) && (kind!=="bundles" || !category || bundleCategory(i)===category));
   const productGroups = kind === "products" ? groupCatalogProducts(visible) : [];
-  return <section className={styles.panel}><header><div><small>E-COMMERCE</small><h1>{kind==="bundles"?"Bundles":"Productos"}</h1><p>Galería de cada artículo para la tienda. Agrega varias fotos sin reemplazar las existentes. No modifica las fotos para chats.</p></div><button type="button" disabled={loading} onClick={()=>void refresh()}>Actualizar</button></header>
+  return <section className={styles.panel}><header><div><small>E-COMMERCE</small><h1>{kind==="bundles"?"Bundles":"Productos"}</h1><p>{kind==="products"?"Administra las fotografías y la lista de composición de cada producto para la tienda.":"Galería de cada artículo para la tienda. Agrega varias fotos sin reemplazar las existentes."} No modifica las fotos para chats.</p></div><button type="button" disabled={loading} onClick={()=>void refresh()}>Actualizar</button></header>
     <p>JPG o PNG · Hasta 5 MB y 16 megapíxeles. Solo sube imágenes que quieras mostrar a los compradores.</p>
     <div className={styles.filters}>
       <label>Buscar<input aria-label="Buscar en catálogo" placeholder={kind === "products" ? "Nombre, categoría o género…" : "Buscar por nombre…"} value={search} onChange={e=>setSearch(e.target.value)}/></label>
