@@ -1,67 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { OrderOperations, type OperationalOrder } from "./OrderOperations";
+import { useEffect, useRef, useState } from "react";
 import { controlApi, controlRequest, controlSession } from "../lib/control-api";
-import styles from "./StoreOrdersPanel.module.css";
-import { shippingDraftKey, type ShippingDraft } from "../lib/shipping-draft";
-import { OrderBreakdown } from "./OrderBreakdown";
+import { emptyBoardPages, fulfillmentLabel, orderBoardPath, orderDateError, orderDateLabel, orderMoney, orderStages, paymentLabel, type BoardPages, type OrderCard, type OrderDates, type OrdersBoard } from "../lib/order-board";
+import { OrderDetailsModal } from "./OrderDetailsModal";
+import styles from "./OrdersBoard.module.css";
 
-type Order = OperationalOrder & { id: string; folio: string; customerName: string; status: string; subtotal: number; createdAt: string;
-  shippingAmount?:number|null;shippingCarrier?:string;shippingService?:string;shippingEnvironment?:string;total?:number;
-  shippingAddress?: {recipient:string;phone:string;email:string;country:string;postalCode:string;state:string;city:string;district:string;street:string;exteriorNumber:string;interiorNumber?:string;references?:string}|null;
-  lines: { kind: string; itemId: number; name: string; quantity: number; unitPrice: number; contents?: string }[] };
-type Page = { content: Order[]; totalElements: number; totalPages: number };
-const money = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
-const paymentLabels: Record<string,string> = { PAID: "Pagado", PENDING: "Pendiente de pago", PAYMENT_PENDING: "Esperando confirmación de Stripe", PAID_TEST: "Pagado · Prueba Stripe", PAYMENT_FAILED: "Pago fallido", PAYMENT_EXPIRED: "Sesión de pago expirada" };
+const message = (error: unknown) => error instanceof Error ? error.message : "No se pudieron cargar los pedidos.";
 
 export function PendingOrdersPanel({ onOpenShipping }: { onOpenShipping: () => void }) {
-  const [page, setPage] = useState(0);
+  const [pages, setPages] = useState<BoardPages>(emptyBoardPages);
+  const [dates, setDates] = useState<OrderDates>({ startDate: "", endDate: "" });
+  const [draftDates, setDraftDates] = useState<OrderDates>(dates);
+  const [filterError, setFilterError] = useState("");
   const [revision, setRevision] = useState(0);
-  const [data, setData] = useState<Page>();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [result, setResult] = useState<{ path: string; key: string; data?: OrdersBoard; error?: string }>();
+  const [selected, setSelected] = useState<OrderCard | null>(null);
   const [connection, setConnection] = useState("Conectando…");
-  const [preparingOrder, setPreparingOrder] = useState<string | null>(null);
-  const prepareShipping = async (order: Order) => {
-    if (preparingOrder) return;
-    setPreparingOrder(order.id); setError("");
-    try {
-      const result = await controlRequest<{orderId:string;folio:string;destination:NonNullable<Order["shippingAddress"]>;lines:Order["lines"];parcel:{pairs:number;weightKg:number;lengthCm:number;widthCm:number;heightCm:number;declaredValue:number}}>(`/pending-orders/${encodeURIComponent(order.id)}/shipping-draft`, { cache: "no-store" });
-      const a=result.destination,p=result.parcel;
-      if (!a || !p || [p.weightKg,p.lengthCm,p.widthCm,p.heightCm].some(n => !Number.isFinite(Number(n)) || Number(n)<=0)) throw new Error("El pedido no tiene un paquete válido. Revisa pesos y empaques.");
-      const draft: ShippingDraft = { source:"order", orderId:result.orderId,orderFolio:result.folio,orderLines:result.lines.map(l=>({name:l.name,quantity:l.quantity})),pairs:p.pairs,
-        destination:{name:a.recipient,phone:a.phone,email:a.email,street:a.street,number:a.exteriorNumber,interiorNumber:a.interiorNumber,references:a.references,city:a.city,state:a.state,country:a.country,postalCode:a.postalCode,district:a.district},
-        package:{type:"box",content:`Calcetines · ${p.pairs} pares`,amount:1,declaredValue:Number(p.declaredValue),weight:Number(p.weightKg),dimensions:{length:Number(p.lengthCm),width:Number(p.widthCm),height:Number(p.heightCm)}} };
-      sessionStorage.setItem(shippingDraftKey,JSON.stringify(draft));
-      onOpenShipping();
-    } catch (e) { setError(e instanceof Error ? e.message : "No se pudo preparar el envío del pedido."); }
-    finally { setPreparingOrder(null); }
-  };
-
+  const boardRef = useRef<HTMLDivElement>(null);
+  const path = orderBoardPath(dates, pages), key = `${path}:${revision}`;
+  const current = result?.path === path ? result : undefined;
+  const busy = current?.key !== key;
   useEffect(() => {
-    const abort = new AbortController();
+    const controller = new AbortController();
     const load = async () => {
-    await Promise.resolve();
-    if (abort.signal.aborted) return;
-    if (!controlSession.get()) { setError("Inicia sesión en Control de ventas para consultar los pedidos."); return; }
-    setBusy(true);
-    controlRequest<Page>(`/pending-orders?page=${page}&size=20`, { signal: abort.signal, cache: "no-store" })
-      .then(result => { if (!abort.signal.aborted) { setData(result); setError(""); } })
-      .catch(() => { if (!abort.signal.aborted) setError("No se pudieron cargar los pedidos. Verifica tu sesión de Control de ventas y la conexión al servicio."); })
-      .finally(() => { if (!abort.signal.aborted) setBusy(false); });
+      if (!controlSession.get()) throw new Error("Inicia sesión en Control de ventas para consultar los pedidos.");
+      return controlRequest<OrdersBoard>(path, { signal: controller.signal, cache: "no-store" });
     };
-    void load();
-    return () => abort.abort();
-  }, [page, revision]);
+    load().then(data => { if (!controller.signal.aborted) setResult({ path, key, data }); })
+      .catch(error => { if (!controller.signal.aborted) setResult(previous => ({ path, key, data: previous?.path === path ? previous.data : undefined, error: message(error) })); });
+    return () => controller.abort();
+  }, [path, key]);
 
   useEffect(() => {
-    let stopped = false;
-    let socket: WebSocket | undefined;
-    let retry: ReturnType<typeof setTimeout> | undefined;
-    let refresh: ReturnType<typeof setTimeout> | undefined;
-    let delay = 1000;
-    let lastActivity = Date.now();
+    let stopped = false, socket: WebSocket | undefined;
+    let retry: ReturnType<typeof setTimeout> | undefined, refresh: ReturnType<typeof setTimeout> | undefined;
+    let delay = 1000, lastActivity = Date.now();
     const connect = () => {
       if (stopped) return;
       const token = controlSession.get();
@@ -71,72 +45,63 @@ export function PendingOrdersPanel({ onOpenShipping }: { onOpenShipping: () => v
         url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
         url.pathname = `${url.pathname.replace(/\/$/, "")}/ws/pending-orders`;
         url.search = ""; url.hash = "";
-        const current = new WebSocket(url);
-        socket = current;
-        lastActivity = Date.now();
-        current.onopen = () => { if (!stopped) current.send(`auth ${token}`); };
-        current.onmessage = event => {
+        const currentSocket = new WebSocket(url); socket = currentSocket; lastActivity = Date.now();
+        currentSocket.onopen = () => { if (!stopped) currentSocket.send(`auth ${token}`); };
+        currentSocket.onmessage = event => {
           if (stopped) return;
           lastActivity = Date.now();
-          let type: string;
-          try { type = JSON.parse(event.data).type; } catch { return; }
-          if (type === "ready") { delay = 1000; setConnection("En vivo"); setRevision(r => r + 1); }
-          if (type === "orders.changed") {
-            clearTimeout(refresh);
-            refresh = setTimeout(() => { setPage(0); setRevision(r => r + 1); }, 250);
-          }
+          let type: string; try { type = JSON.parse(event.data).type; } catch { return; }
+          if (type === "ready") { delay = 1000; setConnection("En vivo"); setRevision(value => value + 1); }
+          if (type === "orders.changed") { clearTimeout(refresh); refresh = setTimeout(() => setRevision(value => value + 1), 250); }
         };
-        current.onerror = () => current.close();
-        current.onclose = () => {
-          if (stopped) return;
-          setConnection("Reconectando · actualización de respaldo cada 30 s");
-          retry = setTimeout(connect, delay);
-          delay = Math.min(delay * 2, 30000);
-        };
-      } catch { setConnection("Revisa la URL de Control de ventas"); }
+        currentSocket.onerror = () => currentSocket.close();
+        currentSocket.onclose = () => { if (stopped) return; setConnection("Reconectando · respaldo cada 30 s"); retry = setTimeout(connect, delay); delay = Math.min(delay * 2, 30000); };
+      } catch { setConnection("Revisa la conexión de Control de ventas"); }
     };
-    connect();
-    // HTTP reconciliation also recovers missed notifications after sleep or restarts.
-    const reconcile = setInterval(() => { if (controlSession.get()) setRevision(r => r + 1); }, 30000);
+    void Promise.resolve().then(connect);
+    const reconcile = setInterval(() => { if (controlSession.get() && document.visibilityState === "visible") setRevision(value => value + 1); }, 30000);
     const watchdog = setInterval(() => { if (socket && Date.now() - lastActivity > 45000) socket.close(); }, 5000);
     return () => { stopped = true; clearTimeout(retry); clearTimeout(refresh); clearInterval(reconcile); clearInterval(watchdog); socket?.close(); };
   }, []);
 
-  return <div className="orders-workspace">
-    <section className={styles.panel} aria-label="Pedidos de E-commerce" aria-busy={busy}>
-      <header className={styles.header}><div><h2>Pedidos de E-commerce {data && <small>({data.totalElements})</small>}</h2>
-        <p>El inventario se descuenta al confirmar un pago real. Sigue aquí la preparación y entrega.</p>
-        <small role="status">{connection}</small></div>
-        <button disabled={busy} onClick={() => { setPage(0); setRevision(r => r + 1); }}>Actualizar</button>
-      </header>
-      {error && <p role="alert">{error}</p>}
-      {busy && !data && <p>Cargando pedidos…</p>}
-      {data?.content.length === 0 && <p>Aún no hay pedidos para esta tienda.</p>}
-      {data?.content.map(order => <details className={styles.order} key={order.id} open>
-        <summary><span><strong>{order.folio}</strong><small className={styles.folio}>{order.customerName || "Compra como invitado"} · {new Date(order.createdAt).toLocaleString("es-MX")}</small></span>
-          <span className={styles.badge}>{paymentLabels[order.status] || order.status}</span>
-          <strong>{money(Number(order.total ?? (Number(order.subtotal) + Number(order.shippingAmount ?? 0))))}</strong><span className={styles.toggleLabel}><span className={styles.whenClosed}>Ver pedido</span><span className={styles.whenOpen}>Ocultar pedido</span></span></summary>
-        <div className={`${styles.details} ${styles.orderLayout}`}>
-          <OrderBreakdown {...order} />
-          <aside className={styles.orderSidebar} aria-label={`Entrega y seguimiento de ${order.folio}`}>
-          <h3>Entrega y seguimiento</h3>
-          <OrderOperations order={order} onUpdated={()=>setRevision(r=>r+1)}/>
-          <button type="button" disabled={preparingOrder!==null || !order.shippingAddress} onClick={()=>void prepareShipping(order)}>{preparingOrder===order.id ? "Preparando dirección y paquete…" : "Cotizar envío en Envia"}</button>
-          {!order.shippingAddress && <small>Este pedido aún no tiene una dirección de entrega capturada.</small>}
-          {order.shippingAddress ? <section aria-label="Dirección de entrega" style={{padding:16,border:'1px solid var(--line)',borderRadius:12,overflowWrap:'anywhere'}}>
-            <h3>Dirección de entrega</h3><p><strong>{order.shippingAddress.recipient}</strong><br/>{order.shippingAddress.phone} · {order.shippingAddress.email}</p>
-            <p>{order.shippingAddress.street} {order.shippingAddress.exteriorNumber}{order.shippingAddress.interiorNumber&&' · Interior '+order.shippingAddress.interiorNumber}<br/>{order.shippingAddress.district}, C.P. {order.shippingAddress.postalCode}<br/>{order.shippingAddress.city}, {order.shippingAddress.state}, {order.shippingAddress.country}</p>
-            {order.shippingAddress.references&&<p>Referencias: {order.shippingAddress.references}</p>}
-            <small>Dirección guardada para este pedido. La guía se genera internamente, no durante el pago.</small>
-          </section> : <p>Dirección pendiente. Identifica al cliente con el folio que te enviará por WhatsApp.</p>}
-          </aside>
-        </div>
-      </details>)}
-      <footer className={styles.header}>
-        <button disabled={busy || page === 0} onClick={() => { setData(undefined); setPage(p => p - 1); }}>Anterior</button>
-        <span>Página {page + 1} de {Math.max(1, data?.totalPages || 1)}</span>
-        <button disabled={busy || !data || page + 1 >= data.totalPages} onClick={() => { setData(undefined); setPage(p => p + 1); }}>Siguiente</button>
-      </footer>
-    </section>
-  </div>;
+  function changed() { setPages(emptyBoardPages()); setRevision(value => value + 1); }
+  return <div className="orders-workspace"><section className={styles.workspace} aria-label="Pedidos de E-commerce">
+    <header className={styles.header}><div><small>E-COMMERCE</small><h2>Pedidos <span>{current?.data?.totalElements ?? "—"}</span></h2><p>Organiza cada pedido desde que llega hasta que lo entregas a paquetería.</p></div>
+      <div className={styles.connection}><small role="status">{connection}</small><button type="button" disabled={busy} onClick={() => setRevision(value => value + 1)}>Actualizar</button></div>
+    </header>
+    <form className={styles.filters} onSubmit={event => { event.preventDefault(); const values = new FormData(event.currentTarget); const selectedDates = { startDate: String(values.get("startDate") || ""), endDate: String(values.get("endDate") || "") }; const error = orderDateError(selectedDates); setDraftDates(selectedDates); setFilterError(error); if (!error) { setDates(selectedDates); setPages(emptyBoardPages()); setRevision(value => value + 1); } }}>
+      <div><strong>Fecha del pedido</strong><small>Zona horaria: Ciudad de México</small></div>
+      <label>Desde<input name="startDate" type="date" min="1900-01-01" max="9998-12-31" value={draftDates.startDate} onChange={event => setDraftDates(value => ({ ...value, startDate: event.target.value }))}/></label>
+      <label>Hasta<input name="endDate" type="date" min="1900-01-01" max="9998-12-31" value={draftDates.endDate} onChange={event => setDraftDates(value => ({ ...value, endDate: event.target.value }))}/></label>
+      <button className={styles.primary} type="submit">Filtrar</button>
+      <button type="button" onClick={() => { const empty = { startDate: "", endDate: "" }; setDraftDates(empty); setDates(empty); setFilterError(""); setPages(emptyBoardPages()); }}>Ver todos</button>
+    </form>
+    {filterError && <p role="alert" className={styles.error}>{filterError}</p>}
+    {current?.error && <div className={styles.error} role="alert"><span>{current.error}{current.data && " Se muestran los últimos datos cargados."}</span><button type="button" onClick={() => setRevision(value => value + 1)}>Reintentar</button></div>}
+    <div className={styles.boardHeading}><p role="status">{busy ? "Actualizando pedidos…" : dates.startDate || dates.endDate ? "Pedidos dentro del periodo seleccionado · ambos días incluidos" : "Todos los pedidos · más recientes primero"}</p><small>El pago y el seguimiento se muestran por separado.</small></div>
+    <nav className={styles.stageNav} aria-label="Ir a una columna de pedidos">{orderStages.map(stage => <button type="button" key={stage.key} onClick={() => { const column = boardRef.current?.querySelector<HTMLElement>(`[data-stage="${stage.key}"]`); column?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest", inline: "start" }); }}>{stage.label}<span>{current?.data?.columns.find(column => column.stage === stage.key)?.totalElements ?? "—"}</span></button>)}</nav>
+    <div className={styles.board} ref={boardRef} aria-busy={busy}>
+      {orderStages.map((stage, index) => {
+        const column = current?.data?.columns.find(column => column.stage === stage.key);
+        return <section className={styles.column} data-stage={stage.key} key={stage.key} aria-labelledby={`orders-${stage.key}`}>
+          <header className={styles.columnHeading}><div><span className={styles.step}>{index + 1}</span><h3 id={`orders-${stage.key}`}>{stage.label}</h3><b>{column?.totalElements ?? "—"}</b></div><p>{stage.hint}</p></header>
+          <div className={styles.cards}>
+            {!column && <p className={styles.empty}>{current?.error ? "No se pudo consultar esta columna." : "Cargando…"}</p>}
+            {column?.totalElements === 0 && <div className={styles.empty}><span aria-hidden="true">○</span><p>Sin pedidos en {stage.label.toLowerCase()}</p><small>{dates.startDate || dates.endDate ? "Prueba otro periodo." : "Los pedidos aparecerán aquí al avanzar."}</small></div>}
+            {column?.content.map(order => <button type="button" key={order.id} className={styles.card} aria-label={`Ver pedido ${order.folio} de ${order.customerName || "invitado"}`} onClick={() => setSelected(order)}>
+              <div className={styles.cardTop}><span title={order.folio}>#{order.id.slice(0, 8).toUpperCase()}</span><time dateTime={order.createdAt}>{orderDateLabel(order.createdAt)}</time></div>
+              <strong className={styles.customer}>{order.customerName || "Compra como invitado"}</strong>
+              <div className={styles.badges}><span className={order.status === "PAID" ? styles.paid : styles.badge}>{paymentLabel(order.status)}</span>
+                {(stage.key === "PENDING" || order.fulfillmentStatus === "DELIVERED") && <span className={styles.badge}>{fulfillmentLabel(order.fulfillmentStatus)}</span>}</div>
+              {order.inventoryIssue && <p className={styles.issue}>Requiere atención de inventario</p>}
+              {order.trackingNumber && <p className={styles.tracking}>Guía: {order.trackingNumber}<small>{order.dispatchCarrier}</small></p>}
+              <div className={styles.cardBottom}><b>{orderMoney(Number(order.total))}</b><span>Ver detalle ↗</span></div>
+            </button>)}
+          </div>
+          {!!column?.totalElements && <footer className={styles.pagination}><button type="button" aria-label={`Página anterior de ${stage.label}`} disabled={busy || column.page === 0} onClick={() => setPages(value => ({ ...value, [stage.key]: column.page - 1 }))}>‹</button><span>{column.page + 1} / {Math.max(1, column.totalPages)}</span><button type="button" aria-label={`Página siguiente de ${stage.label}`} disabled={busy || column.page + 1 >= column.totalPages} onClick={() => setPages(value => ({ ...value, [stage.key]: column.page + 1 }))}>›</button></footer>}
+        </section>;
+      })}
+    </div>
+    <p className={styles.footnote}>Los pedidos nuevos llegan a Pendiente. Cancelaciones, pruebas y pedidos con incidencias conservan su indicador para que puedas revisarlos.</p>
+    {selected && <OrderDetailsModal key={selected.id} card={selected} revision={revision} onClose={() => setSelected(null)} onUpdated={changed} onOpenShipping={onOpenShipping}/>}</section></div>;
 }

@@ -1,0 +1,84 @@
+.workspace { min-width: 0; color: var(--ink); }
+.workspace button, .modal button { min-height: 44px; padding: 10px 14px; border: 1px solid var(--app-border-strong); background: var(--app-surface); color: var(--ink); border-radius: 8px; cursor: pointer; font: inherit; }
+.workspace button:disabled, .modal button:disabled { opacity: .5; cursor: not-allowed; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+.header small, .modalHeader small { color: var(--green); font-size: 11px; letter-spacing: .08em; }
+.header h2 { display: flex; gap: 12px; align-items: center; margin: 6px 0; font-size: 26px; }
+.header h2 span { font-size: 15px; border-radius: 20px; background: var(--app-hover); padding: 4px 10px; }
+.header p, .boardHeading { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 0; }
+.connection { display: grid; gap: 8px; justify-items: end; }
+.connection small { letter-spacing: normal; color: var(--muted); }
+.filters { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 12px; background: var(--app-surface); padding: 16px; }
+.filters > div { margin-right: auto; align-self: center; }
+.filters strong, .filters small { display: block; }
+.filters small { color: var(--muted); margin-top: 5px; font-size: 12px; }
+.filters label { display: grid; gap: 6px; font-size: 12px; color: var(--muted); }
+.filters input { padding: 9px 10px; min-height: 44px; font: inherit; font-size: 14px; }
+.workspace .primary, .modal .primary { background: var(--green); color: white; border-color: var(--green); }
+.boardHeading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; margin: 14px 0; }
+.boardHeading p { margin: 0; }
+.board { display: grid; grid-template-columns: repeat(4, minmax(248px, 1fr)); gap: 14px; overflow-x: auto; align-items: start; padding-bottom: 12px; scroll-snap-type: x proximity; }
+.column { background: var(--app-hover); border-radius: 12px; border: 1px solid var(--line); min-width: 0; scroll-snap-align: start; }
+.columnHeading { padding: 16px 12px 12px; }
+.columnHeading > div { display: flex; align-items: center; gap: 8px; }
+.columnHeading h3 { margin: 0; flex: 1; font-size: 15px; }
+.columnHeading b { font-size: 12px; background: var(--app-surface); padding: 4px 8px; border-radius: 20px; }
+.step { width: 24px; height: 24px; display: grid; place-items: center; background: var(--app-selected); color: var(--green); border-radius: 50%; font-size: 12px; font-weight: 700; flex: none; }
+.columnHeading p { font-size: 11px; margin: 8px 0 0; color: var(--muted); }
+.cards { display: grid; align-content: start; gap: 10px; padding: 0 10px 12px; max-height: max(320px, calc(100dvh - 350px)); overflow-y: auto; min-height: 190px; }
+.workspace .card { width: 100%; min-width: 0; text-align: left; border-color: var(--line); border-radius: 10px; display: grid; gap: 12px; padding: 14px; }
+.card:hover { border-color: var(--green); }
+.cardTop { display: flex; justify-content: space-between; align-items: start; gap: 8px; color: var(--muted); font-size: 10px; }
+.cardTop span { font-weight: 700; color: var(--green); }
+.cardTop time { text-align: right; }
+.customer { overflow-wrap: anywhere; font-size: 15px; line-height: 1.4; }
+.badges { display: flex; gap: 6px; flex-wrap: wrap; font-size: 10px; }
+.badge, .paid { padding: 5px 7px; border-radius: 6px; background: var(--app-subtle); color: var(--muted); }
+.paid { background: var(--app-selected); color: var(--green); }
+.issue { font-size: 11px; color: var(--app-danger); margin: 0; }
+.tracking { margin: 0; font-size: 11px; overflow-wrap: anywhere; }
+.tracking small { display: block; color: var(--muted); margin-top: 4px; }
+.cardBottom { display: flex; justify-content: space-between; gap: 8px; align-items: center; border-top: 1px solid var(--line); padding-top: 12px; font-variant-numeric: tabular-nums; }
+.cardBottom b { font-size: 16px; }
+.cardBottom span { color: var(--green); font-size: 11px; }
+.empty { align-self: center; text-align: center; color: var(--muted); padding: 28px 10px; font-size: 13px; }
+.empty > span { font-size: 26px; opacity: .5; }
+.empty small { display: block; font-size: 11px; line-height: 1.5; }
+.pagination { border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px; font-size: 12px; color: var(--muted); }
+.pagination button { min-width: 44px; }
+.footnote { color: var(--muted); font-size: 12px; line-height: 1.6; margin-bottom: 0; }
+.workspace .stageNav { display: none; }
+.error { background: var(--app-danger-soft); border: 1px solid var(--app-danger); color: var(--app-danger); border-radius: 8px; padding: 12px; display: flex; gap: 12px; justify-content: space-between; align-items: center; font-size: 13px; line-height: 1.5; }
+.modal { width: min(1100px, calc(100vw - 40px)); max-width: none; max-height: calc(100dvh - 40px); margin: auto; padding: 0; border: 1px solid var(--line); border-radius: 16px; background: var(--app-surface); color: var(--ink); overflow: hidden; }
+.modal::backdrop { background: rgba(32, 44, 51, .65); }
+.modalHeader { display: flex; align-items: start; justify-content: space-between; gap: 20px; padding: 20px 24px; border-bottom: 1px solid var(--line); }
+.modalHeader > div { min-width: 0; }
+.modalHeader h2 { font-size: 21px; margin: 8px 0; overflow-wrap: anywhere; }
+.modalHeader p { font-size: 12px; color: var(--muted); margin: 0; overflow-wrap: anywhere; }
+.modalHeader > button { flex: none; }
+.modalBody { padding: 20px 24px 28px; overflow-y: auto; max-height: calc(100dvh - 185px); }
+.progress { list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0 0 16px; padding: 0; }
+.progress li { display: flex; gap: 8px; align-items: center; color: var(--muted); background: var(--app-subtle); border-radius: 8px; padding: 10px; font-size: 12px; }
+.progress li span { flex: none; font-weight: 700; }
+.progress .currentStep { background: var(--app-selected); color: var(--green); font-weight: 700; }
+.detailStatus { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+.detailStatus strong { color: var(--green); }
+.detailStatus span { color: var(--muted); }
+.address { padding: 16px; border: 1px solid var(--line); border-radius: 12px; font-size: 14px; overflow-wrap: anywhere; }
+.modal :is(input, textarea, select) { width: 100%; padding: 10px; }
+.modal label { display: grid; gap: 6px; }
+.modal label:has(input[type="checkbox"]) { display: flex; gap: 8px; align-items: center; }
+.modal input[type="checkbox"] { width: auto; min-height: 20px; }
+@media (max-width: 1000px) { .workspace .stageNav { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; } .workspace .stageNav button { flex: none; font-size: 12px; background: var(--app-surface); color: var(--ink); border: 1px solid var(--app-border-strong); } .stageNav span { margin-left: 8px; color: var(--green); } }
+@media (max-width: 760px) {
+  .header { gap: 12px; } .header h2 { font-size: 24px; } .connection { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; width: 100%; }
+  .filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px; gap: 10px; }
+  .filters > div { grid-column: 1 / -1; margin: 0; } .filters input { width: 100%; min-width: 0; font-size: 16px; }
+  .board { grid-template-columns: repeat(4, min(82vw, 320px)); gap: 12px; } .cards { max-height: 65dvh; }
+  .boardHeading small { display: none; } .error { flex-wrap: wrap; }
+  .modal { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); border-radius: 12px; }
+  .modalHeader { padding: 16px; gap: 10px; } .modalHeader h2 { font-size: 18px; } .modalHeader p { font-size: 10px; }
+  .modalBody { padding: 16px; max-height: calc(100dvh - 170px); } .progress { gap: 5px; } .progress li { display: grid; justify-items: center; text-align: center; font-size: 10px; padding: 8px 3px; gap: 4px; }
+  .modal :is(input, textarea, select) { font-size: 16px; } .address { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .board { scroll-behavior: auto; } }
