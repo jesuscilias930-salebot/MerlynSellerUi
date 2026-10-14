@@ -3,6 +3,7 @@ import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {request} from '../lib/api';
 import {financeToday,financeMoney,financeMonth,financeDate,financeAmount,financeMovementPath,shiftFinanceMonth,movementDefaultDate,type FinanceAccount,type FinanceKind,type FinanceMovement,type FixedExpense,type FixedOccurrence,type FinancePage,type FinanceSummary} from '../lib/finances';
 import {AppNavIcon} from './AppNavIcon';
+import {BusinessMoneyPanel} from './BusinessMoneyPanel';
 import styles from './FinancesPanel.module.css';
 const message=(e:unknown)=>e instanceof Error?e.message:'No se pudo completar la solicitud.';
 function useResource<T>(path:string,version:number){
@@ -16,6 +17,10 @@ type Tab='summary'|'movements'|'fixed';
 const tabs:{id:Tab;label:string}[]=[{id:'summary',label:'Resumen mensual'},{id:'movements',label:'Movimientos'},{id:'fixed',label:'Gastos fijos'}];
 
 export function FinancesPanel(){
+ const [workspace,setWorkspace]=useState<'personal'|'business'>('personal');
+ return <div className={styles.workspace}><div className={styles.workspaceTabs} role="tablist" aria-label="Separación de finanzas">{([['personal','Mis finanzas'],['business','Dinero del negocio']] as const).map(([id,label])=><button key={id} type="button" role="tab" id={`money-tab-${id}`} aria-controls={`money-panel-${id}`} aria-selected={workspace===id} tabIndex={workspace===id?0:-1} onClick={()=>setWorkspace(id)} onKeyDown={e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const next=e.key==='Home'?'personal':e.key==='End'?'business':workspace==='personal'?'business':'personal';setWorkspace(next);document.getElementById(`money-tab-${next}`)?.focus();}}}>{label}</button>)}</div><div className={styles.workspaceContent} role="tabpanel" id={`money-panel-${workspace}`} aria-labelledby={`money-tab-${workspace}`}>{workspace==='business'?<BusinessMoneyPanel/>:<PersonalFinancesPanel/>}</div></div>;
+}
+function PersonalFinancesPanel(){
  const [today,setToday]=useState(financeToday),[month,setMonth]=useState(()=>financeToday().slice(0,7)),[tab,setTab]=useState<Tab>('summary');
  const currentMonth=useRef(today.slice(0,7));
  const [version,setVersion]=useState(0),[editor,setEditor]=useState<Editor|null>(null),[notice,setNotice]=useState('');
