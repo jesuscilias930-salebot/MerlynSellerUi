@@ -1,15 +1,31 @@
 "use client";
 import { useEffect, useState } from "react";
 import { request } from "../lib/api";
+import { whatsappDestination } from "../lib/whatsapp-button";
 type Mode = "sandbox" | "production";
 type Service = "envia" | "stripe";
-type Features = Record<Service, Mode> & { cardPaymentsEnabled: boolean; metaEventsEnabled: boolean; configured: Record<Service, Record<Mode, boolean>>; stripeError?: string };
+type Features = Record<Service, Mode> & { whatsappButtonEnabled?: boolean; whatsappNumber?: string; cardPaymentsEnabled: boolean; metaEventsEnabled: boolean; configured: Record<Service, Record<Mode, boolean>>; stripeError?: string };
 
 export function FeaturesPanel() {
   const [data, setData] = useState<Features | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
-  async function load() { setData(await request<Features>("/features")); }
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  async function load() { const result=await request<Features>("/features"); setData(result); return result; }
+  async function saveWhatsapp(enabled: boolean, number = whatsappNumber) {
+    if (!data || busy) return;
+    setNotice("");
+    let normalized: string;
+    try { normalized=whatsappDestination(number, enabled); }
+    catch(e) { setNotice(e instanceof Error ? e.message : "Revisa el número de WhatsApp."); return; }
+    setBusy(true);
+    try {
+      await request("/features", {method:"PUT",body:JSON.stringify({service:"whatsappButton",enabled,number:normalized})});
+      const saved=await load(); setWhatsappNumber(saved.whatsappNumber || "");
+      setNotice(enabled ? "Botón de WhatsApp habilitado. Se actualizará al recargar la tienda o en la siguiente consulta automática." : "Botón de WhatsApp oculto. El número queda guardado; no cambia el envío de pedidos.");
+    } catch(e) { setNotice(e instanceof Error ? e.message : "No se pudo guardar WhatsApp."); }
+    finally { setBusy(false); }
+  }
   async function toggleMetaEvents() {
     if (!data || busy) return;
     const enabled = !data.metaEventsEnabled;
@@ -32,7 +48,7 @@ export function FeaturesPanel() {
     } catch (e) { setNotice(e instanceof Error ? e.message : "No se pudo actualizar."); }
     finally { setBusy(false); }
   }
-  useEffect(() => { const controller = new AbortController(); void request<Features>("/features", { signal: controller.signal }).then(setData).catch(e => { if (!controller.signal.aborted) setNotice(e.message); }); return () => controller.abort(); }, []);
+  useEffect(() => { const controller = new AbortController(); void request<Features>("/features", { signal: controller.signal }).then(result=>{setData(result);setWhatsappNumber(result.whatsappNumber || "");}).catch(e => { if (!controller.signal.aborted) setNotice(e.message); }); return () => controller.abort(); }, []);
   async function change(service: Service, environment: Mode) {
     if (environment === data?.[service]) return;
     if (environment === "production" && !window.confirm(service === "stripe" ? "¿Activar cobros REALES de Stripe para nuevos pedidos?" : "¿Activar Envia en producción? Las tarifas serán reales y las guías creadas manualmente podrán consumir saldo.")) return;
@@ -48,6 +64,20 @@ export function FeaturesPanel() {
     <p role="status">{notice}</p>
     <button type="button" disabled={busy} onClick={() => { setBusy(true); void load().catch(e => setNotice(e.message)).finally(() => setBusy(false)); }}>Actualizar estado</button>
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 290px), 1fr))", gap: 20, marginTop: 24 }}>
+      <section className="envia-card">
+        <h2>Tienda · Comprar por WhatsApp</h2>
+        <p>Botón flotante visible en toda la tienda para consultar o comprar por WhatsApp.</p>
+        <label style={{display:"flex",alignItems:"center",gap:12,marginTop:20}}>
+          <input type="checkbox" role="switch" checked={data?.whatsappButtonEnabled===true} disabled={busy||!data} onChange={()=>void saveWhatsapp(!data?.whatsappButtonEnabled,data?.whatsappButtonEnabled ? (data.whatsappNumber || "") : whatsappNumber)} aria-label="Mostrar Comprar por WhatsApp" style={{width:24,height:24,accentColor:"var(--green)"}}/>
+          <strong>{!data?"Cargando…":data.whatsappButtonEnabled?"Visible en la tienda":"Oculto en la tienda"}</strong>
+        </label>
+        <form onSubmit={event=>{event.preventDefault();void saveWhatsapp(data?.whatsappButtonEnabled===true);}} style={{display:"grid",gap:12,marginTop:20}}>
+          <label htmlFor="store-whatsapp-number">Número de WhatsApp con lada de país</label>
+          <input id="store-whatsapp-number" type="tel" inputMode="tel" autoComplete="off" maxLength={40} placeholder="+52 272 128 5563" value={whatsappNumber} onChange={event=>setWhatsappNumber(event.target.value)} disabled={busy||!data} aria-describedby="store-whatsapp-help" style={{width:"100%",minWidth:0,padding:"10px 12px"}}/>
+          <small id="store-whatsapp-help">Incluye +52 para México. Este número solo se usa en el botón flotante; no cambia el destinatario de los pedidos.</small>
+          <button type="submit" className="envia-primary" disabled={busy||!data}>Guardar número</button>
+        </form>
+      </section>
       <section className="envia-card">
         <h2>Tienda · Pagos con tarjeta</h2>
         <p>Al desactivar, se ocultan los botones de pago y solo queda concluir el pedido por WhatsApp. No cambia el ambiente Dev/Prod.</p>
