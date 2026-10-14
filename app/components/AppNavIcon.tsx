@@ -1,6 +1,7 @@
-type IconName = "features" | "chat" | "leads" | "store" | "whatsapp" | "documents" | "video" | "sales" | "settings" | "scenarios" | "logout" | "expand" | "collapse";
+type IconName = "finance" | "features" | "chat" | "leads" | "store" | "whatsapp" | "documents" | "video" | "sales" | "settings" | "scenarios" | "logout" | "expand" | "collapse";
 
 const paths: Record<IconName, string> = {
+  finance: "M3 6h17v14H3V6Zm0 0V4h15v2M16 10h6v6h-6v-6Zm2 3h1",
   features: "M4 7h16M4 17h16M8 4v6M16 14v6",
   chat: "M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-1 1v-8.5A8.5 8.5 0 1 1 21 11.5Z",
   leads: "M3 5h5v14H3V5Zm7 0h5v9h-5V5Zm7 0h4v11h-4V5Z",

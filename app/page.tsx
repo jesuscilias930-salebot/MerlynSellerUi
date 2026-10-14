@@ -31,10 +31,11 @@ import { CtaUrlTemplatesPanel } from "./components/CtaUrlTemplatesPanel";
 import { WhatsAppTemplatesPanel } from "./components/WhatsAppTemplatesPanel";
 import { EnviaShippingPanel } from "./components/EnviaShippingPanel";
 import { VideosPanel } from "./components/VideosPanel";
+import { FinancesPanel } from "./components/FinancesPanel";
 import { ConversationAnalysisPanel } from "./components/ConversationAnalysisPanel";
 import type { PendingChatImage } from "./components/ConversationPanel";
 
-type View = "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
+type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./components/ControlPanel").ControlTab;
 type UploadResponse = { error?: string; mediaId?: string; filename?: string };
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -1146,6 +1147,8 @@ export default function Home() {
         <ScenariosPanel scenarios={automationScenarios} columns={pipeline} entrepreneurPackages={entrepreneurPackages} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} />
       ) : view === "videos" ? (
         <VideosPanel />
+      ) : view === "finances" && ["owner", "admin"].includes(user.role) ? (
+        <FinancesPanel />
       ) : view === "conversation-analysis" ? (
         <ConversationAnalysisPanel />
       ) : view === "feature" ? (

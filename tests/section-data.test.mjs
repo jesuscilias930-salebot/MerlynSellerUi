@@ -7,7 +7,7 @@ test("initial inbox only loads conversations and its column filters", () => {
 });
 
 test("self-contained sections do not trigger any global CRM catalogs", () => {
-  for (const view of ["conversation-analysis", "videos", "shipping", "feature", "ecommerce-orders", "ecommerce-products", "ecommerce-bundles", "ecommerce-testimonials"]) {
+  for (const view of ["finances", "conversation-analysis", "videos", "shipping", "feature", "ecommerce-orders", "ecommerce-products", "ecommerce-bundles", "ecommerce-testimonials"]) {
     assert.deepEqual(crmResources(view, "summary"), [], view);
   }
 });
