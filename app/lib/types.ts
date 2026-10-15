@@ -67,6 +67,24 @@ export type CtaUrlTemplate = CtaUrlMessage & {
   created_at: string;
   updated_at: string;
 };
+export type InteractiveOptionsFormat = "auto" | "buttons" | "list";
+export type InteractiveOption = { id?: string; title: string; description?: string };
+export type InteractiveOptionsMessage = {
+  format?: InteractiveOptionsFormat;
+  header?: string;
+  body: string;
+  footer?: string;
+  buttonText?: string;
+  sectionTitle?: string;
+  options: InteractiveOption[];
+};
+export type InteractiveOptionsTemplate = InteractiveOptionsMessage & {
+  id: string;
+  name: string;
+  format: "buttons" | "list";
+  created_at: string;
+  updated_at: string;
+};
 export type WhatsAppTemplateVariable = { component: "body" | "header"; position: number };
 export type WhatsAppTemplateMapping = { component: "body" | "header"; position: number; source: "contact.name" | "contact.phone" | "fixed" | "manual"; value?: string; label?: string };
 export type WhatsAppTemplate = { id: string; metaTemplateId: string; name: string; language: string; status: string; category: string | null; components: { type: string; text?: string }[]; variables: WhatsAppTemplateVariable[]; mappings: WhatsAppTemplateMapping[]; updatedAt: string };

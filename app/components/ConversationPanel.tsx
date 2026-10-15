@@ -6,13 +6,15 @@ import { VIDEO_ACCEPT } from "../lib/video-upload";
 import { initials } from "../lib/format";
 import { deliveryLabel, messageDayKey, messageDayLabel, messageTime } from "../lib/inbox-presentation";
 import { ChatIcon } from "./ChatIcon";
-import type { AutomationIntent, Chat, CtaUrlMessage, DocumentOption, EntrepreneurPackage, LeadColumn, Message, QuickReply, SavedSticker } from "../lib/types";
+import type { AutomationIntent, Chat, CtaUrlMessage, InteractiveOptionsMessage, DocumentOption, EntrepreneurPackage, LeadColumn, Message, QuickReply, SavedSticker } from "../lib/types";
 import { MobileChatSheet } from "./MobileChatSheet";
 import { AudioRecorder } from "./AudioRecorder";
 import { QuoteNoteGenerator } from "./QuoteNoteGenerator";
 import { StoreOrders } from "./StoreOrders";
 import { ChatSaleModal } from "./ChatSaleModal";
 import { CtaUrlCard } from "./CtaUrlCard";
+import { InteractiveOptionsCard } from "./InteractiveOptionsCard";
+import optionStyles from "./InteractiveOptions.module.css";
 import { ToolAccordion } from "./ToolAccordion";
 import { WhatsAppTemplateCard } from "./WhatsAppTemplateCard";
 import {ChatShippingModal} from "./ChatShippingModal";
@@ -79,7 +81,7 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
     if (message.type === "contacts" && message.messageMetadata?.contacts?.length) return <div className="whatsapp-content-card contacts-card"><span className="whatsapp-content-kicker">Contacto compartido</span>{message.messageMetadata.contacts.map((contact, index) => <section key={index}><b>{contact.name || "Contacto"}</b>{contact.phones?.map((phone, key) => <span key={key}>☎ {phone.phone || phone.waId}</span>)}</section>)}</div>;
     if (message.type === "location" && message.messageMetadata?.location) { const location = message.messageMetadata.location; return <a className="whatsapp-content-card location-card" href={`https://www.google.com/maps?q=${location.latitude},${location.longitude}`} target="_blank" rel="noreferrer"><b>{location.name || "Ubicación compartida"}</b><small>{location.address || `${location.latitude}, ${location.longitude}`}</small></a>; }
     if (message.type === "interactive" && message.direction === "inbound" && message.messageMetadata?.interactive) return <div className="whatsapp-content-card reply-card"><span className="whatsapp-content-kicker">Respuesta interactiva</span><b>{message.messageMetadata.interactive.title || message.messageMetadata.interactive.body || "Respuesta seleccionada"}</b></div>;
-    if (message.type === "interactive") { try { const data = JSON.parse(message.body || "{}") as CtaUrlMessage; return <div className="interactive-cta-preview"><p>{data.body}</p><span>{data.buttonText || "Abrir enlace"} ↗</span></div>; } catch { return <p>[Mensaje interactivo]</p>; } }
+    if (message.type === "interactive") { try { const data = JSON.parse(message.body || "{}") as CtaUrlMessage & Partial<InteractiveOptionsMessage> & { kind?: string }; if (data.kind === "options") return <div className={optionStyles.chatPreview}>{data.header && <b>{data.header}</b>}<p>{data.body}</p><ul>{(data.options || []).map(option => <li key={option.id || option.title}>{option.title}{option.description && <small> · {option.description}</small>}</li>)}</ul><small>{data.format === "buttons" ? "Botones de respuesta" : `Lista · «${data.buttonText || "Ver opciones"}»`}</small></div>; return <div className="interactive-cta-preview"><p>{data.body}</p><span>{data.buttonText || "Abrir enlace"} ↗</span></div>; } catch { return <p>[Mensaje interactivo]</p>; } }
     if (message.type === "template") { try { const data = JSON.parse(message.body || "{}") as { templateName?: string }; return <div className="interactive-cta-preview"><p>Plantilla: {data.templateName || "WhatsApp"}</p><span>Enviada mediante plantilla oficial</span></div>; } catch { return <p>[Plantilla oficial]</p>; } }
     if (message.type === "unsupported" || message.type === "unknown") return <div className="whatsapp-content-card system-card"><b>Este tipo de mensaje aún no puede mostrarse aquí.</b><small>La conversación continúa con normalidad.</small></div>;
     return <p>{message.body || `[${message.type}]`}</p>;
@@ -102,6 +104,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
         <button className="tool-primary-button" type="button" disabled={!chat || !selectedDocumentId || uploadingMedia} onClick={onSendDocument}>Enviar catálogo</button>
       </ToolAccordion>
       <CtaUrlCard disabled={!chat} packages={entrepreneurPackages} onSend={onSendCtaUrl} />
+      <InteractiveOptionsCard conversationId={chat?.id} disabled={!chat} />
       <>{chat && <StoreOrders key={chat.id} conversationId={chat.id}/>}</><WhatsAppTemplateCard conversationId={chat?.id} disabled={!chat} />
       <ToolAccordion icon="＋" title="Adjuntar archivos" description="Las imágenes se muestran antes de enviarse.">{attachTools}</ToolAccordion>
       <ToolAccordion icon="▦" title="Imágenes guardadas" description="Selecciona una o varias imágenes y envíalas juntas.">
