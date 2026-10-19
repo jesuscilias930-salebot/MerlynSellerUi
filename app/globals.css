@@ -8589,3 +8589,17 @@ article.inbound:hover .message-reaction-picker, .message-reaction-picker:focus-w
 .product-weights-settings h2{margin:0 0 8px;font-size:20px;color:#183c32}
 .product-weights-settings header strong{display:block;color:#296c51;font-size:14px}
 @media(max-width:600px){.product-weight-category-content{padding:12px;gap:12px}.product-weight-category-content>article{padding:16px}}
+
+/* Error de guardado visible en el editor de escenarios; el borrador se conserva. */
+.scenario-save-error {
+    margin: 8px 0 0;
+    padding: 9px 12px;
+    border: 1px solid #f3c2c7;
+    border-radius: 10px;
+    background: var(--app-danger-soft, #fff1f2);
+    color: var(--app-danger, #b42332);
+    font-size: 13px;
+    line-height: 1.4;
+}
+.scenario-save-error b { margin-right: 4px; }
+.scenario-settings-modal footer .scenario-save-error { flex: 1 1 100%; margin: 0 0 8px; }

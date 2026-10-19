@@ -936,11 +936,11 @@ export default function Home() {
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar el sticker."); }
   };
   const saveScenario = async (value: Omit<AutomationScenario, "id" | "key" | "updatedAt" | "position">, id?: string) => {
-    try {
-      await request(id ? `/scenarios/${id}` : "/scenarios", { method: id ? "PUT" : "POST", body: JSON.stringify(value) });
-      await loadScenarios();
-      setNotice("Escenario guardado.");
-    } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudo guardar el escenario."); }
+    // Si falla, el error se propaga: el editor lo muestra y conserva lo capturado.
+    const saved = await request<AutomationScenario>(id ? `/scenarios/${id}` : "/scenarios", { method: id ? "PUT" : "POST", body: JSON.stringify(value) });
+    try { await loadScenarios(); } catch { /* la lista se actualizará en la siguiente carga */ }
+    setNotice("Escenario guardado.");
+    return saved;
   };
   const reorderScenarios = async (scenarioIds: string[]) => {
     try {

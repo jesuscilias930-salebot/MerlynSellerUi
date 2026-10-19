@@ -26,7 +26,7 @@ type Props = {
   scenarios: AutomationScenario[];
   columns: LeadColumn[];
   entrepreneurPackages: EntrepreneurPackage[];
-  onSave: (value: Draft, id?: string) => Promise<void>;
+  onSave: (value: Draft, id?: string) => Promise<AutomationScenario | void>;
   onDelete: (id: string) => Promise<void>;
   onReorder: (scenarioIds: string[]) => Promise<void>;
 };
@@ -164,6 +164,7 @@ function FlowBuilder({
   const [draggingStepId, setDraggingStepId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [saveError, setSaveError] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(!initial);
   const [stepEditorOpen, setStepEditorOpen] = useState(false);
   const selectedStep =
@@ -487,7 +488,7 @@ function FlowBuilder({
   };
   const saveScenario = async (closeSettings = false) => {
     setSaving(true);
-    setError("");
+    setSaveError("");
     try {
       await onSave(
         {
@@ -521,7 +522,7 @@ function FlowBuilder({
       if (closeSettings) setSettingsOpen(false);
       return true;
     } catch (reason) {
-      setError(
+      setSaveError(
         reason instanceof Error ? reason.message : "No fue posible guardar.",
       );
       return false;
@@ -937,6 +938,12 @@ function FlowBuilder({
               ? `${issues.length} detalle${issues.length === 1 ? "" : "s"} por revisar`
               : "Flujo listo para guardar"}
           </span>
+          {saveError && (
+            <p className="scenario-save-error" role="alert">
+              <b>No se guardó.</b> {saveError} Tus cambios siguen aquí; corrige y
+              vuelve a guardar.
+            </p>
+          )}
         </div>
         <div>
           <label className="scenario-active-toggle">
@@ -1046,6 +1053,11 @@ function FlowBuilder({
               </label>
             </div>
             <footer>
+              {saveError && (
+                <p className="scenario-save-error" role="alert">
+                  <b>No se guardó.</b> {saveError}
+                </p>
+              )}
               <button
                 type="button"
                 className="primary-action"
@@ -1662,7 +1674,9 @@ export function ScenariosPanel({
               entrepreneurPackages={entrepreneurPackages}
               reusableMedia={reusableMedia}
               onSave={async (draft) => {
-                await onSave(draft);
+                const saved = await onSave(draft);
+                // Solo al guardar correctamente se cambia al escenario creado.
+                if (saved?.id) setSelectedId(saved.id);
                 setCreating(false);
               }}
               onCancel={() => setCreating(false)}
