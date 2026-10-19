@@ -1,0 +1,64 @@
+.panel { display: grid; gap: 16px; max-width: 980px; }
+.header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; }
+.header p { margin: 0 0 6px; color: var(--green); font-size: 11px; font-weight: 900; letter-spacing: .12em; }
+.header h1 { margin: 0; color: var(--deep); font-size: 26px; }
+.header span { display: block; margin-top: 6px; max-width: 620px; color: var(--muted); line-height: 1.45; }
+.status { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--app-surface); color: var(--ink); font-size: 13px; font-weight: 700; }
+.status i { width: 9px; height: 9px; border-radius: 50%; background: #d9a400; }
+.status[data-open="true"] i { background: var(--green); }
+.card { display: grid; gap: 12px; padding: 20px; border: 1px solid var(--line); border-radius: var(--app-radius); background: var(--app-surface); }
+.card > header { display: grid; gap: 4px; }
+.card > header strong { color: var(--deep); font-size: 15px; }
+.card > header small, .hint { color: var(--muted); font-size: 12px; line-height: 1.45; }
+.card label { display: grid; gap: 6px; color: var(--deep); font-size: 12px; font-weight: 800; }
+.card input:not([type="checkbox"]), .card select, .card textarea { width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid var(--app-border-strong); border-radius: 9px; background: #fff; color: var(--ink); font: inherit; font-size: 13px; font-weight: 500; }
+.card textarea { min-height: 84px; resize: vertical; }
+.toggle { display: flex !important; grid-template-columns: none; align-items: flex-start; gap: 10px !important; font-weight: 600 !important; line-height: 1.4; }
+.toggle input { margin-top: 2px; accent-color: var(--green); }
+.toggle b { display: block; color: var(--deep); }
+.toggle small { color: var(--muted); font-weight: 500; }
+.enable { border-color: var(--green); background: var(--mint); }
+
+.week { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.day { display: grid; grid-template-columns: 120px 110px minmax(0, 1fr); align-items: center; gap: 12px; padding: 10px 12px; border-top: 1px solid var(--line); }
+.day:first-child { border-top: 0; }
+.day[data-open="false"] { background: var(--app-subtle); }
+.dayName { color: var(--deep); font-size: 13px; font-weight: 800; }
+.dayToggle { display: flex !important; align-items: center; gap: 6px !important; font-size: 12px !important; font-weight: 700 !important; }
+.intervals { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.interval { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+.interval input { width: 112px !important; }
+.closedText { color: var(--muted); font-size: 13px; }
+.link { padding: 4px 6px; border: 0; background: transparent; color: var(--green); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.link:disabled { color: var(--muted); cursor: not-allowed; }
+.remove { padding: 2px 6px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font: inherit; cursor: pointer; }
+.remove:hover { background: var(--app-hover); color: var(--app-danger); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--app-subtle); color: var(--ink); font-size: 12px; }
+.inline { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.inline > label { flex: 1 1 200px; }
+.tokens { display: flex; flex-wrap: wrap; gap: 6px; }
+.tokens button { padding: 5px 9px; border: 1px dashed var(--app-border-strong); border-radius: 8px; background: #fff; color: var(--green); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+.rules { display: grid; gap: 10px; }
+.rule { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--app-subtle); }
+.rule > header { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rule > header b { color: var(--muted); font-size: 11px; letter-spacing: .08em; }
+.rule > header div { display: flex; gap: 2px; }
+
+.preview { display: grid; gap: 8px; padding: 14px; border-radius: 12px; background: #efeae2; }
+.bubble { max-width: 420px; padding: 8px 10px; border-radius: 0 9px 9px; background: #fff; box-shadow: 0 1px .5px #0b141a21; color: #111b21; font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
+.previewMeta { color: #3b4a54; font-size: 12px; }
+
+.issues { display: grid; gap: 3px; margin: 0; padding: 10px 12px 10px 28px; border-radius: 9px; background: var(--app-danger-soft); color: var(--app-danger); font-size: 12px; }
+.error { margin: 0; padding: 10px 12px; border: 1px solid #f3c2c7; border-radius: 10px; background: var(--app-danger-soft); color: var(--app-danger); font-size: 13px; }
+.saved { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--mint); color: #176f46; font-size: 13px; }
+.footer { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--app-radius); background: var(--app-surface); box-shadow: 0 -6px 18px #0b141a12; }
+.footer span { margin-right: auto; color: var(--muted); font-size: 12px; }
+
+@media (max-width: 720px) {
+  .day { grid-template-columns: 1fr auto; }
+  .intervals { grid-column: 1 / -1; }
+  .rule { grid-template-columns: 1fr; }
+}
