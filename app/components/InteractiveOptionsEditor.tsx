@@ -16,7 +16,12 @@ export function InteractiveOptionsEditor({ value, onChange, disabled = false, co
   const set = <K extends keyof InteractiveOptionsMessage>(key: K, next: InteractiveOptionsMessage[K]) => onChange({ ...value, [key]: next });
   const setOptions = (next: InteractiveOption[]) => set("options", next);
   // Al cambiar el texto se descarta el id para que el servidor genere uno coherente.
-  const updateOption = (index: number, patch: Partial<InteractiveOption>) => setOptions(options.map((option, position) => position === index ? { title: option.title, description: option.description, ...patch } : option));
+  const updateOption = (index: number, patch: Partial<InteractiveOption>) => setOptions(options.map((option, position) => {
+    if (position !== index) return option;
+    const next = { ...option, ...patch };
+    if (patch.title !== undefined) delete next.id;
+    return next;
+  }));
   const move = (index: number, offset: number) => { const next = [...options]; const [item] = next.splice(index, 1); next.splice(index + offset, 0, item); setOptions(next); };
   const buttonsAllowed = filled.length <= OPTION_LIMITS.buttons;
   const titleLimit = resolved === "buttons" && value.format === "buttons" ? OPTION_LIMITS.buttonTitle : OPTION_LIMITS.rowTitle;

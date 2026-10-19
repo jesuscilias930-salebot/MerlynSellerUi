@@ -10,6 +10,7 @@ import {
 } from "react";
 import { api } from "../lib/api";
 import ScenarioCodexConnection from "./ScenarioCodexConnection";
+import { ScenarioOptionsStep, stepOptionsIssue } from "./ScenarioOptionsStep";
 import type {
   AutomationScenario,
   EntrepreneurPackage,
@@ -38,6 +39,7 @@ const labels: Record<ScenarioStep["type"], string> = {
   send_catalog: "Enviar catálogo",
   send_media: "Enviar imágenes o documentos",
   wait_reply: "Esperar respuesta",
+  send_options: "Mensaje con opciones",
   budget_recommendation: "Recomendar por presupuesto",
   move_column: "Mover lead",
   end: "Finalizar",
@@ -47,6 +49,7 @@ const icons: Record<ScenarioStep["type"], string> = {
   send_catalog: "▤",
   send_media: "▧",
   wait_reply: "◌",
+  send_options: "☰",
   budget_recommendation: "💰",
   move_column: "↗",
   end: "✓",
@@ -82,12 +85,19 @@ const defaultBudgetOptions = (): ScenarioBudgetOption[] => [
     recommendationBody: "",
   },
 ];
+const optionDefaults = (): Partial<ScenarioStep> => ({
+  body: "",
+  format: "auto",
+  buttonText: "Ver opciones",
+  options: [{ title: "" }, { title: "" }],
+});
 const blankStep = (type: ScenarioStep["type"] = "send_text"): ScenarioStep => ({
   id: stepId(),
   type,
   label: labels[type],
   ...(type === "send_text" ? { body: "" } : {}),
   ...(type === "wait_reply" ? { branches: [] } : {}),
+  ...(type === "send_options" ? optionDefaults() : {}),
   ...(type === "budget_recommendation"
     ? { budgetOptions: defaultBudgetOptions() }
     : {}),
@@ -189,6 +199,14 @@ function FlowBuilder({
           label: branch.name || "respuesta",
           kind: "branch",
         })),
+        ...(step.options || [])
+          .filter((option) => option.nextStepId)
+          .map((option) => ({
+            from: step.id,
+            to: option.nextStepId as string,
+            label: option.title || "opción",
+            kind: "branch",
+          })),
       ].filter((edge) => byStepId.has(edge.to)),
     );
     edges.forEach((edge) => incoming.add(edge.to));
@@ -261,6 +279,10 @@ function FlowBuilder({
           return [`${prefix}: agrega al menos un archivo.`];
         if (step.type === "wait_reply" && !(step.branches || []).length)
           return [`${prefix}: agrega una respuesta posible.`];
+        if (step.type === "send_options") {
+          const problem = stepOptionsIssue(step);
+          if (problem) return [`${prefix}: ${problem}`];
+        }
         if (
           step.type === "wait_reply" &&
           (step.branches || []).some(
@@ -295,6 +317,7 @@ function FlowBuilder({
             step.nextStepId,
             step.fallbackStepId,
             ...(step.branches || []).map((branch) => branch.nextStepId),
+            ...(step.options || []).map((option) => option.nextStepId),
           ]
             .filter(Boolean)
             .some((id) => !value.steps.some((candidate) => candidate.id === id))
@@ -344,7 +367,7 @@ function FlowBuilder({
         selected &&
         candidate.id === selected.id &&
         !selected.nextStepId &&
-        !["wait_reply", "budget_recommendation", "end"].includes(selected.type)
+        !["wait_reply", "send_options", "budget_recommendation", "end"].includes(selected.type)
           ? { ...candidate, nextStepId: step.id }
           : candidate,
       );
@@ -363,6 +386,9 @@ function FlowBuilder({
         fallbackStepId:
           step.fallbackStepId === id ? undefined : step.fallbackStepId,
         branches: step.branches?.filter((branch) => branch.nextStepId !== id),
+        options: step.options?.map((option) =>
+          option.nextStepId === id ? { ...option, nextStepId: undefined } : option,
+        ),
       }));
     setValue({ ...value, steps: remaining });
     setSelectedStepId(remaining[0]?.id || "");
@@ -481,6 +507,13 @@ function FlowBuilder({
                 .map((item) => item.trim())
                 .filter(Boolean),
             })),
+            options: step.options
+              ?.filter((option) => option.title.trim())
+              .map((option) => ({
+                ...option,
+                title: option.title.trim(),
+                description: option.description?.trim() || undefined,
+              })),
           })),
         },
         initial?.id,
@@ -1142,6 +1175,8 @@ function FlowBuilder({
                             ? `${(step.items || []).length} archivo${(step.items || []).length === 1 ? "" : "s"}`
                             : step.type === "wait_reply"
                               ? `${(step.branches || []).length} respuesta${(step.branches || []).length === 1 ? "" : "s"}`
+                              : step.type === "send_options"
+                              ? `${(step.options || []).filter((option) => option.title.trim()).length} opciones · ${truncate(step.body, 28)}`
                               : step.type === "move_column"
                                 ? columns.find(
                                     (column) => column.id === step.columnId,
@@ -1219,9 +1254,26 @@ function FlowBuilder({
                       type,
                       label: labels[type],
                       body:
-                        type === "send_text"
+                        type === "send_text" || type === "send_options"
                           ? selectedStep.body || ""
                           : undefined,
+                      ...(type === "send_options"
+                        ? {
+                            format: selectedStep.format || "auto",
+                            buttonText:
+                              selectedStep.buttonText ?? "Ver opciones",
+                            options: selectedStep.options?.length
+                              ? selectedStep.options
+                              : optionDefaults().options,
+                          }
+                        : {
+                            options: undefined,
+                            header: undefined,
+                            footer: undefined,
+                            format: undefined,
+                            buttonText: undefined,
+                            sectionTitle: undefined,
+                          }),
                       branches:
                         type === "wait_reply"
                           ? selectedStep.branches || []
@@ -1370,6 +1422,13 @@ function FlowBuilder({
                   {branchEditor(selectedStep)}
                 </>
               )}
+              {selectedStep.type === "send_options" && (
+                <ScenarioOptionsStep
+                  step={selectedStep}
+                  targets={targetOptions(selectedStep.id)}
+                  onChange={(patch) => updateStep(selectedStep.id, patch)}
+                />
+              )}
               {selectedStep.type === "budget_recommendation" && (
                 <>
                   <label>
@@ -1407,7 +1466,7 @@ function FlowBuilder({
                   </select>
                 </label>
               )}
-              {!["wait_reply", "end"].includes(selectedStep.type) && (
+              {!["wait_reply", "send_options", "end"].includes(selectedStep.type) && (
                 <label>
                   Después, continuar en
                   <select
