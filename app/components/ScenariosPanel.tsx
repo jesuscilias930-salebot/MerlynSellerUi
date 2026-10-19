@@ -10,6 +10,7 @@ import {
 } from "react";
 import { api } from "../lib/api";
 import ScenarioCodexConnection from "./ScenarioCodexConnection";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { ScenarioOptionsStep, stepOptionsIssue } from "./ScenarioOptionsStep";
 import type {
   AutomationScenario,
@@ -167,6 +168,9 @@ function FlowBuilder({
   const [saveError, setSaveError] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(!initial);
   const [stepEditorOpen, setStepEditorOpen] = useState(false);
+  // Pasos tal como estaban al abrir el editor del paso, para «Descartar».
+  const [stepSnapshot, setStepSnapshot] = useState<ScenarioStep[] | null>(null);
+  const [stepConfirm, setStepConfirm] = useState<"delete" | "discard" | "save" | null>(null);
   const selectedStep =
     value.steps.find((step) => step.id === selectedStepId) || value.steps[0];
   const flowGraph = useMemo(() => {
@@ -353,13 +357,32 @@ function FlowBuilder({
     selectedStep?.budgetOptions?.length,
   ]);
   const openStepEditor = (id: string) => {
+    setStepSnapshot(value.steps);
     setSelectedStepId(id);
     setStepEditorOpen(true);
+  };
+  // La × solo cierra: los cambios quedan en el borrador del escenario.
+  const closeStepEditor = () => {
+    setStepEditorOpen(false);
+    setStepConfirm(null);
+  };
+  const stepChanged =
+    stepSnapshot !== null &&
+    JSON.stringify(stepSnapshot) !== JSON.stringify(value.steps);
+  const discardStepChanges = () => {
+    if (stepSnapshot) {
+      const restored = stepSnapshot;
+      setValue((current) => ({ ...current, steps: restored }));
+      if (!restored.some((step) => step.id === selectedStepId))
+        setSelectedStepId(restored[0]?.id || "");
+    }
+    closeStepEditor();
   };
   const targetOptions = (currentId: string) =>
     value.steps.filter((step) => step.id !== currentId);
   const addStep = () => {
     const step = blankStep(newStepType);
+    setStepSnapshot(value.steps);
     setValue((current) => {
       const selected = current.steps.find(
         (candidate) => candidate.id === selectedStepId,
@@ -393,7 +416,7 @@ function FlowBuilder({
       }));
     setValue({ ...value, steps: remaining });
     setSelectedStepId(remaining[0]?.id || "");
-    setStepEditorOpen(false);
+    closeStepEditor();
   };
   const dropStep = (event: DragEvent<HTMLElement>, destinationId: string) => {
     event.preventDefault();
@@ -1232,16 +1255,10 @@ function FlowBuilder({
                 <div className="flow-inspector-actions">
                   <button
                     type="button"
-                    className="danger-link"
-                    onClick={() => removeStep(selectedStep.id)}
-                    disabled={value.steps.length <= 1}
-                  >
-                    Eliminar
-                  </button>
-                  <button
-                    type="button"
                     className="scenario-modal-close"
-                    onClick={() => setStepEditorOpen(false)}
+                    aria-label="Cerrar sin eliminar"
+                    title="Cerrar (los cambios quedan en el borrador)"
+                    onClick={closeStepEditor}
                   >
                     ×
                   </button>
@@ -1502,6 +1519,41 @@ function FlowBuilder({
                   </select>
                 </label>
               )}
+              <footer className="flow-inspector-footer">
+                {saveError && (
+                  <p className="scenario-save-error" role="alert">
+                    <b>No se guardó.</b> {saveError}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="flow-step-delete"
+                  disabled={value.steps.length <= 1}
+                  title={
+                    value.steps.length <= 1
+                      ? "El escenario necesita al menos un paso"
+                      : undefined
+                  }
+                  onClick={() => setStepConfirm("delete")}
+                >
+                  Eliminar paso
+                </button>
+                <button
+                  type="button"
+                  className="plain-button"
+                  onClick={() => setStepConfirm("discard")}
+                >
+                  Descartar
+                </button>
+                <button
+                  type="button"
+                  className="primary-action"
+                  disabled={saving}
+                  onClick={() => setStepConfirm("save")}
+                >
+                  {saving ? "Guardando…" : "Guardar"}
+                </button>
+              </footer>
             </>
           ) : (
             <div className="flow-empty">
@@ -1539,6 +1591,73 @@ function FlowBuilder({
         )}
       </footer>
       {error && <p className="scenario-error">{error}</p>}
+      {selectedStep && (
+        <>
+          <ConfirmDialog
+            open={stepConfirm === "delete"}
+            tone="danger"
+            title={`¿Eliminar el paso «${selectedStep.label}»?`}
+            confirmLabel="Eliminar paso"
+            onCancel={() => setStepConfirm(null)}
+            onConfirm={() => {
+              setStepConfirm(null);
+              removeStep(selectedStep.id);
+            }}
+          >
+            <p>
+              Se quitará del flujo y las conexiones que llegan a él quedarán
+              sin destino.
+            </p>
+            <p>
+              El cambio se aplica al guardar el escenario; hasta entonces puedes
+              cerrar sin guardar.
+            </p>
+          </ConfirmDialog>
+          <ConfirmDialog
+            open={stepConfirm === "discard"}
+            tone="danger"
+            title="¿Descartar los cambios de este paso?"
+            confirmLabel="Descartar cambios"
+            cancelLabel="Seguir editando"
+            onCancel={() => setStepConfirm(null)}
+            onConfirm={discardStepChanges}
+          >
+            <p>
+              {stepChanged
+                ? "Se perderá lo que cambiaste desde que abriste este paso" +
+                  (stepSnapshot &&
+                  !stepSnapshot.some((step) => step.id === selectedStep.id)
+                    ? ", incluido el paso nuevo."
+                    : ".")
+                : "No hiciste cambios en este paso; solo se cerrará."}
+            </p>
+          </ConfirmDialog>
+          <ConfirmDialog
+            open={stepConfirm === "save"}
+            title="¿Guardar el escenario?"
+            confirmLabel="Guardar"
+            busy={saving}
+            onCancel={() => setStepConfirm(null)}
+            onConfirm={async () => {
+              const ok = await saveScenario();
+              setStepConfirm(null);
+              // Si falla, el editor sigue abierto con el error visible.
+              if (ok) closeStepEditor();
+            }}
+          >
+            <p>
+              Se guardan todos los cambios del escenario, incluido este paso
+              {value.isActive ? ", y se aplicarán a las conversaciones nuevas." : "."}
+            </p>
+            {issues.length > 0 && (
+              <p>
+                Hay {issues.length} detalle{issues.length === 1 ? "" : "s"} por
+                revisar; si el servidor no lo acepta, verás el motivo aquí.
+              </p>
+            )}
+          </ConfirmDialog>
+        </>
+      )}
     </form>
   );
 }
