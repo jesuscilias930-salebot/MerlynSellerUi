@@ -11,6 +11,10 @@ import {
 import { api } from "../lib/api";
 import ScenarioCodexConnection from "./ScenarioCodexConnection";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { StepTypePicker } from "./StepTypePicker";
+import { NewScenarioStart, type NewScenarioChoice } from "./NewScenarioStart";
+import { buildFlowGraph, edgeLabel, insertStepAfter, NODE_HEIGHT, NODE_WIDTH, START_WIDTH } from "../lib/scenario-graph";
+import { instantiateSteps } from "../lib/scenario-templates";
 import { ScenarioOptionsStep, stepOptionsIssue } from "./ScenarioOptionsStep";
 import type {
   AutomationScenario,
@@ -126,6 +130,7 @@ const truncate = (value?: string, limit = 78) =>
 
 function FlowBuilder({
   initial,
+  initialDraft,
   columns,
   entrepreneurPackages,
   reusableMedia,
@@ -134,6 +139,7 @@ function FlowBuilder({
   onCancel,
 }: {
   initial?: AutomationScenario;
+  initialDraft?: Draft;
   columns: LeadColumn[];
   entrepreneurPackages: EntrepreneurPackage[];
   reusableMedia: ReusableScenarioMedia[];
@@ -152,108 +158,55 @@ function FlowBuilder({
           canInterrupt: initial.canInterrupt !== false,
           steps: initial.steps,
         }
-      : emptyScenario(),
+      : initialDraft || emptyScenario(),
   );
   const [triggerText, setTriggerText] = useState(
-    (initial?.triggerExamples || []).join("\n"),
+    (initial?.triggerExamples || initialDraft?.triggerExamples || []).join("\n"),
   );
   const [selectedStepId, setSelectedStepId] = useState(
     value.steps[0]?.id || "",
   );
-  const [newStepType, setNewStepType] =
-    useState<ScenarioStep["type"]>("send_text");
+  // Menú de tipos de paso abierto: "toolbar" o el id de la tarjeta.
+  const [pickerFor, setPickerFor] = useState<string | null>(null);
+  const [pickerAnchor, setPickerAnchor] = useState<DOMRect | null>(null);
   const [draggingStepId, setDraggingStepId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saveError, setSaveError] = useState("");
-  const [settingsOpen, setSettingsOpen] = useState(!initial);
+  const [settingsOpen, setSettingsOpen] = useState(!initial && !initialDraft);
   const [stepEditorOpen, setStepEditorOpen] = useState(false);
   // Pasos tal como estaban al abrir el editor del paso, para «Descartar».
   const [stepSnapshot, setStepSnapshot] = useState<ScenarioStep[] | null>(null);
   const [stepConfirm, setStepConfirm] = useState<"delete" | "discard" | "save" | null>(null);
   const selectedStep =
     value.steps.find((step) => step.id === selectedStepId) || value.steps[0];
-  const flowGraph = useMemo(() => {
-    const byStepId = new Map(value.steps.map((step) => [step.id, step]));
-    const incoming = new Set<string>();
-    const edges = value.steps.flatMap((step) =>
-      [
-        ...(step.nextStepId
-          ? [
-              {
-                from: step.id,
-                to: step.nextStepId,
-                label: "continúa",
-                kind: "direct",
-              },
-            ]
-          : []),
-        ...(step.fallbackStepId
-          ? [
-              {
-                from: step.id,
-                to: step.fallbackStepId,
-                label: "si no coincide",
-                kind: "fallback",
-              },
-            ]
-          : []),
-        ...(step.branches || []).map((branch) => ({
-          from: step.id,
-          to: branch.nextStepId,
-          label: branch.name || "respuesta",
-          kind: "branch",
-        })),
-        ...(step.options || [])
-          .filter((option) => option.nextStepId)
-          .map((option) => ({
-            from: step.id,
-            to: option.nextStepId as string,
-            label: option.title || "opción",
-            kind: "branch",
-          })),
-      ].filter((edge) => byStepId.has(edge.to)),
-    );
-    edges.forEach((edge) => incoming.add(edge.to));
-    const roots = value.steps.filter((step) => !incoming.has(step.id));
-    const levels = new Map<string, number>();
-    const queue = (roots.length ? roots : value.steps.slice(0, 1)).map(
-      (step) => ({ id: step.id, level: 0 }),
-    );
-    while (queue.length) {
-      const current = queue.shift();
-      if (!current || levels.has(current.id)) continue;
-      levels.set(current.id, current.level);
-      edges
-        .filter((edge) => edge.from === current.id)
-        .forEach((edge) =>
-          queue.push({ id: edge.to, level: current.level + 1 }),
-        );
-    }
-    value.steps.forEach((step) => {
-      if (!levels.has(step.id)) levels.set(step.id, 0);
-    });
-    const groups = new Map<number, ScenarioStep[]>();
-    value.steps.forEach((step) => {
-      const level = levels.get(step.id) || 0;
-      groups.set(level, [...(groups.get(level) || []), step]);
-    });
-    const positions = new Map<string, { x: number; y: number }>();
-    const columnCount = Math.max(1, ...groups.keys()) + 1;
-    let tallestColumn = 1;
-    groups.forEach((steps, level) => {
-      tallestColumn = Math.max(tallestColumn, steps.length);
-      steps.forEach((step, index) =>
-        positions.set(step.id, { x: 44 + level * 274, y: 48 + index * 172 }),
-      );
-    });
+  const flowGraph = useMemo(() => buildFlowGraph(value.steps), [value.steps]);
+  // Curva de cada conexión y punto medio para su etiqueta.
+  const edgeGeometry = (edge: (typeof flowGraph.edges)[number]) => {
+    const source = flowGraph.positions.get(edge.from);
+    const target = flowGraph.positions.get(edge.to);
+    if (!source || !target) return null;
+    const sx = source.x + NODE_WIDTH;
+    const sy = source.y + Math.min(30 + edge.order * 16, NODE_HEIGHT - 14);
+    const ex = target.x;
+    const ey = target.y + 44;
+    const backwards = ex <= sx;
+    const c1 = backwards ? [sx + 60, sy + 140] : [sx + Math.max(50, (ex - sx) * 0.45), sy];
+    const c2 = backwards ? [ex - 60, ey + 140] : [ex - Math.max(50, (ex - sx) * 0.45), ey];
+    // Etiqueta un poco más cerca del destino para no tapar el botón «＋».
+    const t = backwards ? 0.5 : 0.62;
+    const at = (a: number, b: number, c: number, d: number) =>
+      (1 - t) ** 3 * a + 3 * (1 - t) ** 2 * t * b + 3 * (1 - t) * t ** 2 * c + t ** 3 * d;
     return {
-      edges,
-      positions,
-      width: Math.max(760, columnCount * 274 + 66),
-      height: Math.max(430, tallestColumn * 172 + 100),
+      d: `M ${sx} ${sy} C ${c1[0]} ${c1[1]}, ${c2[0]} ${c2[1]}, ${ex} ${ey}`,
+      labelX: at(sx, c1[0], c2[0], ex),
+      labelY: at(sy, c1[1], c2[1], ey),
     };
-  }, [value.steps]);
+  };
+  const triggerPreview = triggerText
+    .split("\n")
+    .map((item) => item.trim())
+    .filter(Boolean);
   const currentScenarioMedia: ReusableScenarioMedia[] = value.steps.flatMap(
     (step) =>
       step.type === "send_media"
@@ -274,9 +227,9 @@ function FlowBuilder({
     ],
     [reusableMedia, currentScenarioMedia],
   );
-  const issues = useMemo(
+  const issueEntries = useMemo(
     () =>
-      value.steps.flatMap((step, index) => {
+      value.steps.flatMap((step, index) => ((): string[] => {
         const prefix = `Paso ${index + 1}`;
         if (step.type === "send_text" && !step.body?.trim())
           return [`${prefix}: falta el mensaje.`];
@@ -331,8 +284,12 @@ function FlowBuilder({
             `${prefix}: hay una conexión que apunta a un paso eliminado.`,
           ];
         return [];
-      }),
+      })().map((text) => ({ id: step.id, text }))),
     [value.steps],
+  );
+  const issues = issueEntries.map((entry) => entry.text);
+  const issueByStep = new Map(
+    issueEntries.map((entry) => [entry.id, entry.text.replace(/^Paso \d+: /, "")]),
   );
 
   const updateStep = (id: string, patch: Partial<ScenarioStep>) =>
@@ -380,23 +337,14 @@ function FlowBuilder({
   };
   const targetOptions = (currentId: string) =>
     value.steps.filter((step) => step.id !== currentId);
-  const addStep = () => {
-    const step = blankStep(newStepType);
+  const addStepAfter = (afterId: string | undefined, type: ScenarioStep["type"]) => {
+    const step = blankStep(type);
     setStepSnapshot(value.steps);
-    setValue((current) => {
-      const selected = current.steps.find(
-        (candidate) => candidate.id === selectedStepId,
-      );
-      const steps = [...current.steps, step].map((candidate) =>
-        selected &&
-        candidate.id === selected.id &&
-        !selected.nextStepId &&
-        !["wait_reply", "send_options", "budget_recommendation", "end"].includes(selected.type)
-          ? { ...candidate, nextStepId: step.id }
-          : candidate,
-      );
-      return { ...current, steps };
-    });
+    setValue((current) => ({
+      ...current,
+      steps: insertStepAfter(current.steps, afterId, step),
+    }));
+    setPickerFor(null);
     setSelectedStepId(step.id);
     setStepEditorOpen(true);
   };
@@ -953,9 +901,10 @@ function FlowBuilder({
         <div>
           <p>ESCENARIO</p>
           <h1>
-            {initial ? value.name || "Escenario sin nombre" : "Nuevo escenario"}
+            {value.name || (initial ? "Escenario sin nombre" : "Nuevo escenario")}
           </h1>
           <span>
+            {!initial && "Sin guardar · "}
             {value.steps.length} pasos ·{" "}
             {issues.length
               ? `${issues.length} detalle${issues.length === 1 ? "" : "s"} por revisar`
@@ -984,13 +933,28 @@ function FlowBuilder({
           </button>
         </div>
       </header>
-      <button
-        type="button"
-        className="flow-settings-trigger"
-        onClick={() => setSettingsOpen(true)}
-      >
-        ⚙ Configuración del escenario
-      </button>
+      <div className="flow-settings-summary">
+        <button
+          type="button"
+          className="flow-settings-trigger"
+          onClick={() => setSettingsOpen(true)}
+        >
+          ⚙ Configuración del escenario
+        </button>
+        <span>
+          {triggerPreview.length ? (
+            <>
+              Inicia con{" "}
+              {triggerPreview.slice(0, 3).map((item) => (
+                <q key={item}>{item}</q>
+              ))}
+              {triggerPreview.length > 3 && ` y ${triggerPreview.length - 3} más`}
+            </>
+          ) : (
+            "Aún no tiene frases de inicio."
+          )}
+        </span>
+      </div>
       {settingsOpen && (
         <div
           className="scenario-modal"
@@ -1035,7 +999,7 @@ function FlowBuilder({
                 <textarea
                   value={triggerText}
                   onChange={(event) => setTriggerText(event.target.value)}
-                  placeholder="Hacen envíos\nEnvían a Veracruz"
+                  placeholder={"Hacen envíos\nEnvían a Veracruz"}
                   required
                 />
               </label>
@@ -1099,29 +1063,51 @@ function FlowBuilder({
             <div>
               <strong>Mapa del flujo</strong>
               <small>
-                Selecciona una tarjeta para editarla. Las líneas muestran las
-                conexiones reales; las punteadas son respuestas o rutas
-                alternativas.
+                Toca una tarjeta para editarla o «＋» para agregar el siguiente
+                paso ya conectado.
               </small>
             </div>
             <div className="flow-add">
-              <select
-                value={newStepType}
-                onChange={(event) =>
-                  setNewStepType(event.target.value as ScenarioStep["type"])
-                }
-              >
-                {Object.entries(labels).map(([type, label]) => (
-                  <option key={type} value={type}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              <button type="button" className="plain-button" onClick={addStep}>
-                ＋ Agregar paso
-              </button>
+              <span className="flow-legend" aria-hidden="true">
+                <i className="direct" /> continúa <i className="branch" /> opción
+                o respuesta
+              </span>
+              <div className="flow-add-anchor">
+                <button
+                  type="button"
+                  className="plain-button"
+                  aria-haspopup="menu"
+                  aria-expanded={pickerFor === "toolbar"}
+                  onClick={() =>
+                    setPickerFor((open) => (open === "toolbar" ? null : "toolbar"))
+                  }
+                >
+                  ＋ Agregar paso
+                </button>
+                {pickerFor === "toolbar" && (
+                  <StepTypePicker
+                    align="right"
+                    title={
+                      selectedStep
+                        ? `Agregar después de «${selectedStep.label}»`
+                        : "Agregar paso"
+                    }
+                    onClose={() => setPickerFor(null)}
+                    onPick={(type) => addStepAfter(selectedStep?.id, type)}
+                  />
+                )}
+              </div>
             </div>
           </header>
+          {flowGraph.unreachable.size > 0 && (
+            <p className="flow-warning" role="status">
+              ⚠ {flowGraph.unreachable.size === 1
+                ? "1 paso no está conectado"
+                : `${flowGraph.unreachable.size} pasos no están conectados`}
+              : ningún paso lleva a {flowGraph.unreachable.size === 1 ? "él" : "ellos"}, así que nunca se
+              enviará{flowGraph.unreachable.size === 1 ? "" : "n"}. Conéctalo desde otro paso o elimínalo.
+            </p>
+          )}
           <div className="flow-map-viewport">
             <div
               className="flow-map"
@@ -1146,39 +1132,103 @@ function FlowBuilder({
                     <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
                   </marker>
                 </defs>
-                {flowGraph.edges.map((edge) => {
-                  const source = flowGraph.positions.get(edge.from);
-                  const target = flowGraph.positions.get(edge.to);
-                  if (!source || !target) return null;
-                  const startX = source.x + 218;
-                  const startY = source.y + 54;
-                  const endX = target.x;
-                  const endY = target.y + 54;
-                  const curve = Math.max(55, (endX - startX) * 0.45);
-                  return (
-                    <g key={`${edge.from}-${edge.to}-${edge.label}`}>
+                {flowGraph.startId &&
+                  (() => {
+                    const first = flowGraph.positions.get(flowGraph.startId);
+                    if (!first) return null;
+                    const y = first.y + 44;
+                    return (
                       <path
-                        className={`flow-map-link ${edge.kind}`}
-                        d={`M ${startX} ${startY} C ${startX + curve} ${startY}, ${endX - curve} ${endY}, ${endX} ${endY}`}
+                        className="flow-map-link direct"
+                        d={`M ${24 + START_WIDTH} ${y} L ${first.x} ${y}`}
                       />
-                      <text x={(startX + endX) / 2} y={(startY + endY) / 2 - 9}>
-                        {edge.label}
-                      </text>
-                    </g>
+                    );
+                  })()}
+                {flowGraph.edges.map((edge) => {
+                  const geometry = edgeGeometry(edge);
+                  if (!geometry) return null;
+                  return (
+                    <path
+                      key={`${edge.from}-${edge.to}-${edge.kind}`}
+                      className={`flow-map-link ${edge.kind}`}
+                      d={geometry.d}
+                    />
                   );
                 })}
               </svg>
-              {value.steps.map((step) => {
+              {flowGraph.startId && (
+                <div
+                  className="flow-start-node"
+                  style={{
+                    left: 24,
+                    top: flowGraph.positions.get(flowGraph.startId)?.y || 36,
+                    width: START_WIDTH,
+                  }}
+                >
+                  <b>▶ Inicio</b>
+                  <small>Cuando el cliente escribe:</small>
+                  {triggerPreview.length ? (
+                    triggerPreview
+                      .slice(0, 2)
+                      .map((item) => <q key={item}>{item}</q>)
+                  ) : (
+                    <em>Sin frases de inicio</em>
+                  )}
+                  <button type="button" onClick={() => setSettingsOpen(true)}>
+                    {triggerPreview.length > 2
+                      ? `+${triggerPreview.length - 2} · Editar frases`
+                      : "Editar frases"}
+                  </button>
+                </div>
+              )}
+              {flowGraph.edges.map((edge) => {
+                const geometry = edgeGeometry(edge);
+                if (!geometry || edge.kind === "direct") return null;
+                return (
+                  <span
+                    key={`label-${edge.from}-${edge.to}-${edge.kind}`}
+                    className={`flow-edge-label ${edge.kind}`}
+                    style={{ left: geometry.labelX, top: geometry.labelY }}
+                    title={edge.labels.join("\n")}
+                  >
+                    {edgeLabel(edge)}
+                  </span>
+                );
+              })}
+              {flowGraph.unreachable.size > 0 && (
+                <div
+                  className="flow-orphan-lane"
+                  style={{ top: flowGraph.orphanTop, width: flowGraph.width }}
+                >
+                  Pasos sin conexión
+                </div>
+              )}
+              {value.steps.map((step, index) => {
                 const position = flowGraph.positions.get(step.id) || {
                   x: 44,
                   y: 48,
                 };
+                const unreachable = flowGraph.unreachable.has(step.id);
+                const issue = issueByStep.get(step.id);
+                const optionCount = (step.options || []).filter((option) =>
+                  option.title.trim(),
+                ).length;
                 return (
                   <article
                     key={step.id}
-                    className={`flow-map-node${selectedStep?.id === step.id ? " selected" : ""}${draggingStepId === step.id ? " dragging" : ""}`}
-                    style={{ left: position.x, top: position.y }}
+                    className={`flow-map-node${selectedStep?.id === step.id ? " selected" : ""}${draggingStepId === step.id ? " dragging" : ""}${unreachable ? " unreachable" : ""}${issue ? " has-issue" : ""}${pickerFor === step.id ? " picker-open" : ""}`}
+                    style={{ left: position.x, top: position.y, width: NODE_WIDTH, minHeight: NODE_HEIGHT }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Paso ${index + 1}: ${step.label}. ${labels[step.type]}. Editar`}
                     onClick={() => openStepEditor(step.id)}
+                    onKeyDown={(event) => {
+                      if (event.target !== event.currentTarget) return;
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openStepEditor(step.id);
+                      }
+                    }}
                     onDragOver={(event) => event.preventDefault()}
                     onDrop={(event) => dropStep(event, step.id)}
                   >
@@ -1186,6 +1236,7 @@ function FlowBuilder({
                       type="button"
                       className="flow-drag"
                       draggable
+                      onClick={(event) => event.stopPropagation()}
                       onDragStart={(event) => {
                         event.dataTransfer.effectAllowed = "move";
                         event.dataTransfer.setData(
@@ -1195,40 +1246,74 @@ function FlowBuilder({
                         setDraggingStepId(step.id);
                       }}
                       onDragEnd={() => setDraggingStepId(null)}
-                      title="Arrastra para reordenar"
+                      title="Arrastra para cambiar el orden de la lista"
+                      aria-label="Mover"
                     >
                       ⠿
                     </button>
                     <span className="flow-node-icon">{icons[step.type]}</span>
                     <div>
-                      <small>{labels[step.type]}</small>
+                      <small>
+                        {index + 1} · {labels[step.type]}
+                      </small>
                       <strong>{step.label}</strong>
                       <em>
                         {step.type === "send_text"
-                          ? truncate(step.body, 45)
+                          ? truncate(step.body, 52)
                           : step.type === "send_media"
                             ? `${(step.items || []).length} archivo${(step.items || []).length === 1 ? "" : "s"}`
                             : step.type === "wait_reply"
-                              ? `${(step.branches || []).length} respuesta${(step.branches || []).length === 1 ? "" : "s"}`
+                              ? `${(step.branches || []).length} respuesta${(step.branches || []).length === 1 ? "" : "s"} posibles`
                               : step.type === "send_options"
-                              ? `${(step.options || []).filter((option) => option.title.trim()).length} opciones · ${truncate(step.body, 28)}`
-                              : step.type === "move_column"
-                                ? columns.find(
-                                    (column) => column.id === step.columnId,
-                                  )?.name || "Sin columna"
-                                : labels[step.type]}
+                                ? `${optionCount} opci${optionCount === 1 ? "ón" : "ones"} · ${truncate(step.body, 30)}`
+                                : step.type === "send_catalog"
+                                  ? step.caption?.trim() || "Catálogo del negocio"
+                                  : step.type === "budget_recommendation"
+                                    ? `${(step.budgetOptions || []).length} rangos de presupuesto`
+                                    : step.type === "move_column"
+                                      ? `A «${columns.find((column) => column.id === step.columnId)?.name || "sin columna"}»`
+                                      : "El escenario termina aquí"}
                       </em>
+                      {(issue || unreachable) && (
+                        <span className="flow-node-issue">
+                          ⚠ {issue || "Ningún paso llega aquí"}
+                        </span>
+                      )}
                     </div>
-                    <button
-                      type="button"
-                      className="flow-node-edit"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        openStepEditor(step.id);
-                      }}
-                    >
-                      Editar
-                    </button>
+                    {step.type !== "end" && (
+                      <button
+                        type="button"
+                        className="flow-node-add"
+                        aria-label={`Agregar paso después de ${step.label}`}
+                        title="Agregar paso después"
+                        aria-haspopup="menu"
+                        aria-expanded={pickerFor === step.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedStepId(step.id);
+                          setPickerAnchor(event.currentTarget.getBoundingClientRect());
+                          setPickerFor((open) => (open === step.id ? null : step.id));
+                        }}
+                      >
+                        ＋
+                      </button>
+                    )}
+                    {pickerFor === step.id && (
+                      <StepTypePicker
+                        anchor={pickerAnchor}
+                        title={`Después de «${step.label}»`}
+                        note={
+                          step.type === "send_options" &&
+                          (step.options || []).every((option) => option.nextStepId)
+                            ? "Todas las opciones ya tienen destino: el paso nuevo quedará sin conectar hasta que lo elijas en una opción."
+                            : step.type === "wait_reply"
+                              ? "Se agregará como una respuesta nueva; escribe sus frases en el paso «Esperar respuesta»."
+                              : undefined
+                        }
+                        onClose={() => setPickerFor(null)}
+                        onPick={(type) => addStepAfter(step.id, type)}
+                      />
+                    )}
                   </article>
                 );
               })}
@@ -1245,10 +1330,14 @@ function FlowBuilder({
               <header>
                 <div>
                   <p>
+                    <span className="flow-inspector-type" aria-hidden="true">
+                      {icons[selectedStep.type]}
+                    </span>
                     PASO{" "}
                     {value.steps.findIndex(
                       (step) => step.id === selectedStep.id,
-                    ) + 1}
+                    ) + 1}{" "}
+                    · {labels[selectedStep.type]}
                   </p>
                   <h2>{selectedStep.label}</h2>
                 </div>
@@ -1274,7 +1363,7 @@ function FlowBuilder({
                 />
               </label>
               <label>
-                Acción
+                Tipo de paso
                 <select
                   value={selectedStep.type}
                   onChange={(event) => {
@@ -1335,6 +1424,12 @@ function FlowBuilder({
                     }
                     placeholder="Escribe el mensaje que recibirá el cliente"
                   />
+                  <span className="wa-preview" aria-label="Vista previa">
+                    <small>Así lo verá el cliente</small>
+                    <span className="wa-bubble">
+                      {selectedStep.body?.trim() || "Escribe el mensaje…"}
+                    </span>
+                  </span>
                 </label>
               )}
               {selectedStep.type === "send_catalog" && (
@@ -1351,6 +1446,15 @@ function FlowBuilder({
                       placeholder="Opcional"
                     />
                   </label>
+                  <span className="wa-preview" aria-label="Vista previa">
+                    <small>Así lo verá el cliente</small>
+                    <span className="wa-bubble wa-document">
+                      <b>📄 Catálogo (PDF)</b>
+                      {selectedStep.caption?.trim() && (
+                        <span>{selectedStep.caption}</span>
+                      )}
+                    </span>
+                  </span>
                   <label className="scenario-active-toggle">
                     <input
                       type="checkbox"
@@ -1497,7 +1601,7 @@ function FlowBuilder({
               )}
               {!["wait_reply", "send_options", "end"].includes(selectedStep.type) && (
                 <label>
-                  Después, continuar en
+                  Qué sigue después
                   <select
                     value={selectedStep.nextStepId || ""}
                     onChange={(event) =>
@@ -1662,6 +1766,16 @@ function FlowBuilder({
   );
 }
 
+const draftFromChoice = (choice: NewScenarioChoice): Draft => ({
+  name: choice.name,
+  isActive: choice.isActive,
+  triggerExamples: choice.triggers,
+  aiDescription: choice.aiDescription,
+  priority: 0,
+  canInterrupt: true,
+  steps: instantiateSteps(choice.template, stepId),
+});
+
 export function ScenariosPanel({
   scenarios,
   columns,
@@ -1673,7 +1787,8 @@ export function ScenariosPanel({
   const [selectedId, setSelectedId] = useState<string | null>(
     scenarios[0]?.id || null,
   );
-  const [creating, setCreating] = useState(false);
+  // false: sin crear · "start": eligiendo punto de partida · Draft: editando el nuevo.
+  const [creating, setCreating] = useState<false | "start" | Draft>(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(true);
@@ -1730,7 +1845,7 @@ export function ScenariosPanel({
           className="primary-action"
           type="button"
           onClick={() => {
-            setCreating(true);
+            setCreating("start");
             setSelectedId(null);
           }}
         >
@@ -1786,9 +1901,15 @@ export function ScenariosPanel({
           </aside>
         )}
         <div className="scenario-studio-editor">
-          {creating ? (
+          {creating === "start" ? (
+            <NewScenarioStart
+              onCancel={() => setCreating(false)}
+              onCreate={(choice) => setCreating(draftFromChoice(choice))}
+            />
+          ) : creating ? (
             <FlowBuilder
               key="new"
+              initialDraft={creating}
               columns={columns}
               entrepreneurPackages={entrepreneurPackages}
               reusableMedia={reusableMedia}
