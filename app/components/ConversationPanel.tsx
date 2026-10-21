@@ -14,6 +14,7 @@ import { StoreOrders } from "./StoreOrders";
 import { ChatSaleModal } from "./ChatSaleModal";
 import { CtaUrlCard } from "./CtaUrlCard";
 import { InteractiveOptionsCard } from "./InteractiveOptionsCard";
+import { InventoryQuickSearch } from "./InventoryQuickSearch";
 import optionStyles from "./InteractiveOptions.module.css";
 import { ToolAccordion } from "./ToolAccordion";
 import { WhatsAppTemplateCard } from "./WhatsAppTemplateCard";
@@ -44,6 +45,8 @@ export function ConversationPanel(props: Props) {
 const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, documentOptions, selectedDocumentId, documentCaption, onDraftChange, onSendQuickReplyCta, onSendText, replyToMessage, onReplyToChange, onUploadAudio, onUploadImage, onUploadVideo, onUploadDocument, onRemovePendingImage, onDocumentChange, onDocumentCaptionChange, onSendDocument, onSendCtaUrl, entrepreneurPackages, quickReplies, stickers, onSendEntrepreneurPackages, onSendSticker, onRecordAudio, onAutoReplyChange, onScenarioChange, automationIntents, onLearnIntent, onReact, onDeleteMessage, columns, onMoveLead, onDeleteConversation, onClose, onMobileBack } = props;
   const [mobile, setMobile] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [inventoryOpen, setInventoryOpen] = useState(false);
+  const inventoryRef = useRef<HTMLDivElement>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const optionsRef = useRef<HTMLDivElement>(null);
   const optionsToggle = useRef<HTMLButtonElement>(null);
@@ -62,8 +65,14 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
   const bundles = useMemo(() => entrepreneurPackages.filter((item) => item.controlBundleId != null), [entrepreneurPackages]);
   const images = useMemo(() => entrepreneurPackages.filter((item) => item.controlBundleId == null), [entrepreneurPackages]);
   useEffect(() => { if (!chat?.id || !messages.length || lastChatId.current === chat.id) return; const frame = requestAnimationFrame(() => { threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight }); lastChatId.current = chat.id; }); return () => cancelAnimationFrame(frame); }, [chat?.id, messages.length]);
-  useEffect(() => { let active = true; queueMicrotask(() => { if (!active) return; setSelectedSavedImageIds([]); setChatMenuOpen(false); setOptionsOpen(false); setToolsOpen(false); setMenuId(null); setShippingOpen(false); setSaleModalOpen(false); setBundlePickerOpen(false); }); return () => { active = false; }; }, [chat?.id]);
+  useEffect(() => { let active = true; queueMicrotask(() => { if (!active) return; setSelectedSavedImageIds([]); setChatMenuOpen(false); setOptionsOpen(false); setInventoryOpen(false); setToolsOpen(false); setMenuId(null); setShippingOpen(false); setSaleModalOpen(false); setBundlePickerOpen(false); }); return () => { active = false; }; }, [chat?.id]);
   useEffect(() => { let active = true; queueMicrotask(() => { if (active && (shippingOpen || saleModalOpen || bundlePickerOpen)) setToolsOpen(false); }); return () => { active = false; }; }, [shippingOpen, saleModalOpen, bundlePickerOpen]);
+  useEffect(() => {
+    if (!inventoryOpen || mobile) return;
+    const close = (event: PointerEvent) => { if (!inventoryRef.current?.contains(event.target as Node)) setInventoryOpen(false); };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [inventoryOpen, mobile]);
   useEffect(() => {
     if (!optionsOpen || mobile) return;
     const close = (event: PointerEvent) => { if (!optionsRef.current?.contains(event.target as Node)) setOptionsOpen(false); };
@@ -141,6 +150,13 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
         <b className="avatar">{chat ? initials(chat.name || chat.phone_number) : "M"}</b>
         <div className="chat-title"><h2>{chat ? chat.name || chat.phone_number : "Merlyn Seller"}</h2><small>{chat?.phone_number || "Tu espacio de atención al cliente"}</small></div>
         {chat && <div className="inbox-chat-header-actions">
+          <div className="inbox-options-anchor" ref={inventoryRef}>
+            <button className="inbox-icon-button inbox-inventory-trigger" type="button" title="Buscar disponibilidad en inventario" aria-label="Buscar disponibilidad en inventario" aria-expanded={inventoryOpen} onClick={() => setInventoryOpen(value => !value)}><ChatIcon name="inventory" /><span>Inventario</span></button>
+            {inventoryOpen && !mobile && <div className="inbox-options-popover inventory-quick-popover" role="dialog" aria-label="Disponibilidad de inventario" onKeyDown={event => { if (event.key === "Escape") setInventoryOpen(false); }}>
+              <p className="inbox-options-title">Disponibilidad</p>
+              <InventoryQuickSearch onInsert={text => { onDraftChange(draft.trim() ? `${draft.trimEnd()}\n${text}` : text); setInventoryOpen(false); }} />
+            </div>}
+          </div>
           {!onClose && <button className="inbox-icon-button inbox-tools-trigger" type="button" ref={toolsToggle} title="Herramientas del chat" aria-label="Herramientas del chat" aria-expanded={mobile ? toolsOpen : !toolsCollapsed} aria-controls={toolsId} onClick={() => { if (mobile) setToolsOpen(value => !value); else setToolsCollapsed(value => !value); }}><ChatIcon name="tools" /><span>Herramientas</span></button>}
           <div className="inbox-options-anchor" ref={optionsRef}>
             <button className="inbox-icon-button" type="button" ref={optionsToggle} title="Opciones de conversación" aria-label="Opciones de conversación" aria-expanded={optionsOpen} aria-controls={optionsId} onClick={() => setOptionsOpen(value => !value)}><ChatIcon name="more" /></button>
@@ -182,6 +198,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
           </article>
         </Fragment>)}
       </div>
+      {inventoryOpen && mobile && <MobileChatSheet title="Disponibilidad" onClose={() => setInventoryOpen(false)}><InventoryQuickSearch autoFocus={false} onInsert={text => { onDraftChange(draft.trim() ? `${draft.trimEnd()}\n${text}` : text); setInventoryOpen(false); }} /></MobileChatSheet>}
       {bundlePickerOpen && <div className="bundle-picker-backdrop" onMouseDown={() => setBundlePickerOpen(false)}><section className="bundle-picker-modal" role="dialog" aria-modal="true" aria-label="Enviar bundle" onMouseDown={event => event.stopPropagation()}><header><h2>Enviar bundle</h2><button type="button" aria-label="Cerrar selección de bundles" onClick={() => setBundlePickerOpen(false)}>×</button></header>{bundles.map(item => <label key={item.id}><input type="checkbox" checked={bundleIds.includes(item.id)} onChange={() => setBundleIds(current => current.includes(item.id) ? current.filter(id => id !== item.id) : [...current, item.id])} /> {item.name} · {item.images.length} fotografías</label>)}<footer><button type="button" className="plain-button" onClick={() => setBundlePickerOpen(false)}>Cancelar</button><button type="button" disabled={!bundleIds.length} onClick={() => void submitBundles()}>Enviar fotografías</button></footer></section></div>}
       <div className="chat-compose-area">
         <form className="composer compact-composer" onSubmit={onSendText}>

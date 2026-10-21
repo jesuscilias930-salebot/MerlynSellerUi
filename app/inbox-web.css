@@ -202,3 +202,34 @@
 @media (hover: none) {
   .inbox-shell .message-more-button { opacity: 1; }
 }
+
+/* Búsqueda rápida de inventario en el chat */
+.inbox-inventory-trigger { width: auto; border-radius: 8px; padding: 0 10px; font-size: 12px; }
+@media (max-width: 1100px) { .inbox-inventory-trigger span { display: none; } .inbox-inventory-trigger { width: 40px; padding: 0; } }
+.inventory-quick-popover { width: 420px; padding: 14px; }
+.inventory-quick { display: grid; gap: 10px; text-align: left; }
+.inventory-quick-input input { width: 100%; min-height: 40px; padding: 8px 12px; border: 1px solid #cfdcd5; border-radius: 10px; background: #fff; color: #1f2a30; font: inherit; font-size: 14px; }
+.inventory-quick-input input:focus { border-color: #087f5b; outline: 2px solid #087f5b33; }
+.inventory-quick-hint { margin: 0; color: #66766e; font-size: 12px; line-height: 1.45; }
+.inventory-quick-error { margin: 0; padding: 8px 10px; border-radius: 8px; background: #fff1f2; color: #b42332; font-size: 12px; }
+.inventory-quick-error button, .inventory-quick-footer button { padding: 0; border: 0; background: none; color: #087f5b; font: inherit; font-weight: 700; cursor: pointer; }
+.inventory-quick ul { display: grid; gap: 2px; max-height: min(52vh, 380px); overflow: auto; margin: 0; padding: 0; list-style: none; }
+.inventory-quick li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 8px; border-radius: 9px; }
+.inventory-quick li.active { background: #f0f6f3; }
+.inventory-quick-kind { font-size: 16px; text-align: center; }
+.inventory-quick-copy { display: grid; min-width: 0; }
+.inventory-quick-copy b, .inventory-quick-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inventory-quick-copy b { color: #1f2a30; font-size: 13px; }
+.inventory-quick-copy small { color: #66766e; font-size: 11px; }
+.inventory-quick-stock { padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.inventory-quick-stock.ready { background: #e3f5ea; color: #0b6b44; }
+.inventory-quick-stock.low { background: #fff4dc; color: #8a5a00; }
+.inventory-quick-stock.empty { background: #fde8ea; color: #b42332; }
+.inventory-quick li > button { padding: 5px 9px; border: 1px solid #cfe0d5; border-radius: 8px; background: #fff; color: #087f5b; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.inventory-quick li > button:hover { background: #087f5b; border-color: #087f5b; color: #fff; }
+.inventory-quick-footer { display: flex; justify-content: space-between; gap: 8px; color: #8a978f; font-size: 11px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 520px) {
+  .inventory-quick li { grid-template-columns: 22px minmax(0, 1fr) auto; }
+  .inventory-quick li > button { grid-column: 2 / -1; justify-self: start; }
+}

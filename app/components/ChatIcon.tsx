@@ -1,5 +1,6 @@
-type Name = "search" | "new" | "filter" | "tools" | "more" | "back" | "close" | "attach" | "send" | "audio" | "chat";
+type Name = "inventory" | "search" | "new" | "filter" | "tools" | "more" | "back" | "close" | "attach" | "send" | "audio" | "chat";
 const paths: Record<Name, React.ReactNode> = {
+  inventory: <><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z" /><path d="m3 7.5 9 4.5 9-4.5M12 12v9" /></>,
   search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></>,
   new: <><path d="M14 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9M15 3l6 6M11 13l2-5 5-5 3 3-5 5-5 2Z" /></>,
   filter: <><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none" /><circle cx="16" cy="12" r="2" fill="currentColor" stroke="none" /><circle cx="10" cy="18" r="2" fill="currentColor" stroke="none" /></>,
