@@ -44,6 +44,9 @@ export function ScenarioOptionsStep({ step, targets, onChange }: Props) {
       options: template.options.map(option => ({ ...option, nextStepId: destinations.get(option.title.trim().toLocaleLowerCase("es")) })),
     });
   };
+  const setAllDestinations = (nextStepId: string) => onChange({
+    options: options.map(option => option.title.trim() && !option.nextStepId ? { ...option, nextStepId } : option),
+  });
   const setDestination = (index: number, nextStepId: string) => onChange({
     options: options.map((option, position) => position === index ? { ...option, nextStepId: nextStepId || undefined } : option),
   });
@@ -59,10 +62,17 @@ export function ScenarioOptionsStep({ step, targets, onChange }: Props) {
     <InteractiveOptionsEditor value={message} onChange={setMessage} compact />
     {started && <InteractiveOptionsErrors errors={errors} />}
     <div className="flow-branches">
-      <strong>Si el cliente elige…</strong>
-      <small>La opción tocada se reconoce exactamente. Si el cliente escribe en lugar de tocar, se compara con el texto de cada opción y, si no coincide, se usa la respuesta de abajo o pasa a Requiere atención.</small>
+      <strong>Siguiente paso</strong>
+      <small>Cada opción puede seguir su propio camino. También puedes arrastrar en el lienzo desde el punto de una opción hasta el paso que quieras. Si conectas a «Esperar respuesta», la opción elegida se evalúa con las respuestas de ese paso.</small>
+      <label>
+        Todas las opciones sin destino continúan en
+        <select value="" onChange={event => { if (event.target.value) setAllDestinations(event.target.value); }} disabled={!options.some(option => option.title.trim() && !option.nextStepId)}>
+          <option value="">{options.some(option => option.title.trim() && !option.nextStepId) ? "Elegir un paso…" : "Todas las opciones ya tienen destino"}</option>
+          {targets.map(target => <option key={target.id} value={target.id}>{target.label}</option>)}
+        </select>
+      </label>
       {options.map((option, index) => option.title.trim() ? <label key={index}>
-        «{option.title.trim()}» continuar en
+        Si elige «{option.title.trim()}»
         <select value={option.nextStepId || ""} onChange={event => setDestination(index, event.target.value)}>
           <option value="">Terminar escenario (lo atiende el equipo)</option>
           {targets.map(target => <option key={target.id} value={target.id}>{target.label}</option>)}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from "react";
 
-export type FlowCanvasHandle = { fit: () => void; centerOn: (x: number, y: number) => void };
+export type FlowCanvasHandle = { fit: () => void; centerOn: (x: number, y: number) => void; toWorld: (clientX: number, clientY: number) => { x: number; y: number } };
 type View = { x: number; y: number; k: number };
 type Props = {
   width: number;
@@ -60,6 +60,12 @@ export function FlowCanvas({ width, height, fitKey, children, overlay, handle, f
       const rect = viewport.current?.getBoundingClientRect();
       if (!rect) return;
       setView(current => ({ ...current, x: rect.width / 2 - x * current.k, y: rect.height / 2 - y * current.k }));
+    },
+    // Convierte coordenadas de pantalla a coordenadas del lienzo (para arrastrar conexiones).
+    toWorld: (clientX, clientY) => {
+      const rect = viewport.current?.getBoundingClientRect();
+      const current = viewRef.current;
+      return { x: (clientX - (rect?.left || 0) - current.x) / current.k, y: (clientY - (rect?.top || 0) - current.y) / current.k };
     },
   }), [fit]);
 

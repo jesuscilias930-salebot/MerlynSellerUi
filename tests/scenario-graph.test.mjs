@@ -62,3 +62,19 @@ test('las plantillas generan ids únicos y conexiones válidas', () => {
     assert.equal(buildFlowGraph(created).unreachable.size, 0, template.id);
   }
 });
+
+import { connectSteps, disconnectStep } from '../app/lib/scenario-graph.ts';
+test('arrastrar conecta y desconecta salidas', () => {
+  const linked = connectSteps(steps, { stepId: 'b', port: 3 }, 'x');
+  assert.equal(linked.find(s => s.id === 'b').options[3].nextStepId, 'x');
+  assert.equal(buildFlowGraph(linked).unreachable.size, 0, 'el huérfano queda conectado');
+  assert.equal(connectSteps(steps, { stepId: 'c' }, 'x').find(s => s.id === 'c').nextStepId, 'x');
+  assert.equal(connectSteps(steps, { stepId: 'c' }, 'c'), steps, 'no se conecta consigo mismo');
+  assert.equal(connectSteps(steps, { stepId: 'e' }, 'a').find(s => s.id === 'e').nextStepId, undefined, 'Finalizar no tiene salida');
+  assert.deepEqual(connectSteps(steps, { stepId: '__start__' }, 'x').map(s => s.id)[0], 'x', 'desde el inicio cambia el primer paso');
+  const wait = [{ id: 'w', type: 'wait_reply', label: 'W', branches: [{ id: 'r', name: 'Sí', examples: ['si'], nextStepId: '' }] }, { id: 'z', type: 'end', label: 'Z' }];
+  assert.equal(connectSteps(wait, { stepId: 'w', port: 0 }, 'z')[0].branches[0].nextStepId, 'z');
+  assert.equal(connectSteps(wait, { stepId: 'w', port: -1 }, 'z')[0].fallbackStepId, 'z');
+  assert.equal(disconnectStep(linked, 'b', 3).find(s => s.id === 'b').options[3].nextStepId, undefined);
+  assert.equal(disconnectStep(steps, 'a').find(s => s.id === 'a').nextStepId, undefined);
+});

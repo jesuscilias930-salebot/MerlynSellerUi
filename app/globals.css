@@ -8847,3 +8847,18 @@ article.inbound:hover .message-reaction-picker, .message-reaction-picker:focus-w
 .merlyn-app .flow-workspace .wf-name:focus { border-color: var(--wf-accent) !important; background: var(--wf-bg) !important; }
 .merlyn-app .flow-workspace :is(.wf-button, .wf-icon-button) { border: 1px solid var(--wf-bar-border); background: transparent; color: var(--wf-text); }
 .merlyn-app .flow-workspace .wf-icon-button.wf-danger:hover { border-color: var(--wf-danger); color: var(--wf-danger); }
+/* Conexiones por arrastre */
+.wf-handle.out { pointer-events: auto; cursor: crosshair; }
+.wf-handle.out::before { content: ""; position: absolute; inset: -9px; border-radius: 50%; }
+.wf-handle.out:hover { background: var(--wf-accent); transform: translateY(-50%) scale(1.35); }
+.wf-node.linking { cursor: copy; }
+.wf-node.link-target { border: 2px solid var(--wf-accent); box-shadow: 0 0 0 5px color-mix(in srgb, var(--wf-accent) 25%, transparent); }
+.wf-node.link-target .wf-handle.in { background: var(--wf-accent); transform: translateY(-50%) scale(1.5); }
+.wf-link-draft { stroke: var(--wf-accent); stroke-dasharray: 6 5; opacity: .85; }
+.wf-link-draft.ready { stroke-dasharray: none; opacity: 1; }
+.wf-link.hover { stroke: var(--wf-accent); stroke-width: 3; }
+.wf-link-hit { fill: none; stroke: transparent; stroke-width: 16; pointer-events: stroke; cursor: pointer; }
+.wf-edge-remove { position: absolute; z-index: 4; display: grid; width: 24px; height: 24px; padding: 0; place-items: center; border: 1px solid var(--wf-danger); border-radius: 50%; background: var(--wf-panel); color: var(--wf-danger); font: inherit; font-size: 12px; font-weight: 900; cursor: pointer; transform: translate(-50%, -50%); }
+.wf-edge-remove:hover { background: var(--wf-danger); color: #fff; }
+.wf-stub-add { cursor: crosshair; }
+.flow-inspector .flow-branches > small { color: var(--muted); font-size: 12px; font-weight: 500; line-height: 1.45; opacity: 1; }

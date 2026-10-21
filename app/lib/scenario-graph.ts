@@ -178,3 +178,37 @@ export function insertStepAfter(steps: ScenarioStep[], afterId: string | undefin
   next.splice(index + 1, 0, inserted);
   return next;
 }
+
+/** Origen de una conexión: el paso y su salida (`undefined` = salida única; -1 = «si no entiende»). */
+export type LinkSource = { stepId: string; port?: number } | { stepId: "__start__" };
+
+/** Conecta una salida con un paso destino. Desde el inicio, el destino pasa a ser el primer paso. */
+export function connectSteps(steps: ScenarioStep[], source: LinkSource, targetId: string): ScenarioStep[] {
+  if (!steps.some(step => step.id === targetId)) return steps;
+  if (source.stepId === "__start__") {
+    const target = steps.find(step => step.id === targetId) as ScenarioStep;
+    return [target, ...steps.filter(step => step.id !== targetId)];
+  }
+  if (source.stepId === targetId) return steps;
+  const port = "port" in source ? source.port : undefined;
+  return steps.map(step => {
+    if (step.id !== source.stepId) return step;
+    if (port === -1) return { ...step, fallbackStepId: targetId };
+    if (port === undefined) return hasNext(step) ? { ...step, nextStepId: targetId } : step;
+    if (step.type === "send_options") return { ...step, options: (step.options || []).map((option, index) => index === port ? { ...option, nextStepId: targetId } : option) };
+    if (step.type === "wait_reply") return { ...step, branches: (step.branches || []).map((branch, index) => index === port ? { ...branch, nextStepId: targetId } : branch) };
+    return step;
+  });
+}
+
+/** Quita la conexión de una salida. */
+export function disconnectStep(steps: ScenarioStep[], stepId: string, port?: number): ScenarioStep[] {
+  return steps.map(step => {
+    if (step.id !== stepId) return step;
+    if (port === -1) return { ...step, fallbackStepId: undefined };
+    if (port === undefined) return { ...step, nextStepId: undefined };
+    if (step.type === "send_options") return { ...step, options: (step.options || []).map((option, index) => index === port ? { ...option, nextStepId: undefined } : option) };
+    if (step.type === "wait_reply") return { ...step, branches: (step.branches || []).map((branch, index) => index === port ? { ...branch, nextStepId: "" } : branch) };
+    return step;
+  });
+}

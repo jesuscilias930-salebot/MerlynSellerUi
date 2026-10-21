@@ -2,8 +2,10 @@
 
 import {
   ChangeEvent,
+  type CSSProperties,
   DragEvent,
   FormEvent,
+  type PointerEvent as ReactPointerEvent,
   useEffect,
   useMemo,
   useRef,
@@ -14,7 +16,7 @@ import ScenarioCodexConnection from "./ScenarioCodexConnection";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { StepTypePicker } from "./StepTypePicker";
 import { NewScenarioStart, type NewScenarioChoice } from "./NewScenarioStart";
-import { buildFlowGraph, hasNext, INPUT_Y, insertStepAfter, NODE_WIDTH, outputY, START_HEIGHT, START_WIDTH, stepPorts } from "../lib/scenario-graph";
+import { buildFlowGraph, connectSteps, disconnectStep, hasNext, INPUT_Y, insertStepAfter, NODE_WIDTH, outputY, START_HEIGHT, START_WIDTH, stepPorts, type LinkSource } from "../lib/scenario-graph";
 import { FlowCanvas, type FlowCanvasHandle } from "./FlowCanvas";
 import { instantiateSteps } from "../lib/scenario-templates";
 import { ScenarioOptionsStep, stepOptionsIssue } from "./ScenarioOptionsStep";
@@ -200,6 +202,17 @@ function FlowBuilder({
     try { return localStorage.getItem("merlyn.flowTheme") === "light" ? "light" : "dark"; } catch { return "dark"; }
   });
   const canvas = useRef<FlowCanvasHandle>(null);
+  // Conexión que se está arrastrando desde una salida (coordenadas del lienzo).
+  const [linking, setLinking] = useState<{
+    source: LinkSource;
+    sx: number;
+    sy: number;
+    x: number;
+    y: number;
+    over: string | null;
+  } | null>(null);
+  const linkMoved = useRef(false);
+  const [hoverEdge, setHoverEdge] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saveError, setSaveError] = useState("");
@@ -221,13 +234,93 @@ function FlowBuilder({
     const drop = Math.max(sy, ey) + 90;
     return `M ${sx} ${sy} C ${sx + 90} ${sy}, ${sx + 90} ${drop}, ${(sx + ex) / 2} ${drop} S ${ex - 90} ${ey}, ${ex} ${ey}`;
   };
-  const edgePath = (edge: (typeof flowGraph.edges)[number]) => {
+  const edgeEnds = (edge: (typeof flowGraph.edges)[number]) => {
     const source = flowGraph.positions.get(edge.from);
     const target = flowGraph.positions.get(edge.to);
     const step = value.steps.find((item) => item.id === edge.from);
     if (!source || !target || !step) return null;
-    return curve(source.x + NODE_WIDTH, source.y + outputY(step, edge.port), target.x, target.y + INPUT_Y);
+    const sx = source.x + NODE_WIDTH;
+    const sy = source.y + outputY(step, edge.port);
+    const ex = target.x;
+    const ey = target.y + INPUT_Y;
+    return {
+      d: curve(sx, sy, ex, ey),
+      mx: (sx + ex) / 2,
+      my: ex > sx + 20 ? (sy + ey) / 2 : Math.max(sy, ey) + 90,
+      step,
+    };
   };
+  const edgePath = (edge: (typeof flowGraph.edges)[number]) => edgeEnds(edge)?.d || null;
+  const stepIdAt = (clientX: number, clientY: number) =>
+    (document.elementFromPoint(clientX, clientY) as HTMLElement | null)
+      ?.closest("[data-step-id]")
+      ?.getAttribute("data-step-id") || null;
+  /**
+   * Arrastrar desde una salida: soltar sobre un paso lo conecta; soltar en el
+   * vacío abre el menú para crear un paso nuevo ya conectado. Un clic sin
+   * arrastrar ejecuta `onClick` (p. ej. abrir el menú del «＋»).
+   */
+  const startLink = (
+    event: ReactPointerEvent<HTMLElement>,
+    source: LinkSource,
+    sx: number,
+    sy: number,
+  ) => {
+    if (event.button !== 0) return;
+    event.stopPropagation();
+    event.preventDefault();
+    const element = event.currentTarget;
+    element.setPointerCapture(event.pointerId);
+    const origin = { x: event.clientX, y: event.clientY };
+    linkMoved.current = false;
+    const move = (moveEvent: PointerEvent) => {
+      if (!linkMoved.current && Math.hypot(moveEvent.clientX - origin.x, moveEvent.clientY - origin.y) < 6) return;
+      linkMoved.current = true;
+      const point = canvas.current?.toWorld(moveEvent.clientX, moveEvent.clientY) || { x: sx, y: sy };
+      const over = stepIdAt(moveEvent.clientX, moveEvent.clientY);
+      setLinking({ source, sx, sy, x: point.x, y: point.y, over: over && over !== source.stepId ? over : null });
+    };
+    const finish = (upEvent: PointerEvent) => {
+      element.removeEventListener("pointermove", move);
+      element.removeEventListener("pointerup", finish);
+      element.removeEventListener("pointercancel", cancel);
+      setLinking(null);
+      if (!linkMoved.current) return;
+      const target = stepIdAt(upEvent.clientX, upEvent.clientY);
+      if (target && target !== source.stepId) {
+        setValue((current) => ({ ...current, steps: connectSteps(current.steps, source, target) }));
+        return;
+      }
+      if (source.stepId === "__start__") return;
+      // Soltó en el vacío: crear un paso nuevo conectado a esa salida.
+      const port = "port" in source ? source.port : undefined;
+      setSelectedStepId(source.stepId);
+      setPickerAnchor(new DOMRect(upEvent.clientX, upEvent.clientY, 0, 0));
+      setPickerPort(port);
+      setPickerFor(`${source.stepId}:${port ?? "next"}:drop`);
+    };
+    const cancel = () => {
+      element.removeEventListener("pointermove", move);
+      element.removeEventListener("pointerup", finish);
+      element.removeEventListener("pointercancel", cancel);
+      setLinking(null);
+    };
+    element.addEventListener("pointermove", move);
+    element.addEventListener("pointerup", finish);
+    element.addEventListener("pointercancel", cancel);
+  };
+  const outHandle = (source: LinkSource, sx: number, sy: number, style: CSSProperties, label: string) => (
+    <span
+      className="wf-handle out"
+      style={style}
+      role="button"
+      tabIndex={-1}
+      aria-label={`Arrastra para conectar «${label}» con otro paso`}
+      title="Arrastra hasta otro paso para conectarlo"
+      onPointerDown={(event) => startLink(event, source, sx, sy)}
+      onClick={(event) => event.stopPropagation()}
+    />
+  );
   const triggerPreview = triggerText
     .split("\n")
     .map((item) => item.trim())
@@ -954,8 +1047,17 @@ function FlowBuilder({
         title="Agregar paso"
         aria-haspopup="menu"
         aria-expanded={pickerFor === key}
+        onPointerDown={(event) => {
+          const position = flowGraph.positions.get(stepIdForPicker);
+          if (!position) return;
+          startLink(event, { stepId: stepIdForPicker, port }, position.x + NODE_WIDTH, position.y + y);
+        }}
         onClick={(event) => {
           event.stopPropagation();
+          if (linkMoved.current) {
+            linkMoved.current = false;
+            return;
+          }
           setSelectedStepId(stepIdForPicker);
           openPicker(key, event.currentTarget, port);
         }}
@@ -1203,7 +1305,7 @@ function FlowBuilder({
                 )}
               </div>
               <p className="wf-hint">
-                Arrastra el fondo para moverte · Ctrl/⌘ + rueda para acercar
+                Arrastra desde un punto de salida hasta un paso para conectarlo · Ctrl/⌘ + rueda para acercar
               </p>
             </>
           }
@@ -1240,15 +1342,53 @@ function FlowBuilder({
             )}
             {flowGraph.edges.map((edge) => {
               const d = edgePath(edge);
+              const key = `${edge.from}-${edge.port ?? "next"}-${edge.to}`;
               return d ? (
-                <path
-                  key={`${edge.from}-${edge.port ?? "next"}-${edge.to}`}
-                  className={`wf-link ${edge.kind}`}
-                  d={d}
-                />
+                <g key={key}>
+                  <path className={`wf-link ${edge.kind}${hoverEdge === key ? " hover" : ""}`} d={d} />
+                  <path
+                    className="wf-link-hit"
+                    d={d}
+                    data-canvas-item
+                    onMouseEnter={() => setHoverEdge(key)}
+                    onMouseLeave={() => setHoverEdge((current) => (current === key ? null : current))}
+                  />
+                </g>
               ) : null;
             })}
+            {linking && (
+              <path
+                className={`wf-link wf-link-draft${linking.over ? " ready" : ""}`}
+                d={curve(linking.sx, linking.sy, linking.x, linking.y)}
+              />
+            )}
           </svg>
+          {flowGraph.edges.map((edge) => {
+            const key = `${edge.from}-${edge.port ?? "next"}-${edge.to}`;
+            if (hoverEdge !== key || linking) return null;
+            const ends = edgeEnds(edge);
+            if (!ends) return null;
+            const portIndex = edge.port === undefined ? undefined : stepPorts(ends.step)[edge.port]?.index;
+            return (
+              <button
+                key={`remove-${key}`}
+                type="button"
+                className="wf-edge-remove"
+                data-canvas-item
+                style={{ left: ends.mx, top: ends.my }}
+                aria-label="Quitar conexión"
+                title="Quitar conexión"
+                onMouseEnter={() => setHoverEdge(key)}
+                onMouseLeave={() => setHoverEdge(null)}
+                onClick={() => {
+                  setValue((current) => ({ ...current, steps: disconnectStep(current.steps, edge.from, portIndex) }));
+                  setHoverEdge(null);
+                }}
+              >
+                ✕
+              </button>
+            );
+          })}
           {flowGraph.startId && (
             <div
               className="wf-start"
@@ -1274,7 +1414,13 @@ function FlowBuilder({
                   ? `+${triggerPreview.length - 2} · Editar frases`
                   : "Editar frases"}
               </button>
-              <span className="wf-handle out" style={{ top: START_HEIGHT / 2 }} />
+              {outHandle(
+                { stepId: "__start__" },
+                flowGraph.start.x + START_WIDTH,
+                flowGraph.start.y + START_HEIGHT / 2,
+                { top: START_HEIGHT / 2 },
+                "Inicio",
+              )}
             </div>
           )}
           {flowGraph.unreachable.size > 0 && (
@@ -1311,7 +1457,8 @@ function FlowBuilder({
               <article
                 key={step.id}
                 data-canvas-item
-                className={`wf-node type-${step.type}${selectedStep?.id === step.id ? " selected" : ""}${unreachable ? " unreachable" : ""}${issue ? " has-issue" : ""}`}
+                data-step-id={step.id}
+                className={`wf-node type-${step.type}${linking?.over === step.id ? " link-target" : ""}${linking ? " linking" : ""}${selectedStep?.id === step.id ? " selected" : ""}${unreachable ? " unreachable" : ""}${issue ? " has-issue" : ""}`}
                 style={{ left: position.x, top: position.y, width: NODE_WIDTH, height }}
                 role="button"
                 tabIndex={0}
@@ -1350,7 +1497,13 @@ function FlowBuilder({
                     style={{ top: outputY(step, slot) - 13 }}
                   >
                     <span>{port.label}</span>
-                    <span className="wf-handle out" />
+                    {outHandle(
+                      { stepId: step.id, port: port.index },
+                      position.x + NODE_WIDTH,
+                      position.y + outputY(step, slot),
+                      {},
+                      port.label,
+                    )}
                   </div>
                 ))}
                 {ports.map((port, slot) =>
@@ -1360,7 +1513,13 @@ function FlowBuilder({
                 )}
                 {hasNext(step) && (
                   <>
-                    <span className="wf-handle out" style={{ top: outputY(step) }} />
+                    {outHandle(
+                      { stepId: step.id },
+                      position.x + NODE_WIDTH,
+                      position.y + outputY(step),
+                      { top: outputY(step) },
+                      step.label,
+                    )}
                     {!step.nextStepId
                       ? outputStub(`${step.id}:next`, outputY(step), step.label, step.id)
                       : (
