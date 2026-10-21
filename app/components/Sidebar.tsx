@@ -3,7 +3,7 @@ import type { User } from "../lib/types";
 import styles from "./Sidebar.module.css";
 import { AppNavIcon, type AppNavIconName } from "./AppNavIcon";
 
-type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
+type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./ControlPanel").ControlTab;
 type Item = { label: string; view: View; tab?: ControlTab; adminOnly?: boolean };
 const groups: { id: string; label: string; icon: AppNavIconName; items: Item[] }[] = [
@@ -19,6 +19,7 @@ const groups: { id: string; label: string; icon: AppNavIconName; items: Item[] }
     { label: "Invitaciones con botón", view: "cta-buttons" },
     { label: "Mensajes con opciones", view: "option-messages" },
     { label: "Horario de atención", view: "business-hours" },
+    { label: "Entregas", view: "deliveries" },
     { label: "Análisis de conversaciones", view: "conversation-analysis", adminOnly: true },
   ] },
   { id: "documents", label: "Documentos", icon: "documents", items: [

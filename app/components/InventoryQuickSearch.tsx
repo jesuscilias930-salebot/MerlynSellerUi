@@ -1,13 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { controlRequest, controlSession } from "../lib/control-api";
-import { availabilityMessage, searchInventory, type QuickBundle, type QuickProduct, type QuickResult } from "../lib/quick-inventory";
-
-type Snapshot = { products: QuickProduct[]; bundles: QuickBundle[]; loadedAt: number };
-const FRESH_MS = 60_000;
-// Compartido entre chats: abrir la búsqueda en otra conversación no vuelve a descargar todo.
-let cache: Snapshot | null = null;
+import { controlSession } from "../lib/control-api";
+import { cachedInventory, loadInventory, type InventorySnapshot as Snapshot } from "../lib/inventory-snapshot";
+import { availabilityMessage, searchInventory, type QuickResult } from "../lib/quick-inventory";
 
 const money = (value: number) => value.toLocaleString("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: value % 1 ? 2 : 0 });
 const ago = (time: number) => {
@@ -20,20 +16,16 @@ const stockLabel = (result: QuickResult) =>
 /** Búsqueda rápida de existencias (productos y bundles) desde el chat. */
 export function InventoryQuickSearch({ onInsert, autoFocus = true }: { onInsert: (text: string) => void; autoFocus?: boolean }) {
   const [query, setQuery] = useState("");
-  const [data, setData] = useState<Snapshot | null>(cache);
+  const [data, setData] = useState<Snapshot | null>(cachedInventory);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [active, setActive] = useState(0);
   const input = useRef<HTMLInputElement>(null);
 
   const load = async (force = false) => {
-    if (!force && cache && Date.now() - cache.loadedAt < FRESH_MS) { setData(cache); return; }
-    if (!controlSession.get()) { setError("Inicia sesión en Control de ventas para consultar existencias."); return; }
     setLoading(true); setError("");
     try {
-      const [products, bundles] = await Promise.all([controlRequest<QuickProduct[]>("/products/all"), controlRequest<QuickBundle[]>("/bundles")]);
-      cache = { products: Array.isArray(products) ? products : [], bundles: Array.isArray(bundles) ? bundles : [], loadedAt: Date.now() };
-      setData(cache);
+      setData(await loadInventory(force));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo consultar el inventario.");
     } finally { setLoading(false); }

@@ -30,6 +30,7 @@ import { StickersPanel } from "./components/StickersPanel";
 import { CtaUrlTemplatesPanel } from "./components/CtaUrlTemplatesPanel";
 import { InteractiveOptionsPanel } from "./components/InteractiveOptionsPanel";
 import { BusinessHoursPanel } from "./components/BusinessHoursPanel";
+import { DeliveriesPanel } from "./components/DeliveriesPanel";
 import { WhatsAppTemplatesPanel } from "./components/WhatsAppTemplatesPanel";
 import { EnviaShippingPanel } from "./components/EnviaShippingPanel";
 import { VideosPanel } from "./components/VideosPanel";
@@ -37,7 +38,7 @@ import { FinancesPanel } from "./components/FinancesPanel";
 import { ConversationAnalysisPanel } from "./components/ConversationAnalysisPanel";
 import type { PendingChatImage } from "./components/ConversationPanel";
 
-type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
+type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./components/ControlPanel").ControlTab;
 type UploadResponse = { error?: string; mediaId?: string; filename?: string };
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -1135,6 +1136,8 @@ export default function Home() {
         <div className="automation-workspace"><EntrepreneurPackagesPanel packages={entrepreneurPackages} onCreate={createEntrepreneurPackage} onUpload={uploadEntrepreneurPackage} onSave={saveEntrepreneurPackage} onDelete={deleteEntrepreneurPackage} /></div>
       ) : view === "cta-buttons" ? (
         <div className="automation-workspace"><CtaUrlTemplatesPanel templates={ctaUrlTemplates} onSave={saveCtaUrlTemplate} onDelete={deleteCtaUrlTemplate} /></div>
+      ) : view === "deliveries" ? (
+        <div className="automation-workspace"><DeliveriesPanel /></div>
       ) : view === "business-hours" ? (
         <div className="automation-workspace"><BusinessHoursPanel /></div>
       ) : view === "option-messages" ? (

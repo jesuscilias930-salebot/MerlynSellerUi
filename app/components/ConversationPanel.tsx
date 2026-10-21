@@ -15,6 +15,7 @@ import { ChatSaleModal } from "./ChatSaleModal";
 import { CtaUrlCard } from "./CtaUrlCard";
 import { InteractiveOptionsCard } from "./InteractiveOptionsCard";
 import { InventoryQuickSearch } from "./InventoryQuickSearch";
+import { ChatDeliveriesCard } from "./DeliveriesPanel";
 import optionStyles from "./InteractiveOptions.module.css";
 import { ToolAccordion } from "./ToolAccordion";
 import { WhatsAppTemplateCard } from "./WhatsAppTemplateCard";
@@ -126,6 +127,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
   const saleTools = (
     <>
       <ToolAccordion defaultOpen icon="✓" title="Registrar venta" description="Descuenta inventario y vincula la conversión al chat."><button className="tool-primary-button" type="button" disabled={!chat} onClick={() => setSaleModalOpen(true)}>Registrar orden</button></ToolAccordion>
+      <ChatDeliveriesCard conversationId={chat?.id} prefill={{ customerName: chat?.name || chat?.phone_number || "", customerPhone: chat?.phone_number || "" }} />
       <ToolAccordion icon="▣" title="Generar envío" description="Captura los datos y cotiza sin salir del chat."><button className="tool-secondary-button" type="button" disabled={!chat} onClick={() => setShippingOpen(true)}>Capturar datos de envío</button></ToolAccordion>
       <ToolAccordion icon="🎁" title="Paquetes y promociones" description="Envía fotografías de un bundle."><button className="tool-secondary-button" type="button" disabled={!chat} onClick={() => setBundlePickerOpen(true)}>Enviar bundle</button></ToolAccordion>
       <ToolAccordion icon="🧾" title="Nota final" description="Genera un resumen de la venta."><QuoteNoteGenerator disabled={!chat} onUseNote={onDraftChange} /></ToolAccordion>
