@@ -11,6 +11,9 @@ import { ProductWeightEditor } from "./ProductWeightEditor";
 import { StackMeasurementsPanel } from "./StackMeasurementsPanel";
 import { PackingRulesPanel } from "./PackingRulesPanel";
 import { InventoryPanel } from "./InventoryPanel";
+import { PurchasesWorkspace } from "./PurchasesWorkspace";
+import { request } from "../lib/api";
+import { COMMON_COLORS, colorMap, colorSwatch, normalizeColor, type ProductColor } from "../lib/product-colors";
 
 type Customer = {
   id: number;
@@ -40,39 +43,6 @@ type Sale = {
     product?: { name?: string };
   }[];
 };
-type PurchaseItem = {
-  id?: number;
-  productId?: number;
-  product?: { id?: number; name?: string; category?: Category; gender?: string | null; size?: string | null };
-  isBulk?: boolean;
-  unitsPerBulk?: number;
-  bulksReceived?: number;
-  individualUnitsReceived?: number;
-  totalUnitsAcquired?: number;
-  unitCostNet?: number;
-  isTaxed?: boolean;
-  pricePerBulk?: number;
-  totalPaid?: number;
-};
-type Purchase = {
-  id: number;
-  supplierName?: string;
-  totalInvoiceAmount?: number;
-  purchaseDate?: string;
-  purchaseItemsRequest?: PurchaseItem[];
-};
-type PurchaseDraftItem = {
-  id?: number;
-  productId: string;
-  isBulk: boolean;
-  bulksReceived: string;
-  unitsPerBulk: string;
-  individualUnitsReceived: string;
-  unitCostNet: string;
-  isTaxed: boolean;
-  pricePerBulk: string;
-};
-type PurchaseDraft = { supplierName: string; purchaseDate: string; totalInvoiceAmount: string; items: PurchaseDraftItem[] };
 type Page<T> = { content: T[]; totalElements: number };
 type Report = {
   productId: number;
@@ -105,13 +75,6 @@ const monthStart = () =>
     .toISOString()
     .slice(0, 10);
 const today = () => new Date().toISOString().slice(0, 10);
-const emptyPurchaseItem = (): PurchaseDraftItem => ({ productId: "", isBulk: false, bulksReceived: "1", unitsPerBulk: "", individualUnitsReceived: "0", unitCostNet: "", isTaxed: false, pricePerBulk: "" });
-const purchaseToday = () => {
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
-};
-const emptyPurchaseDraft = (): PurchaseDraft => ({ supplierName: "", purchaseDate: purchaseToday(), totalInvoiceAmount: "", items: [emptyPurchaseItem()] });
-
 export function ControlPanel({
   chats,
   tab,
@@ -149,7 +112,7 @@ export function ControlPanel({
   }, [products]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [colors, setColors] = useState<Record<number, string>>({});
   const [report, setReport] = useState<Report[]>([]);
   const [start, setStart] = useState(monthStart());
   const [end, setEnd] = useState(today());
@@ -165,6 +128,7 @@ export function ControlPanel({
     categoryId: "",
     gender: "Hombre",
     size: "",
+    color: "",
     minStockAlert: "12",
   });
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
@@ -172,8 +136,6 @@ export function ControlPanel({
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(
     null,
   );
-  const [editingPurchaseId, setEditingPurchaseId] = useState<number | null>(null);
-  const [purchaseDraft, setPurchaseDraft] = useState<PurchaseDraft>(emptyPurchaseDraft);
 
   const loadController = useRef<AbortController | null>(null);
   const load = useCallback(async () => {
@@ -193,9 +155,10 @@ export function ControlPanel({
         products: () => get<Product[]>("/products/all", setProducts),
         categories: () => get<Category[]>("/category", setCategories),
         sales: () => get<Page<Sale>>("/sales?page=0&size=40", page => setSales(page.content || [])),
-        purchases: () => get<Page<Purchase>>("/purchase?page=0&size=40", page => setPurchases(page.content || [])),
         report: () => get<Report[]>(`/financial-reports/product-breakdown?start=${start}&end=${end}`, setReport),
       };
+      // El color vive en el CRM; si falla, el catálogo sigue funcionando sin él.
+      if (tab === "products" || tab === "purchases") void request<ProductColor[]>("/product-details", { signal }).then(rows => { if (!signal.aborted) setColors(colorMap(rows)); }).catch(() => undefined);
       const results = await Promise.allSettled(controlResources(tab).map(resource => loaders[resource]()));
       const failed = results.find(result => result.status === "rejected");
       if (failed?.status === "rejected") throw failed.reason;
@@ -284,7 +247,7 @@ export function ControlPanel({
   };
   const resetProductEditor = () => {
     setEditingProductId(null);
-    setProductDraft({ name: "", categoryId: "", gender: "Hombre", size: "", minStockAlert: "12" });
+    setProductDraft({ name: "", categoryId: "", gender: "Hombre", size: "", color: "", minStockAlert: "12" });
   };
   const saveProduct = async (event: FormEvent) => {
     event.preventDefault();
@@ -297,14 +260,25 @@ export function ControlPanel({
         minStockAlert: Number(productDraft.minStockAlert),
         currentStock: 0,
       };
-      await controlRequest<Product | Product[]>(editingProductId ? `/products/${editingProductId}` : "/products", {
+      const saved = await controlRequest<Product | Product[]>(editingProductId ? `/products/${editingProductId}` : "/products", {
         method: editingProductId ? "PUT" : "POST",
         body: JSON.stringify(editingProductId ? product : [product]),
       });
       const wasEditing = Boolean(editingProductId);
+      const productId = editingProductId || (Array.isArray(saved) ? saved[0]?.id : saved?.id);
+      const color = normalizeColor(productDraft.color);
+      let colorError = "";
+      if (productId && color !== (colors[productId] || "")) {
+        try {
+          await request<ProductColor>(`/product-details/${productId}`, { method: "PUT", body: JSON.stringify({ color }) });
+          setColors(current => { const next = { ...current }; if (color) next[productId] = color; else delete next[productId]; return next; });
+        } catch (error) {
+          colorError = error instanceof Error ? error.message : "intenta de nuevo";
+        }
+      }
       resetProductEditor();
       await load();
-      setNotice(wasEditing ? "Producto actualizado." : "Producto guardado. Registra una compra para agregar existencias.");
+      setNotice(colorError ? `Producto guardado, pero no se pudo guardar el color: ${colorError}` : wasEditing ? "Producto actualizado." : "Producto guardado. Registra una compra para agregar existencias.");
     } catch (error) {
       setNotice(
         error instanceof Error
@@ -315,7 +289,7 @@ export function ControlPanel({
   };
   const editProduct = (product: Product) => {
     setEditingProductId(product.id);
-    setProductDraft({ name: product.name, categoryId: String(product.category?.id || ""), gender: product.gender || "Unisex", size: product.size || "", minStockAlert: String(product.minStockAlert ?? 0) });
+    setProductDraft({ name: product.name, categoryId: String(product.category?.id || ""), gender: product.gender || "Unisex", size: product.size || "", color: colors[product.id] || "", minStockAlert: String(product.minStockAlert ?? 0) });
   };
   const duplicateProduct = (product: Product) => {
     // Do not copy id or stock: this intentionally starts a new catalog record.
@@ -325,6 +299,7 @@ export function ControlPanel({
       categoryId: String(product.category?.id || ""),
       gender: product.gender || "Unisex",
       size: product.size || "",
+      color: colors[product.id] || "",
       minStockAlert: String(product.minStockAlert ?? 12),
     });
     setNotice("Se copiaron los datos. Ajusta lo necesario y guarda como producto nuevo.");
@@ -334,6 +309,7 @@ export function ControlPanel({
     if (!window.confirm(`¿Eliminar el producto “${product.name}”? Esta acción puede fallar si está vinculado a compras, ventas o precios.`)) return;
     try {
       await controlRequest<void>(`/products/${product.id}`, { method: "DELETE" });
+      if (colors[product.id]) void request(`/product-details/${product.id}`, { method: "PUT", body: JSON.stringify({ color: "" }) }).catch(() => undefined);
       if (editingProductId === product.id) resetProductEditor();
       await load();
       setNotice("Producto eliminado.");
@@ -392,110 +368,6 @@ export function ControlPanel({
           ? error.message
           : "No se pudo eliminar la categoría. Puede estar vinculada a un producto.",
       );
-    }
-  };
-  const resetPurchaseEditor = () => {
-    setEditingPurchaseId(null);
-    setPurchaseDraft(emptyPurchaseDraft());
-  };
-  const savePurchase = async (event: FormEvent) => {
-    event.preventDefault();
-    try {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(purchaseDraft.purchaseDate)) throw new Error("Selecciona la fecha de compra.");
-      const items = purchaseDraft.items.map((item) => {
-        const bulksReceived = item.isBulk ? Number(item.bulksReceived || 0) : 0;
-        const unitsPerBulk = item.isBulk ? Number(item.unitsPerBulk || 0) : 0;
-        const individualUnitsReceived = item.isBulk
-          ? 0
-          : Number(item.individualUnitsReceived || 0);
-        const pricePerBulk = item.isBulk ? Number(item.pricePerBulk || 0) : 0;
-        const unitCostNet = item.isBulk
-          ? pricePerBulk / unitsPerBulk
-          : Number(item.unitCostNet);
-        const totalUnitsAcquired =
-          bulksReceived * unitsPerBulk + individualUnitsReceived;
-
-        return {
-          ...(item.id ? { id: item.id } : {}),
-          productId: Number(item.productId),
-          isBulk: item.isBulk,
-          isTaxed: item.isTaxed,
-          bulksReceived,
-          unitsPerBulk,
-          individualUnitsReceived,
-          unitCostNet,
-          pricePerBulk: item.isBulk ? pricePerBulk : null,
-          // Son una vista previa para el usuario; el backend los recalcula.
-          totalUnitsAcquired,
-          totalPaid: item.isBulk ? pricePerBulk * bulksReceived : unitCostNet * totalUnitsAcquired,
-        };
-      });
-      if (
-        items.some(
-          (item, index) =>
-            !item.productId ||
-            (!item.isBulk && purchaseDraft.items[index].unitCostNet === "") ||
-            item.unitCostNet < 0 ||
-            (item.isBulk &&
-              (!item.bulksReceived || !item.unitsPerBulk || !item.pricePerBulk)) ||
-            (!item.isBulk && !item.individualUnitsReceived),
-        )
-      )
-        throw new Error(
-          "Completa producto, cantidades y costo de cada compra.",
-        );
-      await controlRequest<Purchase>(editingPurchaseId ? `/purchase/${editingPurchaseId}` : "/purchase", {
-        method: editingPurchaseId ? "PUT" : "POST",
-        body: JSON.stringify({
-          supplierName: purchaseDraft.supplierName || null,
-          // Calendar date: no UTC conversion that could move it to another day.
-          purchaseDate: `${purchaseDraft.purchaseDate}T00:00:00`,
-          totalInvoiceAmount: purchaseDraft.totalInvoiceAmount
-            ? Number(purchaseDraft.totalInvoiceAmount)
-            : null,
-          purchaseItemsRequest: items,
-        }),
-      });
-      const wasEditing = Boolean(editingPurchaseId);
-      resetPurchaseEditor();
-      await load();
-      setNotice(wasEditing ? "Compra actualizada e inventario recalculado." : "Compra registrada e inventario actualizado.");
-    } catch (error) {
-      setNotice(
-        error instanceof Error
-          ? error.message
-          : "No fue posible registrar la compra.",
-      );
-    }
-  };
-  const editPurchase = (purchase: Purchase) => {
-    setEditingPurchaseId(purchase.id);
-    setPurchaseDraft({
-      supplierName: purchase.supplierName || "",
-      purchaseDate: purchase.purchaseDate?.slice(0, 10) || "",
-      totalInvoiceAmount: purchase.totalInvoiceAmount == null ? "" : String(purchase.totalInvoiceAmount),
-      items: (purchase.purchaseItemsRequest?.length ? purchase.purchaseItemsRequest : [undefined]).map((item) => ({
-        ...(item?.id ? { id: item.id } : {}),
-        productId: String(item?.productId || item?.product?.id || ""),
-        isBulk: Boolean(item?.isBulk),
-        bulksReceived: String(item?.bulksReceived ?? 0),
-        unitsPerBulk: String(item?.unitsPerBulk ?? ""),
-        individualUnitsReceived: String(item?.individualUnitsReceived ?? 0),
-        unitCostNet: String(item?.unitCostNet ?? ""),
-        isTaxed: Boolean(item?.isTaxed),
-        pricePerBulk: String(item?.pricePerBulk ?? ""),
-      })),
-    });
-  };
-  const deletePurchase = async (purchase: Purchase) => {
-    if (!window.confirm(`¿Eliminar la compra #${purchase.id}? Úsalo solo si fue un registro equivocado; verifica el inventario después.`)) return;
-    try {
-      await controlRequest<void>(`/purchase/${purchase.id}`, { method: "DELETE" });
-      if (editingPurchaseId === purchase.id) resetPurchaseEditor();
-      await load();
-      setNotice("Compra eliminada.");
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "No fue posible eliminar la compra.");
     }
   };
   const lowStock = useMemo(
@@ -887,6 +759,14 @@ export function ControlPanel({
                 Tamaño / talla
                 <input value={productDraft.size} onChange={(event) => setProductDraft({ ...productDraft, size: event.target.value })} placeholder="Ej. Unitalla, 22–25" maxLength={80} />
               </label>
+              <label>
+                Color (opcional)
+                <span className="product-color-input">
+                  <span className="product-color-dot" style={colorSwatch(productDraft.color) ? { background: colorSwatch(productDraft.color) || undefined } : undefined} data-empty={productDraft.color.trim() ? undefined : ""} aria-hidden="true" />
+                  <input list="product-colors" value={productDraft.color} onChange={(event) => setProductDraft({ ...productDraft, color: event.target.value })} placeholder="Ej. Negro, Azul marino" maxLength={40} />
+                </span>
+                <datalist id="product-colors">{COMMON_COLORS.map(color => <option key={color} value={color} />)}</datalist>
+              </label>
             </div>
             <div className="product-cost-section">
               <b>Control de existencias</b>
@@ -924,7 +804,7 @@ export function ControlPanel({
                 <div className="product-category-content">
                 {category.products.map((product) => (
               <div key={product.id} className="product-category-row">
-                <strong>{`${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}${product.size ? ` - ${product.size}` : ""}`}</strong>
+                <strong>{`${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}${product.size ? ` - ${product.size}` : ""}`}{colors[product.id] && <span className="product-color-chip"><span className="product-color-dot" style={colorSwatch(colors[product.id]) ? { background: colorSwatch(colors[product.id]) || undefined } : undefined} aria-hidden="true" />{colors[product.id]}</span>}</strong>
                 <span className="category-actions"><button type="button" className="plain-button" onClick={() => editProduct(product)}>Editar</button><button type="button" className="plain-button" onClick={() => duplicateProduct(product)}>Duplicar</button><button type="button" className="danger-link" onClick={() => void deleteProduct(product)}>Eliminar</button></span>
               </div>
                 ))}
@@ -959,297 +839,7 @@ export function ControlPanel({
       </section>}
       {tab === "bundles" && <BundleConfiguration products={products} packages={entrepreneurPackages} onCreateImageSet={onCreateBundleImageSet} onUploadImage={onUploadBundleImage} onProductsChanged={async()=>setProducts(await controlRequest<Product[]>("/products/all"))} />}
       {tab === "sales" && <SalesWorkspace />}
-      {tab === "purchases" && (
-        <div className="control-customers">
-          <form
-            className="customer-form purchase-form"
-            onSubmit={savePurchase}
-          >
-            <header><div><p className="form-kicker">ADQUISICIÓN DE MERCANCÍA</p><h2>{editingPurchaseId ? `Editar adquisición #${editingPurchaseId}` : "Registrar adquisición de mercancía"}</h2></div>{editingPurchaseId && <button type="button" className="plain-button" onClick={resetPurchaseEditor}>Cancelar edición</button>}</header>
-            <input
-              value={purchaseDraft.supplierName}
-              onChange={(event) =>
-                setPurchaseDraft({
-                  ...purchaseDraft,
-                  supplierName: event.target.value,
-                })
-              }
-              placeholder="Proveedor (opcional)"
-            />
-            <label>
-              Fecha de compra
-              <input type="date" required value={purchaseDraft.purchaseDate}
-                onChange={(event) => setPurchaseDraft({ ...purchaseDraft, purchaseDate: event.target.value })} />
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={purchaseDraft.totalInvoiceAmount}
-              onChange={(event) =>
-                setPurchaseDraft({
-                  ...purchaseDraft,
-                  totalInvoiceAmount: event.target.value,
-                })
-              }
-              placeholder="Total de factura (opcional)"
-            />
-            {purchaseDraft.items.map((item, index) => (
-              <fieldset key={index}>
-                <legend>Producto {index + 1}</legend>
-                <select
-                  value={item.productId}
-                  onChange={(event) =>
-                    setPurchaseDraft({
-                      ...purchaseDraft,
-                      items: purchaseDraft.items.map((current, itemIndex) =>
-                        itemIndex === index
-                          ? { ...current, productId: event.target.value }
-                          : current,
-                      ),
-                    })
-                  }
-                  required
-                >
-                  <option value="">Selecciona producto</option>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name} - {product.category.name} - {product.gender || "Sin género"}
-                    </option>
-                  ))}
-                </select>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={item.isBulk}
-                    onChange={(event) =>
-                      setPurchaseDraft({
-                        ...purchaseDraft,
-                        items: purchaseDraft.items.map((current, itemIndex) =>
-                          itemIndex === index
-                            ? { ...current, isBulk: event.target.checked }
-                            : current,
-                        ),
-                      })
-                    }
-                  />{" "}
-                  Compra por bulto
-                </label>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(item.isTaxed)}
-                    onChange={(event) =>
-                      setPurchaseDraft({
-                        ...purchaseDraft,
-                        items: purchaseDraft.items.map((current, itemIndex) =>
-                          itemIndex === index
-                            ? { ...current, isTaxed: event.target.checked }
-                            : current,
-                        ),
-                      })
-                    }
-                  />{" "}
-                  Compra facturada
-                </label>
-                {item.isBulk && (
-                  <>
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.bulksReceived}
-                      onChange={(event) =>
-                        setPurchaseDraft({
-                          ...purchaseDraft,
-                          items: purchaseDraft.items.map(
-                            (current, itemIndex) =>
-                              itemIndex === index
-                                ? {
-                                    ...current,
-                                    bulksReceived: event.target.value,
-                                  }
-                                : current,
-                          ),
-                        })
-                      }
-                      placeholder="Bultos recibidos"
-                    />
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.unitsPerBulk}
-                      onChange={(event) =>
-                        setPurchaseDraft({
-                          ...purchaseDraft,
-                          items: purchaseDraft.items.map(
-                            (current, itemIndex) =>
-                              itemIndex === index
-                                ? {
-                                    ...current,
-                                    unitsPerBulk: event.target.value,
-                                  }
-                                : current,
-                          ),
-                        })
-                      }
-                      placeholder="Piezas por bulto"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={item.pricePerBulk}
-                      onChange={(event) =>
-                        setPurchaseDraft({
-                          ...purchaseDraft,
-                          items: purchaseDraft.items.map(
-                            (current, itemIndex) =>
-                              itemIndex === index
-                                ? {
-                                    ...current,
-                                    pricePerBulk: event.target.value,
-                                  }
-                                : current,
-                          ),
-                        })
-                      }
-                      placeholder="Precio pagado por bulto"
-                      required
-                    />
-                  </>
-                )}
-                {!item.isBulk && (
-                  <>
-                    <input
-                      type="number"
-                      min="0"
-                      value={item.individualUnitsReceived}
-                      onChange={(event) =>
-                        setPurchaseDraft({
-                          ...purchaseDraft,
-                          items: purchaseDraft.items.map((current, itemIndex) =>
-                            itemIndex === index
-                              ? {
-                                  ...current,
-                                  individualUnitsReceived: event.target.value,
-                                }
-                              : current,
-                          ),
-                        })
-                      }
-                      placeholder="Piezas recibidas"
-                      required
-                    />
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      value={item.unitCostNet}
-                      onChange={(event) =>
-                        setPurchaseDraft({
-                          ...purchaseDraft,
-                          items: purchaseDraft.items.map((current, itemIndex) =>
-                            itemIndex === index
-                              ? { ...current, unitCostNet: event.target.value }
-                              : current,
-                          ),
-                        })
-                      }
-                      placeholder="Costo neto unitario"
-                      required
-                    />
-                  </>
-                )}
-                <p className="purchase-item-summary">
-                  {(() => {
-                    const units =
-                      item.isBulk
-                        ? Number(item.bulksReceived || 0) * Number(item.unitsPerBulk || 0)
-                        : Number(item.individualUnitsReceived || 0);
-                    const unitCost = item.isBulk
-                      ? Number(item.pricePerBulk || 0) /
-                        Number(item.unitsPerBulk || 1)
-                      : Number(item.unitCostNet || 0);
-                    return `${units} piezas · ${money(
-                      item.isBulk ? Number(item.pricePerBulk || 0) * Number(item.bulksReceived || 0) : units * unitCost,
-                    )} total calculado`;
-                  })()}
-                </p>
-                {purchaseDraft.items.length > 1 && (
-                  <button
-                    type="button"
-                    className="danger compact"
-                    onClick={() =>
-                      setPurchaseDraft({
-                        ...purchaseDraft,
-                        items: purchaseDraft.items.filter(
-                          (_, itemIndex) => itemIndex !== index,
-                        ),
-                      })
-                    }
-                  >
-                    Quitar producto
-                  </button>
-                )}
-              </fieldset>
-            ))}
-            <button
-              type="button"
-              className="plain-button"
-              onClick={() =>
-                setPurchaseDraft({
-                  ...purchaseDraft,
-                  items: [
-                    ...purchaseDraft.items,
-                    {
-                      productId: "",
-                      isBulk: false,
-                      bulksReceived: "1",
-                      unitsPerBulk: "",
-                      individualUnitsReceived: "0",
-                      unitCostNet: "",
-                      isTaxed: false,
-                      pricePerBulk: "",
-                    },
-                  ],
-                })
-              }
-            >
-              ＋ Agregar producto
-            </button>
-            <button>{editingPurchaseId ? "Actualizar compra" : "Registrar compra"}</button>
-          </form>
-          <section className="control-table">
-            <h2>Adquisiciones de mercancía recientes</h2>
-            {purchases.length === 0 && <p>Aún no hay compras registradas.</p>}
-            {purchases.map((purchase) => (
-              <div key={purchase.id}>
-                <strong>Compra #{purchase.id}</strong>
-                <span>{purchase.supplierName || "Sin proveedor"}</span>
-                <span>{purchase.purchaseDate ? `Fecha: ${purchase.purchaseDate.slice(0,10).split("-").reverse().join("/")}` : "Sin fecha"}</span>
-                <span>
-                  {purchase.purchaseItemsRequest
-                    ?.map(
-                      (item) =>
-                        `${[item.product?.name || "Producto", item.product?.category?.name, item.product?.gender, item.product?.size].filter(Boolean).join(" · ")}: ${item.totalUnitsAcquired || 0} pzas`,
-                    )
-                    .join(" · ")}
-                </span>
-                <b>
-                  {money(
-                    purchase.totalInvoiceAmount ||
-                      purchase.purchaseItemsRequest?.reduce(
-                        (sum, item) => sum + Number(item.totalPaid || 0),
-                        0,
-                      ),
-                  )}
-                </b>
-                <span className="category-actions"><button type="button" className="plain-button" onClick={() => editPurchase(purchase)}>Editar</button><button type="button" className="danger-link" onClick={() => void deletePurchase(purchase)}>Eliminar</button></span>
-              </div>
-            ))}
-          </section>
-        </div>
-      )}
+      {tab === "purchases" && <PurchasesWorkspace products={products} colors={colors} onInventoryChanged={async () => setProducts(await controlRequest<Product[]>("/products/all"))} />}
       {tab === "reports" && (
         <section className="control-table">
           <div className="report-controls">

@@ -19,7 +19,7 @@ export function crmResources(view: string, controlTab: string, conversationOpen 
   return [...resources].sort();
 }
 
-export type ControlResource = "customers" | "products" | "categories" | "sales" | "purchases" | "report";
+export type ControlResource = "customers" | "products" | "categories" | "sales" | "report";
 export function controlResources(tab: string): ControlResource[] {
   switch (tab) {
     case "summary": return ["customers", "products", "sales"];
@@ -29,7 +29,7 @@ export function controlResources(tab: string): ControlResource[] {
     case "inventory": return []; // InventoryPanel loads categories, opened pages and server typeahead only.
     case "weights": case "prices": case "bundles": return ["products"];
     case "sales": return []; // SalesWorkspace loads only the opened subtab.
-    case "purchases": return ["products", "purchases"];
+    case "purchases": return ["products"]; // PurchasesWorkspace pagina su propio historial.
     case "reports": return ["report"];
     default: return [];
   }

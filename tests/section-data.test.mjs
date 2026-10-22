@@ -44,7 +44,7 @@ test("all Control sections have an explicit, minimal loading plan", () => {
     summary: ["customers", "products", "sales"], customers: ["customers"], categories: ["categories"],
     products: ["products", "categories"], inventory: [], weights: ["products"],
     prices: ["products"], bundles: ["products"], packing: [],
-    sales: [], purchases: ["products", "purchases"], reports: ["report"],
+    sales: [], purchases: ["products"], reports: ["report"],
   };
   for (const [tab, resources] of Object.entries(expected)) assert.deepEqual(controlResources(tab), resources, tab);
 });

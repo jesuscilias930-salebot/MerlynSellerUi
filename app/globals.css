@@ -8982,3 +8982,11 @@ article.inbound:hover .message-reaction-picker, .message-reaction-picker:focus-w
   .location-fields { grid-template-columns: 1fr 1fr; }
   .location-finder li { grid-template-columns: minmax(0, 1fr) auto; }
 }
+
+/* Color opcional del producto */
+.product-color-input { position: relative; display: block; }
+.product-color-input .product-color-dot { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); }
+.product-form .product-color-input input { padding-left: 34px; }
+.product-color-dot { display: inline-block; flex: none; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #0000002e; background: repeating-linear-gradient(45deg, #d7dedb 0 3px, #f3f6f5 3px 6px); }
+.product-color-dot[data-empty] { background: transparent; border-style: dashed; border-color: var(--app-border-strong); }
+.product-color-chip { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; padding: 2px 9px; border: 1px solid var(--line); border-radius: 99px; background: var(--app-subtle); color: var(--muted); font-size: 12px; font-weight: 600; vertical-align: middle; }
