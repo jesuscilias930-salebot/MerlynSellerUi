@@ -16,6 +16,7 @@ import { request } from "../lib/api";
 import { COMMON_COLORS, colorSwatch, normalizeColor } from "../lib/product-colors";
 import { detailMaps, groupModels, normalizeModel, uniqueValues, type ModelGroup, type ProductDetail } from "../lib/product-variants";
 import { ModelStockCard, VariantGenerator, type VariantPrefill } from "./ProductVariants";
+import { compareSizesDesc, groupBySize } from "../lib/size-groups";
 
 type Customer = {
   id: number;
@@ -855,9 +856,12 @@ export function ControlPanel({
                   const { groups, loose } = groupModels(category.products, models, colors);
                   return <>
                     {groups.map(group => <ModelStockCard key={group.key} group={group} onEdit={product => editProduct(product as Product)} onAddVariants={addVariantsTo}>
-                      {group.products.map(product => productRow(product))}
+                      {[...group.products].sort((a, b) => (!a.size ? 1 : !b.size ? -1 : compareSizesDesc(a.size, b.size)) || a.name.localeCompare(b.name, "es")).map(product => productRow(product as Product))}
                     </ModelStockCard>)}
-                    {loose.map(product => productRow(product))}
+                    {groupBySize(loose).map(size => <details key={size.key} className="product-size-group" open>
+                      <summary><strong>{size.label}</strong><span>{size.items.length} {size.items.length === 1 ? "producto" : "productos"}</span></summary>
+                      {size.items.map(product => productRow(product))}
+                    </details>)}
                   </>;
                 })()}
                 </div>

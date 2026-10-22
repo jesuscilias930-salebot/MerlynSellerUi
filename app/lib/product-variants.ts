@@ -39,10 +39,9 @@ export function uniqueValues(values: (string | null | undefined)[]) {
   return result;
 }
 
-/** Tallas en orden natural: 2-4, 5-7, 22-25, 25-28… y al final las que no tienen número. */
+/** Tallas en orden alfabético descendente (números en orden natural): Unitalla, 25-28, 22-25, 5-7, 2-4. */
 export function sortSizes(sizes: string[]) {
-  const first = (size: string) => { const match = size.match(/\d+(?:\.\d+)?/); return match ? Number(match[0]) : Infinity; };
-  return [...sizes].sort((a, b) => first(a) - first(b) || a.localeCompare(b, "es", { numeric: true }));
+  return [...sizes].sort((a, b) => b.localeCompare(a, "es", { numeric: true, sensitivity: "base" }));
 }
 
 export const variantName = (model: string, color?: string | null) => (clean(color) ? `${normalizeModel(model)} · ${clean(color)}` : normalizeModel(model));

@@ -19,7 +19,7 @@ test('mapas de detalle, nombres y valores únicos', () => {
   assert.deepEqual(uniqueValues([' Negro', 'negro', '', 'Blanco ', null]), ['Negro', 'Blanco']);
   assert.equal(variantName(' Deportiva  algodón ', 'Negro'), 'Deportiva algodón · Negro');
   assert.equal(variantName('Deportiva', ''), 'Deportiva');
-  assert.deepEqual(sortSizes(['Unitalla', '25-28', '2-4', '22-25', '5-7']), ['2-4', '5-7', '22-25', '25-28', 'Unitalla']);
+  assert.deepEqual(sortSizes(['Unitalla', '25-28', '2-4', '22-25', '5-7']), ['Unitalla', '25-28', '22-25', '5-7', '2-4']);
 });
 
 test('genera combinaciones color × talla', () => {
@@ -36,7 +36,7 @@ test('agrupa por modelo, categoría y género', () => {
   assert.equal(groups.length, 2);
   const men = groups.find(group => group.gender === 'Hombre');
   assert.deepEqual(men.colors, ['Negro', 'Blanco']);
-  assert.deepEqual(men.sizes, ['22-25', '25-28']);
+  assert.deepEqual(men.sizes, ['25-28', '22-25']);
   assert.equal(men.cells[cellKey('Negro', '22-25')].id, 3);
   assert.equal(men.stock, 44); assert.equal(men.low, 1);
   const cells = existingCells(products, models, colors, 'DEPORTIVA', '2', 'Hombre');

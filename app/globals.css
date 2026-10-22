@@ -8996,3 +8996,10 @@ article.inbound:hover .message-reaction-picker, .message-reaction-picker:focus-w
 .product-mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .product-mode-switch button { border: 0; border-radius: 9px; padding: 9px 8px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; font-weight: 750; cursor: pointer; }
 .product-mode-switch button[aria-selected="true"] { background: var(--green); color: #fff; }
+
+/* Subgrupos por talla dentro de cada categoría */
+.product-size-group { margin: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; overflow: hidden; }
+.product-size-group > summary { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; background: var(--app-subtle, #f7f9fa); font-size: 14px; }
+.product-size-group > summary span { padding: 2px 8px; border-radius: 99px; background: #fff; border: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.product-size-group[open] > summary { border-bottom: 1px solid var(--line); }
+.product-size-group .product-category-row:last-child { border-bottom: 0; }

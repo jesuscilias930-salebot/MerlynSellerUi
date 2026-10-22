@@ -14,10 +14,10 @@ export function inventoryFilterParams(q: string, productId?: number) {
   else if (q) params.set("q", q);
   return params;
 }
-export function inventoryPagePath(category: InventoryCategory, q: string, productId: number | undefined, page: number) {
+export function inventoryPagePath(category: InventoryCategory, q: string, productId: number | undefined, page: number, size = 20) {
   const params = inventoryFilterParams(q, productId);
   if (category.categoryId == null) params.set("uncategorized", "true");
   else params.set("categoryId", String(category.categoryId));
-  params.set("page", String(page)); params.set("size", "20");
+  params.set("page", String(page)); params.set("size", String(size));
   return `/products/inventory?${params}`;
 }

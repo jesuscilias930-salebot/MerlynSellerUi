@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useState, type KeyboardEvent } from "react";
 import { controlRequest } from "../lib/control-api";
 import { inventoryCategoryKey, inventoryCategoryName, inventoryFilterParams, inventoryPagePath, inventoryProductName, inventorySearchText, inventoryStockState, type InventoryCategory, type InventoryPage, type InventoryProduct } from "../lib/inventory-catalog";
 import { InventoryQuantityEditor } from "./InventoryQuantityEditor";
@@ -10,6 +10,7 @@ import { request } from "../lib/api";
 import { updateCachedLocations } from "../lib/inventory-snapshot";
 import { locationMap, suggestions, type LocationMap, type ProductLocation } from "../lib/product-locations";
 import { ChatIcon } from "./ChatIcon";
+import { groupBySize } from "../lib/size-groups";
 import styles from "./InventoryPanel.module.css";
 
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : "No pudimos consultar el inventario. Intenta nuevamente.";
@@ -138,36 +139,60 @@ export function InventoryPanel({ refreshKey }: { refreshKey: number }) {
   </section>;
 }
 
+// Control entrega máximo 50 por página; juntamos la categoría completa para agruparla por talla.
+const PAGE_SIZE = 50, MAX_PAGES = 40;
 function InventoryCategoryProducts({ category, q, productId, revision, onSaved, locations, onLocationSaved }: { category: InventoryCategory; q: string; productId?: number; revision: string; onSaved: () => Promise<void>; locations: LocationMap; onLocationSaved: (rows: ProductLocation[]) => void }) {
   const options = { rack: suggestions(locations.values(), "rack"), level: suggestions(locations.values(), "level"), side: suggestions(locations.values(), "side") };
-  const body = useRef<HTMLDivElement>(null);
-  const [page, setPage] = useState(0), [retry, setRetry] = useState(0);
-  const [result, setResult] = useState<{ key: string; data?: InventoryPage; error?: string }>();
-  const path = inventoryPagePath(category, q, productId, page);
-  const key = `${path}:${revision}:${retry}`;
+  const [retry, setRetry] = useState(0);
+  const [result, setResult] = useState<{ key: string; data?: { items: InventoryProduct[]; total: number }; error?: string }>();
+  const key = `${inventoryPagePath(category, q, productId, 0, PAGE_SIZE)}:${revision}:${retry}`;
   const current = result?.key === key ? result : undefined;
   useEffect(() => {
     const controller = new AbortController();
-    controlRequest<InventoryPage>(path, { signal: controller.signal })
+    (async () => {
+      const items: InventoryProduct[] = [];
+      let page = 0, totalPages = 1, total = 0;
+      do {
+        const data = await controlRequest<InventoryPage>(inventoryPagePath(category, q, productId, page, PAGE_SIZE), { signal: controller.signal });
+        items.push(...data.content);
+        totalPages = data.totalPages; total = data.totalElements; page += 1;
+      } while (page < totalPages && page < MAX_PAGES && !controller.signal.aborted);
+      return { items, total };
+    })()
       .then(data => { if (!controller.signal.aborted) setResult({ key, data }); })
       .catch(error => { if (!controller.signal.aborted) setResult({ key, error: errorMessage(error) }); });
     return () => controller.abort();
-  }, [path, key]);
-  function changePage(next: number) { setPage(next); body.current?.scrollIntoView({ block: "start" }); }
-  return <div ref={body} className={styles.categoryBody} aria-busy={!current}>
+  }, [category, q, productId, key]);
+  const sizes = useMemo(() => groupBySize(current?.data?.items || []), [current]);
+  const openByDefault = Boolean(q || productId) || sizes.length === 1;
+  return <div className={styles.categoryBody} aria-busy={!current}>
     {!current && <p role="status">Cargando productos de {inventoryCategoryName(category)}…</p>}
     {current?.error && <div role="alert" className={styles.error}>{current.error}<button type="button" onClick={() => setRetry(value => value + 1)}>Reintentar categoría</button></div>}
-    {current?.data?.content.length === 0 && <p>No hay productos en esta página.</p>}
-    {(current?.data?.content.length || 0) > 1 && <ProductLocationEditor productIds={current!.data!.content.map(product => product.id)} options={options} onSaved={onLocationSaved} bulkLabel={`Asignar una ubicación a los ${current!.data!.content.length} productos de esta página`}/>}
-    <div className={styles.products}>{current?.data?.content.map(product => {
-      const state = inventoryStockState(product);
-      return <article key={product.id} className={styles.product}>
-        <header><div><h4>{product.name}</h4><p>{[product.gender || "Sin género", product.size, `#${product.id}`].filter(Boolean).join(" · ")}</p></div><span className={`${styles.badge} ${styles[state]}`}>{state === "empty" ? "Sin existencias" : state === "low" ? "Stock bajo" : "Disponible"}</span></header>
-        <div className={styles.stock}><strong>{number(product.currentStock)}</strong><span>unidades disponibles</span><small>Alerta mínima: {number(product.minStockAlert ?? 0)}</small></div>
-        <ProductLocationEditor productIds={[product.id]} location={locations.get(product.id)} options={options} onSaved={onLocationSaved}/>
-        <InventoryQuantityEditor id={product.id} name={inventoryProductName(product)} stock={product.currentStock} onSaved={onSaved}/>
-      </article>;
+    {current?.data?.items.length === 0 && <p>No hay productos en esta categoría.</p>}
+    {!!current?.data && current.data.total > current.data.items.length && <p className={styles.hint}>Se muestran {number(current.data.items.length)} de {number(current.data.total)} productos. Usa la búsqueda para encontrar los demás.</p>}
+    <div className={styles.sizeGroups}>{sizes.map(size => {
+      const stock = size.items.reduce((sum, product) => sum + Number(product.currentStock || 0), 0);
+      const low = size.items.filter(product => inventoryStockState(product) !== "ready").length;
+      return <details key={size.key} className={styles.sizeGroup} open={openByDefault}>
+        <summary>
+          <strong>{size.label}</strong>
+          <span className={styles.count}>{number(size.items.length)} {size.items.length === 1 ? "producto" : "productos"} · {number(stock)} piezas</span>
+          {low > 0 && <span className={`${styles.badge} ${styles.low}`}>{low} por surtir</span>}
+          <span className={styles.chevron} aria-hidden="true">›</span>
+        </summary>
+        <div className={styles.sizeBody}>
+          {size.items.length > 1 && <ProductLocationEditor productIds={size.items.map(product => product.id)} options={options} onSaved={onLocationSaved} bulkLabel={`Asignar una ubicación a los ${size.items.length} productos de ${size.size ? `talla ${size.size}` : "esta sección"}`}/>}
+          <div className={styles.products}>{size.items.map(product => {
+            const state = inventoryStockState(product);
+            return <article key={product.id} className={styles.product}>
+              <header><div><h4>{product.name}</h4><p>{[product.gender || "Sin género", product.size, `#${product.id}`].filter(Boolean).join(" · ")}</p></div><span className={`${styles.badge} ${styles[state]}`}>{state === "empty" ? "Sin existencias" : state === "low" ? "Stock bajo" : "Disponible"}</span></header>
+              <div className={styles.stock}><strong>{number(product.currentStock)}</strong><span>unidades disponibles</span><small>Alerta mínima: {number(product.minStockAlert ?? 0)}</small></div>
+              <ProductLocationEditor productIds={[product.id]} location={locations.get(product.id)} options={options} onSaved={onLocationSaved}/>
+              <InventoryQuantityEditor id={product.id} name={inventoryProductName(product)} stock={product.currentStock} onSaved={onSaved}/>
+            </article>;
+          })}</div>
+        </div>
+      </details>;
     })}</div>
-    {!!current?.data && current.data.totalPages > 1 && <nav className={styles.pagination} aria-label={`Páginas de ${inventoryCategoryName(category)}`}><button type="button" disabled={page === 0} onClick={() => changePage(page - 1)}>Anterior</button><span>Página {page + 1} de {current.data.totalPages} · {number(current.data.totalElements)} productos</span><button type="button" disabled={page + 1 >= current.data.totalPages} onClick={() => changePage(page + 1)}>Siguiente</button></nav>}
   </div>;
 }
