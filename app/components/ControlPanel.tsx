@@ -13,7 +13,9 @@ import { PackingRulesPanel } from "./PackingRulesPanel";
 import { InventoryPanel } from "./InventoryPanel";
 import { PurchasesWorkspace } from "./PurchasesWorkspace";
 import { request } from "../lib/api";
-import { COMMON_COLORS, colorMap, colorSwatch, normalizeColor, type ProductColor } from "../lib/product-colors";
+import { COMMON_COLORS, colorSwatch, normalizeColor } from "../lib/product-colors";
+import { detailMaps, groupModels, normalizeModel, uniqueValues, type ModelGroup, type ProductDetail } from "../lib/product-variants";
+import { ModelStockCard, VariantGenerator, type VariantPrefill } from "./ProductVariants";
 
 type Customer = {
   id: number;
@@ -113,6 +115,10 @@ export function ControlPanel({
   const [categories, setCategories] = useState<Category[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [colors, setColors] = useState<Record<number, string>>({});
+  const [models, setModels] = useState<Record<number, string>>({});
+  const [productMode, setProductMode] = useState<"single" | "variants">("single");
+  const [variantPrefill, setVariantPrefill] = useState<VariantPrefill | null>(null);
+  const [variantRevision, setVariantRevision] = useState(0);
   const [report, setReport] = useState<Report[]>([]);
   const [start, setStart] = useState(monthStart());
   const [end, setEnd] = useState(today());
@@ -129,6 +135,7 @@ export function ControlPanel({
     gender: "Hombre",
     size: "",
     color: "",
+    model: "",
     minStockAlert: "12",
   });
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
@@ -157,8 +164,13 @@ export function ControlPanel({
         sales: () => get<Page<Sale>>("/sales?page=0&size=40", page => setSales(page.content || [])),
         report: () => get<Report[]>(`/financial-reports/product-breakdown?start=${start}&end=${end}`, setReport),
       };
-      // El color vive en el CRM; si falla, el catálogo sigue funcionando sin él.
-      if (tab === "products" || tab === "purchases") void request<ProductColor[]>("/product-details", { signal }).then(rows => { if (!signal.aborted) setColors(colorMap(rows)); }).catch(() => undefined);
+      // Color y modelo viven en el CRM; si fallan, el catálogo sigue funcionando sin ellos.
+      if (tab === "products" || tab === "purchases") void request<ProductDetail[]>("/product-details", { signal }).then(rows => {
+        if (signal.aborted) return;
+        const maps = detailMaps(rows);
+        setColors(maps.colors);
+        setModels(maps.models);
+      }).catch(() => undefined);
       const results = await Promise.allSettled(controlResources(tab).map(resource => loaders[resource]()));
       const failed = results.find(result => result.status === "rejected");
       if (failed?.status === "rejected") throw failed.reason;
@@ -247,7 +259,7 @@ export function ControlPanel({
   };
   const resetProductEditor = () => {
     setEditingProductId(null);
-    setProductDraft({ name: "", categoryId: "", gender: "Hombre", size: "", color: "", minStockAlert: "12" });
+    setProductDraft({ name: "", categoryId: "", gender: "Hombre", size: "", color: "", model: "", minStockAlert: "12" });
   };
   const saveProduct = async (event: FormEvent) => {
     event.preventDefault();
@@ -267,18 +279,20 @@ export function ControlPanel({
       const wasEditing = Boolean(editingProductId);
       const productId = editingProductId || (Array.isArray(saved) ? saved[0]?.id : saved?.id);
       const color = normalizeColor(productDraft.color);
-      let colorError = "";
-      if (productId && color !== (colors[productId] || "")) {
+      const model = normalizeModel(productDraft.model);
+      let detailError = "";
+      if (productId && (color !== (colors[productId] || "") || model !== (models[productId] || ""))) {
         try {
-          await request<ProductColor>(`/product-details/${productId}`, { method: "PUT", body: JSON.stringify({ color }) });
+          await request<ProductDetail>(`/product-details/${productId}`, { method: "PUT", body: JSON.stringify({ color, model }) });
           setColors(current => { const next = { ...current }; if (color) next[productId] = color; else delete next[productId]; return next; });
+          setModels(current => { const next = { ...current }; if (model) next[productId] = model; else delete next[productId]; return next; });
         } catch (error) {
-          colorError = error instanceof Error ? error.message : "intenta de nuevo";
+          detailError = error instanceof Error ? error.message : "intenta de nuevo";
         }
       }
       resetProductEditor();
       await load();
-      setNotice(colorError ? `Producto guardado, pero no se pudo guardar el color: ${colorError}` : wasEditing ? "Producto actualizado." : "Producto guardado. Registra una compra para agregar existencias.");
+      setNotice(detailError ? `Producto guardado, pero no se pudo guardar el color y modelo: ${detailError}` : wasEditing ? "Producto actualizado." : "Producto guardado. Registra una compra para agregar existencias.");
     } catch (error) {
       setNotice(
         error instanceof Error
@@ -287,10 +301,25 @@ export function ControlPanel({
       );
     }
   };
+  const scrollToProductEditor = () => requestAnimationFrame(() => document.querySelector(".product-editor-column")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   const editProduct = (product: Product) => {
+    setProductMode("single");
     setEditingProductId(product.id);
-    setProductDraft({ name: product.name, categoryId: String(product.category?.id || ""), gender: product.gender || "Unisex", size: product.size || "", color: colors[product.id] || "", minStockAlert: String(product.minStockAlert ?? 0) });
+    setProductDraft({ name: product.name, categoryId: String(product.category?.id || ""), gender: product.gender || "Unisex", size: product.size || "", color: colors[product.id] || "", model: models[product.id] || "", minStockAlert: String(product.minStockAlert ?? 0) });
+    scrollToProductEditor();
   };
+  const openVariantGenerator = (prefill: VariantPrefill | null) => {
+    resetProductEditor();
+    setVariantPrefill(prefill);
+    setVariantRevision(value => value + 1);
+    setProductMode("variants");
+    scrollToProductEditor();
+  };
+  const addVariantsTo = (group: ModelGroup) => {
+    const first = products.find(product => product.id === group.products[0]?.id);
+    openVariantGenerator({ model: group.model, categoryId: group.categoryId, gender: group.gender || "Hombre", colors: group.colors.filter(Boolean), sizes: group.sizes.filter(Boolean), minStockAlert: String(first?.minStockAlert ?? 12) });
+  };
+  const modelNames = useMemo(() => uniqueValues(Object.values(models)).sort((a, b) => a.localeCompare(b, "es")), [models]);
   const duplicateProduct = (product: Product) => {
     // Do not copy id or stock: this intentionally starts a new catalog record.
     setEditingProductId(null);
@@ -300,16 +329,18 @@ export function ControlPanel({
       gender: product.gender || "Unisex",
       size: product.size || "",
       color: colors[product.id] || "",
+      model: models[product.id] || "",
       minStockAlert: String(product.minStockAlert ?? 12),
     });
+    setProductMode("single");
     setNotice("Se copiaron los datos. Ajusta lo necesario y guarda como producto nuevo.");
-    document.querySelector(".product-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToProductEditor();
   };
   const deleteProduct = async (product: Product) => {
     if (!window.confirm(`¿Eliminar el producto “${product.name}”? Esta acción puede fallar si está vinculado a compras, ventas o precios.`)) return;
     try {
       await controlRequest<void>(`/products/${product.id}`, { method: "DELETE" });
-      if (colors[product.id]) void request(`/product-details/${product.id}`, { method: "PUT", body: JSON.stringify({ color: "" }) }).catch(() => undefined);
+      if (colors[product.id] || models[product.id]) void request(`/product-details/${product.id}`, { method: "PUT", body: JSON.stringify({ color: "", model: "" }) }).catch(() => undefined);
       if (editingProductId === product.id) resetProductEditor();
       await load();
       setNotice("Producto eliminado.");
@@ -370,6 +401,10 @@ export function ControlPanel({
       );
     }
   };
+  const productRow = (product: Product) => <div key={product.id} className="product-category-row">
+    <strong>{`${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}${product.size ? ` - ${product.size}` : ""}`}{colors[product.id] && <span className="product-color-chip"><span className="product-color-dot" style={colorSwatch(colors[product.id]) ? { background: colorSwatch(colors[product.id]) || undefined } : undefined} aria-hidden="true" />{colors[product.id]}</span>}</strong>
+    <span className="category-actions"><button type="button" className="plain-button" onClick={() => editProduct(product)}>Editar</button><button type="button" className="plain-button" onClick={() => duplicateProduct(product)}>Duplicar</button><button type="button" className="danger-link" onClick={() => void deleteProduct(product)}>Eliminar</button></span>
+  </div>;
   const lowStock = useMemo(
     () =>
       products.filter(
@@ -695,6 +730,14 @@ export function ControlPanel({
       {tab === "inventory" && <InventoryPanel refreshKey={inventoryRevision}/>}
       {tab === "products" && (
         <div className="control-customers inventory-workspace">
+          <div className="product-editor-column">
+          <div className="product-mode-switch" role="tablist" aria-label="Tipo de alta">
+            <button type="button" role="tab" aria-selected={productMode === "single"} onClick={() => setProductMode("single")}>Producto individual</button>
+            <button type="button" role="tab" aria-selected={productMode === "variants"} onClick={() => openVariantGenerator(null)}>Modelo con colores y tallas</button>
+          </div>
+          {productMode === "variants" ? <VariantGenerator key={variantRevision} categories={categories} products={products} colors={colors} models={models} initial={variantPrefill}
+            onCancel={() => setProductMode("single")}
+            onCreated={async message => { setProductMode("single"); setVariantPrefill(null); await load(); setNotice(message); }} /> :
           <form className="customer-form product-form" onSubmit={saveProduct}>
             <div>
               <p className="form-kicker">CATÁLOGO</p>
@@ -713,6 +756,11 @@ export function ControlPanel({
                 placeholder="Ej. Calceta deportiva algodón"
                 required
               />
+            </label>
+            <label>
+              Modelo (opcional)
+              <input list="product-models" value={productDraft.model} onChange={(event) => setProductDraft({ ...productDraft, model: event.target.value })} placeholder="Agrupa colores y tallas del mismo producto" maxLength={80} />
+              <datalist id="product-models">{modelNames.map(name => <option key={name} value={name} />)}</datalist>
             </label>
             <div className="form-pair">
               <label>
@@ -791,7 +839,8 @@ export function ControlPanel({
                 ? editingProductId ? "Actualizar producto" : "Guardar producto"
                 : "Primero crea una categoría"}
             </button>{editingProductId && <button type="button" className="plain-button" onClick={resetProductEditor}>Cancelar</button>}</div>
-          </form>
+          </form>}
+          </div>
           <section className="control-table product-catalog-list">
             <h2>Productos existentes</h2>
             {products.length > 0 && <p>{products.length} productos en {productCategories.length} categorías. Abre una categoría para ver sus productos.</p>}
@@ -802,12 +851,15 @@ export function ControlPanel({
               <details key={category.id} className="product-category-group">
                 <summary><strong>{category.name}</strong><span>{category.products.length} {category.products.length === 1 ? "producto" : "productos"}</span></summary>
                 <div className="product-category-content">
-                {category.products.map((product) => (
-              <div key={product.id} className="product-category-row">
-                <strong>{`${product.name} - ${product.category?.name || "Sin categoría"} - ${product.gender || "Sin género"}${product.size ? ` - ${product.size}` : ""}`}{colors[product.id] && <span className="product-color-chip"><span className="product-color-dot" style={colorSwatch(colors[product.id]) ? { background: colorSwatch(colors[product.id]) || undefined } : undefined} aria-hidden="true" />{colors[product.id]}</span>}</strong>
-                <span className="category-actions"><button type="button" className="plain-button" onClick={() => editProduct(product)}>Editar</button><button type="button" className="plain-button" onClick={() => duplicateProduct(product)}>Duplicar</button><button type="button" className="danger-link" onClick={() => void deleteProduct(product)}>Eliminar</button></span>
-              </div>
-                ))}
+                {(() => {
+                  const { groups, loose } = groupModels(category.products, models, colors);
+                  return <>
+                    {groups.map(group => <ModelStockCard key={group.key} group={group} onEdit={product => editProduct(product as Product)} onAddVariants={addVariantsTo}>
+                      {group.products.map(product => productRow(product))}
+                    </ModelStockCard>)}
+                    {loose.map(product => productRow(product))}
+                  </>;
+                })()}
                 </div>
               </details>
             ))}
@@ -839,7 +891,7 @@ export function ControlPanel({
       </section>}
       {tab === "bundles" && <BundleConfiguration products={products} packages={entrepreneurPackages} onCreateImageSet={onCreateBundleImageSet} onUploadImage={onUploadBundleImage} onProductsChanged={async()=>setProducts(await controlRequest<Product[]>("/products/all"))} />}
       {tab === "sales" && <SalesWorkspace />}
-      {tab === "purchases" && <PurchasesWorkspace products={products} colors={colors} onInventoryChanged={async () => setProducts(await controlRequest<Product[]>("/products/all"))} />}
+      {tab === "purchases" && <PurchasesWorkspace products={products} colors={colors} models={models} onInventoryChanged={async () => setProducts(await controlRequest<Product[]>("/products/all"))} />}
       {tab === "reports" && (
         <section className="control-table">
           <div className="report-controls">

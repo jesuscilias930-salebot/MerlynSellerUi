@@ -1,0 +1,72 @@
+.generator { display: grid; gap: 14px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fff; color: var(--ink); }
+.generator button, .modelCard button { font: inherit; cursor: pointer; }
+.generator input, .generator select { box-sizing: border-box; width: 100%; min-width: 0; border: 1px solid #dbe3df; border-radius: 8px; padding: 10px; background: #fff; color: var(--ink); font: inherit; }
+.field { display: grid; gap: 5px; min-width: 0; }
+.field small, .chipField small { color: var(--muted); font-size: 12px; }
+.label { color: #355247; font-size: 12px; font-weight: 700; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.chipField { display: grid; gap: 6px; }
+.chipBox { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px; border: 1px solid #dbe3df; border-radius: 8px; background: #fff; }
+.chipBox:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px var(--app-selected, #dff3ea); }
+.chipBox input:focus-visible { outline: none; }
+.chipBox input { flex: 1 1 110px; width: auto; border: 0 !important; padding: 5px 6px !important; outline: none; box-shadow: none; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 99px; background: var(--app-selected, #dff3ea); color: var(--deep, #0d402f); font-size: 13px; font-weight: 650; }
+.chip button { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 11px; opacity: .7; }
+.chip button:hover { opacity: 1; background: #ffffff99; }
+.suggestions { display: flex; flex-wrap: wrap; gap: 6px; }
+.suggestions button { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border: 1px dashed var(--app-border-strong, #c8d2d7); border-radius: 99px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 650; }
+.suggestions button:hover { border-color: var(--green); color: var(--green); }
+
+.dot { flex: none; display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid #0000002e; vertical-align: -1px; }
+.dot[data-unknown] { background: repeating-linear-gradient(45deg, #d7dedb 0 3px, #f3f6f5 3px 6px); }
+.dot[data-none] { border-style: dashed; border-color: var(--app-border-strong, #c8d2d7); }
+
+.preview { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--app-subtle, #f7f9fa); }
+.preview header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.preview header span { display: flex; gap: 4px; }
+.preview header button { border: 0; background: transparent; color: var(--green); font-size: 12px; font-weight: 750; padding: 4px 6px; }
+.matrixWrap { overflow-x: auto; }
+.matrix { border-collapse: separate; border-spacing: 0; font-size: 13px; min-width: 100%; }
+.matrix th, .matrix td { padding: 6px 8px; text-align: center; white-space: nowrap; border-bottom: 1px solid var(--line); }
+.matrix thead th { color: var(--muted); font-size: 12px; font-weight: 700; }
+.matrix thead th:first-child { text-align: left; font-weight: 600; }
+.matrix tbody th { text-align: left; font-weight: 650; }
+.rowLabel { display: inline-flex; align-items: center; gap: 7px; }
+.matrix tbody tr:last-child > * { border-bottom: 0; }
+.cellCheck { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; }
+.cellCheck:hover { background: #fff; }
+.cellCheck input { width: 18px !important; height: 18px; margin: 0; accent-color: var(--green); }
+.exists { color: var(--muted); font-size: 11px; font-weight: 650; }
+.note { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.note b { color: var(--ink); }
+.error { margin: 0; padding: 9px 12px; border: 1px solid #f3c2c7; border-radius: 9px; background: var(--app-danger-soft, #fff1f2); color: var(--app-danger, #b42332); font-size: 13px; }
+.actions { display: flex; gap: 8px; }
+.primary { border: 0; border-radius: 8px; padding: 11px 16px; background: var(--green); color: #fff; font-weight: 750; }
+.primary:disabled, .secondary:disabled { opacity: .55; cursor: not-allowed; }
+.secondary { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: #fff; color: var(--green); font-weight: 700; font-size: 13px; }
+
+.modelCard { display: grid; gap: 10px; margin: 10px 12px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.modelCard > header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.modelCard > header > div { flex: 1; min-width: 160px; display: grid; gap: 2px; }
+.modelCard > header strong { font-size: 15px; }
+.modelCard > header small { color: var(--muted); font-size: 12px; }
+.lowBadge { padding: 3px 9px; border-radius: 99px; background: #fff4dc; color: #8a5a00; font-size: 12px; font-weight: 700; }
+.stockCell { min-width: 44px; padding: 6px 8px; border: 1px solid transparent; border-radius: 8px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.stockCell[data-level="ok"] { background: var(--app-selected, #dff3ea); color: var(--deep, #0d402f); }
+.stockCell[data-level="low"] { background: #fff4dc; color: #8a5a00; }
+.stockCell[data-level="out"] { background: var(--app-danger-soft, #fff1f2); color: var(--app-danger, #b42332); }
+.stockCell:hover { border-color: currentColor; }
+.noCell { color: #b9c3bf; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 0; color: var(--muted); font-size: 11px; }
+.legend span { display: inline-block; width: 10px; height: 10px; margin-left: 4px; border-radius: 3px; }
+.legend span[data-level="ok"] { background: var(--app-selected, #dff3ea); }
+.legend span[data-level="low"] { background: #ffe3a6; }
+.legend span[data-level="out"] { background: #f7c5cb; }
+.variantList summary { cursor: pointer; color: var(--green); font-size: 13px; font-weight: 700; padding: 4px 0; }
+.variantList[open] summary { margin-bottom: 4px; }
+
+@media (max-width: 640px) {
+  .row { grid-template-columns: 1fr; }
+  .modelCard { margin: 8px; padding: 12px; }
+}

@@ -90,6 +90,25 @@
 .addLine { justify-self: start; border: 1px dashed var(--app-border-strong); border-radius: 10px; padding: 11px 16px; background: transparent; color: var(--green); font-weight: 750; }
 .addLine:hover { background: var(--app-selected); border-color: var(--green); }
 
+.addButtons { display: flex; flex-wrap: wrap; gap: 10px; }
+.modelPanel { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--green); border-radius: 12px; background: var(--app-surface); box-shadow: 0 0 0 3px var(--app-selected); }
+.modelPanel > header { display: flex; align-items: flex-start; gap: 10px; }
+.modelPanel > header div { flex: 1; display: grid; gap: 3px; }
+.modelPanel > header small { color: var(--muted); font-size: 13px; }
+.modelPanel select { box-sizing: border-box; width: 100%; max-width: 420px; border: 1px solid var(--app-border-strong); border-radius: 9px; background: var(--app-surface); color: var(--ink); padding: 10px 12px; font: inherit; font-size: 15px; }
+.quickMatrix { border-collapse: collapse; font-size: 14px; }
+.quickMatrix th, .quickMatrix td { padding: 5px 6px; text-align: center; white-space: nowrap; }
+.quickMatrix thead th { color: var(--muted); font-size: 12px; font-weight: 700; }
+.quickMatrix thead th:first-child { text-align: left; }
+.quickMatrix tbody th { text-align: left; font-weight: 650; }
+.rowLabel { display: inline-flex; align-items: center; gap: 8px; }
+.workspace .quickMatrix input { width: 74px; padding: 8px; text-align: center; }
+.noCell { color: #b9c3bf; }
+.quickFooter { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 20px; }
+.quickFooter > label:first-child { width: 200px; }
+.modelPanel > .muted { font-size: 13px; }
+.quickTotal { margin: 0 0 10px; color: var(--muted); }
+.quickTotal b { color: var(--ink); }
 .summaryBar { position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; padding: 14px 18px; border: 1px solid var(--line); border-radius: var(--app-radius); background: var(--app-surface); box-shadow: 0 -10px 30px #0f2a1f14; }
 .summaryNumbers { display: flex; flex-wrap: wrap; gap: 10px 26px; flex: 1; }
 .summaryNumbers > span { display: grid; gap: 2px; }

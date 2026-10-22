@@ -8990,3 +8990,9 @@ article.inbound:hover .message-reaction-picker, .message-reaction-picker:focus-w
 .product-color-dot { display: inline-block; flex: none; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #0000002e; background: repeating-linear-gradient(45deg, #d7dedb 0 3px, #f3f6f5 3px 6px); }
 .product-color-dot[data-empty] { background: transparent; border-style: dashed; border-color: var(--app-border-strong); }
 .product-color-chip { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; padding: 2px 9px; border: 1px solid var(--line); border-radius: 99px; background: var(--app-subtle); color: var(--muted); font-size: 12px; font-weight: 600; vertical-align: middle; }
+
+/* Alta de productos: individual o modelo con variantes */
+.product-editor-column { display: grid; gap: 10px; align-content: start; min-width: 0; scroll-margin-top: 16px; }
+.product-mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.product-mode-switch button { border: 0; border-radius: 9px; padding: 9px 8px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; font-weight: 750; cursor: pointer; }
+.product-mode-switch button[aria-selected="true"] { background: var(--green); color: #fff; }

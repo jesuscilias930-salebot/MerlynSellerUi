@@ -7,6 +7,7 @@ import {
   draftFromPurchase, draftIssues, draftTotals, emptyLine, emptyPurchase, lineIssues, lineTotals, purchaseDateLabel,
   purchaseTotal, purchaseUnits, sortPurchases, toPurchaseRequest, type Purchase, type PurchaseDraft, type PurchaseItem, type PurchaseLine,
 } from "../lib/purchases";
+import { cellKey, groupModels, type ModelGroup } from "../lib/product-variants";
 import { ConfirmDialog } from "./ConfirmDialog";
 import styles from "./PurchasesWorkspace.module.css";
 
@@ -24,6 +25,9 @@ const pieces = (value: number) => `${new Intl.NumberFormat("es-MX").format(value
 const plain = (value: string) => value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const meta = (product: PurchaseProduct | PurchaseItem["product"] | undefined, color?: string) =>
   [product?.category?.name, product?.gender, product?.size, color].filter(Boolean).join(" · ");
+// Si el nombre ya trae el color (variantes de un modelo), no lo repetimos.
+const productMeta = (product: PurchaseProduct, color?: string) =>
+  meta(product, color && !plain(product.name).includes(plain(color)) ? color : undefined);
 const isDirty = (draft: PurchaseDraft) =>
   Boolean(draft.supplierName.trim() || draft.invoiceTotal.trim() || draft.lines.length > 1
     || draft.lines.some(line => line.productId || line.units || line.unitCost || line.unitsPerBulk || line.pricePerBulk || line.taxed));
@@ -68,7 +72,7 @@ function ProductPicker({ products, colors, value, taken, invalid, onChange }: {
     <Swatch color={selected ? colors[selected.id] : null} />
     <div>
       <strong>{selected?.name || `Producto #${value}`}</strong>
-      <small>{selected ? meta(selected, colors[selected.id]) || "Sin detalles" : "Ya no aparece en tu catálogo"}</small>
+      <small>{selected ? productMeta(selected, colors[selected.id]) || "Sin detalles" : "Ya no aparece en tu catálogo"}</small>
     </div>
     {selected?.currentStock != null && <span className={styles.stock}>Hay {pieces(Number(selected.currentStock))}</span>}
     <button type="button" className={styles.linkButton} onClick={() => { setSearching(true); setActive(0); setOpen(true); requestAnimationFrame(() => inputRef.current?.focus()); }}>Cambiar</button>
@@ -89,7 +93,7 @@ function ProductPicker({ products, colors, value, taken, invalid, onChange }: {
         return <li key={product.id} id={`${listId}-${product.id}`} role="option" aria-selected={index === active} aria-disabled={used || undefined}
           data-active={index === active ? "" : undefined} onMouseEnter={() => setActive(index)} onMouseDown={event => event.preventDefault()} onClick={() => choose(product)}>
           <Swatch color={colors[product.id]} keepSpace />
-          <span><strong>{product.name}</strong><small>{meta(product, colors[product.id]) || "Sin detalles"}</small></span>
+          <span><strong>{product.name}</strong><small>{productMeta(product, colors[product.id]) || "Sin detalles"}</small></span>
           <em>{used ? "Ya está en esta compra" : product.currentStock != null ? `${product.currentStock} en stock` : ""}</em>
         </li>;
       })}
@@ -156,8 +160,70 @@ function LineCard({ line, index, count, products, colors, taken, showIssues, onC
   </article>;
 }
 
-export function PurchasesWorkspace({ products, colors, onInventoryChanged }: {
-  products: PurchaseProduct[]; colors: Record<number, string>; onInventoryChanged: () => void | Promise<void>;
+type QuickEntry = { productId: number; units: string; unitCost: string; taxed: boolean };
+
+/** Captura de piezas por color y talla de un modelo; agrega una línea por variante. */
+function ModelQuickAdd({ groups, onAdd, onClose }: { groups: ModelGroup<PurchaseProduct>[]; onAdd: (entries: QuickEntry[]) => void; onClose: () => void }) {
+  const [groupKey, setGroupKey] = useState(groups[0]?.key || "");
+  const [quantities, setQuantities] = useState<Record<number, string>>({});
+  const [unitCost, setUnitCost] = useState("");
+  const [taxed, setTaxed] = useState(false);
+  const [error, setError] = useState("");
+  const group = groups.find(item => item.key === groupKey) || groups[0];
+  const entries = group ? group.products.map(product => ({ product, units: quantities[product.id] || "" })).filter(entry => entry.units.trim() !== "" && Number(entry.units) !== 0) : [];
+  const units = entries.reduce((sum, entry) => sum + (Number(entry.units) || 0), 0);
+  const cost = Number(unitCost);
+  const add = () => {
+    if (!entries.length) return setError("Escribe cuántas piezas llegaron de al menos una variante.");
+    if (entries.some(entry => !Number.isInteger(Number(entry.units)) || Number(entry.units) < 1)) return setError("Las piezas deben ser números enteros mayores a cero.");
+    if (!(cost > 0)) return setError("Indica el costo por pieza.");
+    onAdd(entries.map(entry => ({ productId: entry.product.id, units: String(Number(entry.units)), unitCost, taxed })));
+  };
+  if (!group) return null;
+  return <section className={styles.modelPanel} aria-label="Capturar por modelo">
+    <header>
+      <div><strong>Capturar por modelo</strong><small>Escribe las piezas de cada color y talla; se agrega una línea por variante.</small></div>
+      <button type="button" className={styles.remove} onClick={onClose} aria-label="Cerrar">✕</button>
+    </header>
+    <label className={styles.field}>
+      <span>Modelo</span>
+      <select value={group.key} onChange={event => { setGroupKey(event.target.value); setQuantities({}); setError(""); }}>
+        {groups.map(item => <option key={item.key} value={item.key}>{[item.model, item.gender, item.categoryName].filter(Boolean).join(" · ")}</option>)}
+      </select>
+    </label>
+    <div className={styles.tableWrap}><table className={styles.quickMatrix}>
+      <thead><tr><th scope="col">Color \ Talla</th>{group.sizes.map(size => <th key={size} scope="col">{size || "Sin talla"}</th>)}</tr></thead>
+      <tbody>{group.colors.map(color => <tr key={color}>
+        <th scope="row"><span className={styles.rowLabel}><Swatch color={color || null} keepSpace />{color || "Sin color"}</span></th>
+        {group.sizes.map(size => {
+          const product = group.cells[cellKey(color, size)];
+          return <td key={size}>{product
+            ? <input type="number" inputMode="numeric" min="0" step="1" placeholder="0" value={quantities[product.id] || ""} aria-label={`Piezas de ${color || "sin color"} ${size || "sin talla"}`}
+                onChange={event => { setError(""); setQuantities(current => ({ ...current, [product.id]: event.target.value })); }} />
+            : <span className={styles.noCell} title="Esta combinación no existe">—</span>}</td>;
+        })}
+      </tr>)}</tbody>
+    </table></div>
+    <div className={styles.quickFooter}>
+      <NumberField label="Costo por pieza (todas)" prefix="$" step="0.01" min="0.01" value={unitCost} onChange={value => { setError(""); setUnitCost(value); }} />
+      <label className={styles.switch}>
+        <input type="checkbox" role="switch" checked={taxed} onChange={event => setTaxed(event.target.checked)} />
+        <span aria-hidden="true" />
+        Con factura (IVA)
+      </label>
+      <p className={styles.quickTotal}><b>{pieces(units)}</b> en {entries.length} {entries.length === 1 ? "variante" : "variantes"}{cost > 0 && units > 0 ? <> · <b>{money(units * cost)}</b></> : null}</p>
+    </div>
+    {error && <p className={styles.error} role="alert">{error}</p>}
+    <p className={styles.muted}>Si una variante ya estaba en la compra, se reemplaza su cantidad y costo.</p>
+    <div className={styles.rowActions}>
+      <button type="button" className={styles.primary} onClick={add}>Agregar a la compra</button>
+      <button type="button" className={styles.secondary} onClick={onClose}>Cancelar</button>
+    </div>
+  </section>;
+}
+
+export function PurchasesWorkspace({ products, colors, models = {}, onInventoryChanged }: {
+  products: PurchaseProduct[]; colors: Record<number, string>; models?: Record<number, string>; onInventoryChanged: () => void | Promise<void>;
 }) {
   const [tab, setTab] = useState<Tab>("new");
   const [draft, setDraft] = useState<PurchaseDraft>(emptyPurchase);
@@ -176,6 +242,7 @@ export function PurchasesWorkspace({ products, colors, onInventoryChanged }: {
   const [highlight, setHighlight] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [deleting, setDeleting] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const loadHistory = useCallback(async (nextPage = 0) => {
@@ -204,6 +271,21 @@ export function PurchasesWorkspace({ products, colors, onInventoryChanged }: {
     return () => { active = false; };
   }, [loadHistory]);
 
+  const modelGroups = useMemo(() => groupModels(products, models, colors).groups, [products, models, colors]);
+  const addFromModel = (entries: QuickEntry[]) => {
+    setFormError("");
+    setDraft(current => {
+      const lines = current.lines.filter(line => line.productId || line.units || line.unitCost || line.unitsPerBulk || line.pricePerBulk);
+      for (const entry of entries) {
+        const patch = { mode: "unit" as const, units: entry.units, unitCost: entry.unitCost, taxed: entry.taxed };
+        const index = lines.findIndex(line => line.productId === String(entry.productId));
+        if (index >= 0) lines[index] = { ...lines[index], ...patch };
+        else lines.push({ ...emptyLine(), productId: String(entry.productId), ...patch });
+      }
+      return { ...current, lines: lines.length ? lines : [emptyLine()] };
+    });
+    setQuickOpen(false);
+  };
   const productById = useMemo(() => new Map(products.map(product => [product.id, product])), [products]);
   const suppliers = useMemo(() => [...new Set(purchases.map(item => item.supplierName?.trim()).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b, "es")), [purchases]);
   const totals = draftTotals(draft);
@@ -214,7 +296,7 @@ export function PurchasesWorkspace({ products, colors, onInventoryChanged }: {
     setFormError("");
     setDraft(current => ({ ...current, lines: current.lines.map(line => line.key === key ? { ...line, ...patch } : line) }));
   };
-  const reset = () => { setDraft(emptyPurchase()); setEditing(null); setAttempted(false); setFormError(""); };
+  const reset = () => { setDraft(emptyPurchase()); setEditing(null); setAttempted(false); setFormError(""); setQuickOpen(false); };
   const startEdit = (purchase: Purchase) => {
     setDraft(draftFromPurchase(purchase));
     setEditing(purchase);
@@ -351,7 +433,11 @@ export function PurchasesWorkspace({ products, colors, onInventoryChanged }: {
             taken={taken(line.key)} showIssues={attempted} onChange={patch => updateLine(line.key, patch)}
             onRemove={() => setDraft(current => ({ ...current, lines: current.lines.filter(item => item.key !== line.key) }))} />)}
         </div>
-        <button type="button" className={styles.addLine} onClick={() => setDraft(current => ({ ...current, lines: [...current.lines, emptyLine()] }))}>＋ Agregar otro producto</button>
+        {quickOpen && <ModelQuickAdd groups={modelGroups} onAdd={addFromModel} onClose={() => setQuickOpen(false)} />}
+        <div className={styles.addButtons}>
+          <button type="button" className={styles.addLine} onClick={() => setDraft(current => ({ ...current, lines: [...current.lines, emptyLine()] }))}>＋ Agregar otro producto</button>
+          {modelGroups.length > 0 && !quickOpen && <button type="button" className={styles.addLine} onClick={() => setQuickOpen(true)}>▦ Capturar por modelo (colores y tallas)</button>}
+        </div>
       </section>
 
       {attempted && generalIssues.length > 0 && <ul className={styles.issues}>{generalIssues.map(issue => <li key={issue}>{issue}</li>)}</ul>}
