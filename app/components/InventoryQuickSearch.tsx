@@ -36,7 +36,7 @@ export function InventoryQuickSearch({ onInsert, autoFocus = true }: { onInsert:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const results = useMemo(() => data ? searchInventory(query, data.products, data.bundles, 12, data.locations) : [], [data, query]);
+  const results = useMemo(() => data ? searchInventory(query, data.products, data.bundles, 12, data.locations, data.slots) : [], [data, query]);
   const keyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (!results.length) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -75,6 +75,7 @@ export function InventoryQuickSearch({ onInsert, autoFocus = true }: { onInsert:
           <b>{result.title}</b>
           <small>{[result.detail, result.price ? money(result.price) : ""].filter(Boolean).join(" · ")}</small>
           {result.location && <small className="inventory-quick-location">📍 {result.location}</small>}
+          {result.slots?.map(slot => <small key={slot} className="inventory-quick-location">📍 {slot}</small>)}
         </span>
         <span className={`inventory-quick-stock ${result.state}`}>{stockLabel(result)}</span>
         <button type="button" title="Escribir la respuesta en el mensaje" onClick={() => onInsert(availabilityMessage(result))}>Responder</button>

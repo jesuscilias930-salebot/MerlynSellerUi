@@ -1,9 +1,9 @@
 import { request } from "./api";
 import { controlRequest, controlSession } from "./control-api";
-import { locationMap, type LocationMap, type ProductLocation } from "./product-locations";
+import { locationMap, slotMap, type LocationMap, type LocationSlot, type ProductLocation, type SlotMap } from "./product-locations";
 import type { QuickBundle, QuickProduct } from "./quick-inventory";
 
-export type InventorySnapshot = { products: QuickProduct[]; bundles: QuickBundle[]; locations: LocationMap; loadedAt: number };
+export type InventorySnapshot = { products: QuickProduct[]; bundles: QuickBundle[]; locations: LocationMap; slots: SlotMap; loadedAt: number };
 const FRESH_MS = 60_000;
 // Compartido entre chats y pantallas: abrir otra búsqueda no vuelve a descargar todo.
 let cache: InventorySnapshot | null = null;
@@ -15,13 +15,17 @@ export const CONTROL_LOGIN_MESSAGE = "Inicia sesión en Control de ventas para c
 export async function loadInventory(force = false): Promise<InventorySnapshot> {
   if (!force && cache && Date.now() - cache.loadedAt < FRESH_MS) return cache;
   if (!controlSession.get()) throw new Error(CONTROL_LOGIN_MESSAGE);
-  const [products, bundles, locations] = await Promise.all([
+  const [products, bundles, locations, slots] = await Promise.all([
     controlRequest<QuickProduct[]>("/products/all"),
     controlRequest<QuickBundle[]>("/bundles"),
     // Las ubicaciones son un extra: si fallan, el stock se muestra igual.
     request<ProductLocation[]>("/inventory-locations").catch(() => [] as ProductLocation[]),
+    request<LocationSlot[]>("/inventory-locations/slots").catch(() => [] as LocationSlot[]),
   ]);
-  cache = { products: Array.isArray(products) ? products : [], bundles: Array.isArray(bundles) ? bundles : [], locations: locationMap(Array.isArray(locations) ? locations : []), loadedAt: Date.now() };
+  cache = {
+    products: Array.isArray(products) ? products : [], bundles: Array.isArray(bundles) ? bundles : [],
+    locations: locationMap(Array.isArray(locations) ? locations : []), slots: slotMap(Array.isArray(slots) ? slots : []), loadedAt: Date.now(),
+  };
   return cache;
 }
 /** Después de vender, el stock cambió: la próxima consulta vuelve a Control. */
@@ -32,4 +36,11 @@ export function updateCachedLocations(rows: ProductLocation[]) {
   const next = new Map(cache.locations);
   rows.forEach(row => { if (row.rack || row.level || row.side) next.set(row.productId, row); else next.delete(row.productId); });
   cache = { ...cache, locations: next };
+}
+/** Refleja en la caché las ubicaciones por talla y color recién guardadas. */
+export function updateCachedSlots(productId: number, rows: LocationSlot[]) {
+  if (!cache) return;
+  const next = new Map(cache.slots);
+  if (rows.length) next.set(productId, rows); else next.delete(productId);
+  cache = { ...cache, slots: next };
 }

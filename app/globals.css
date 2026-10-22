@@ -9003,3 +9003,38 @@ article.inbound:hover .message-reaction-picker, .message-reaction-picker:focus-w
 .product-size-group > summary span { padding: 2px 8px; border-radius: 99px; background: #fff; border: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 .product-size-group[open] > summary { border-bottom: 1px solid var(--line); }
 .product-size-group .product-category-row:last-child { border-bottom: 0; }
+
+/* Ubicación por talla y color dentro de un producto */
+.slot-add-button { justify-self: start; margin-bottom: 8px; padding: 5px 9px; border: 1px dashed #9cc9ad; border-radius: 9px; background: none; color: var(--green); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.slot-summary { display: grid; gap: 6px; margin-bottom: 8px; padding: 9px 10px; border: 1px solid #c9e5d9; border-radius: 10px; background: #f7fbf8; }
+.slot-summary header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.slot-summary header strong { color: var(--deep); font-size: 12px; }
+.slot-summary header button { padding: 0; border: 0; background: none; color: var(--green); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.slot-summary ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.slot-summary li { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 7px; background: #fff; font-size: 12px; }
+.slot-summary li b { color: var(--ink); white-space: nowrap; }
+.slot-summary li span { overflow: hidden; color: #11573f; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.slot-summary li em { color: var(--muted); font-style: normal; font-weight: 700; white-space: nowrap; }
+.slot-summary > small { color: var(--muted); font-size: 11px; font-weight: 600; }
+.slot-warning { color: #8a5a00 !important; font-size: 11px; font-weight: 700; }
+.slot-editor { display: grid; gap: 8px; margin-bottom: 8px; padding: 10px; border: 1px solid #c9e5d9; border-radius: 10px; background: #f7fbf8; }
+.slot-editor > header { display: grid; gap: 2px; }
+.slot-editor > header strong { color: var(--deep); font-size: 13px; }
+.slot-editor > header small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+.slot-rows { display: grid; gap: 6px; }
+.slot-row { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.1fr) minmax(0, .8fr) minmax(0, .8fr) minmax(0, .7fr) minmax(0, 1fr) 26px; align-items: center; gap: 5px; }
+.slot-head span { color: var(--deep); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.slot-row label { display: block; min-width: 0; }
+.slot-row label > span { display: none; }
+.slot-row input { width: 100%; min-width: 0; box-sizing: border-box; padding: 6px 7px; border: 1px solid var(--app-border-strong); border-radius: 7px; background: #fff; color: var(--ink); font: inherit; font-size: 12px; }
+.slot-remove { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 11px; cursor: pointer; }
+.slot-remove:hover { background: var(--app-danger-soft, #fff1f2); color: var(--app-danger, #b42332); }
+.slot-add-row { justify-self: start; padding: 5px 9px; border: 1px dashed #9cc9ad; border-radius: 8px; background: none; color: var(--green); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.slot-issues { margin: 0; padding: 7px 10px 7px 24px; border-radius: 8px; background: var(--app-danger-soft, #fff1f2); color: var(--app-danger, #b42332); font-size: 11px; line-height: 1.5; }
+@media (max-width: 620px) {
+  .slot-head { display: none; }
+  .slot-row { grid-template-columns: 1fr 1fr 1fr; padding: 8px; border: 1px solid var(--line); border-radius: 9px; background: #fff; position: relative; }
+  .slot-row label > span { display: block; margin-bottom: 3px; color: var(--deep); font-size: 10px; font-weight: 800; }
+  .slot-remove { position: absolute; top: 4px; right: 4px; }
+}
+.location-finder-slot { color: #0b6b44; font-style: normal; }
