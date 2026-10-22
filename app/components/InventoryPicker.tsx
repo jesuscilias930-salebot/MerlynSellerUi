@@ -15,7 +15,7 @@ export function InventoryPicker({ onPick, allowCustom = false, placeholder = "Bu
     loadInventory().then(snapshot => { if (active) setData(snapshot); }).catch(reason => { if (active) setError(reason instanceof Error ? reason.message : "No se pudo consultar el inventario."); });
     return () => { active = false; };
   }, []);
-  const results = useMemo(() => (data ? searchInventory(query, data.products, data.bundles, 6) : []), [data, query]);
+  const results = useMemo(() => (data ? searchInventory(query, data.products, data.bundles, 6, data.locations) : []), [data, query]);
   const pick = (line: DeliveryLine) => { onPick(line); setQuery(""); };
   return <div className="inventory-picker">
     <input type="search" value={query} placeholder={placeholder} onChange={event => setQuery(event.target.value)} onKeyDown={event => {
@@ -28,11 +28,11 @@ export function InventoryPicker({ onPick, allowCustom = false, placeholder = "Bu
     {query.trim().length >= 2 && <ul>
       {results.map(result => <li key={`${result.kind}-${result.id}`}>
         <button type="button" onClick={() => pick({ kind: result.kind, id: result.id, name: result.title, quantity: 1 })}>
-          <span>{result.kind === "bundle" ? "🎁" : "🧦"} <b>{result.title}</b><small>{result.detail}</small></span>
+          <i aria-hidden="true">{result.kind === "bundle" ? "🎁" : "🧦"}</i><span><b>{result.title}</b><small>{[result.detail, result.location && `📍 ${result.location}`].filter(Boolean).join(" · ")}</small></span>
           <em className={`inventory-quick-stock ${result.state}`}>{result.state === "empty" ? "Agotado" : `${result.available} disp.`}</em>
         </button>
       </li>)}
-      {allowCustom && <li><button type="button" onClick={() => pick({ kind: "custom", name: query.trim(), quantity: 1 })}><span>✎ <b>Agregar «{query.trim()}» como texto</b><small>No descuenta inventario</small></span></button></li>}
+      {allowCustom && <li><button type="button" onClick={() => pick({ kind: "custom", name: query.trim(), quantity: 1 })}><i aria-hidden="true">✎</i><span><b>Agregar «{query.trim()}» como texto</b><small>No descuenta inventario</small></span></button></li>}
       {!results.length && !allowCustom && <li className="inventory-picker-empty">Sin coincidencias.</li>}
     </ul>}
   </div>;

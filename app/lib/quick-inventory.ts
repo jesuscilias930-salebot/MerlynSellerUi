@@ -11,9 +11,23 @@ export type QuickBundle = { id: number; name: string; fixedPrice?: number | stri
 export type StockState = "ready" | "low" | "empty";
 export type QuickResult = {
   kind: "product" | "bundle"; id: number; title: string; detail: string; available: number; state: StockState; price?: number;
+  /** Ubicación en bodega (solo productos), p. ej. «Rack A · Piso 2 · Lado izquierdo». */
+  location?: string;
+};
+type LocationLike = { rack: string | null; level: string | null; side: string | null };
+// Igual que formatLocation (product-locations); se repite para que este módulo no
+// dependa de otros y sus pruebas de Node lo importen directamente.
+const formatLocation = (location?: LocationLike) => {
+  if (!location) return "";
+  const part = (label: string, value: string | null) => {
+    const text = (value || "").trim().replace(/\s+/g, " ");
+    if (!text) return "";
+    return new RegExp(`^${label}\\b`, "i").test(text) ? text : `${label} ${label === "Lado" ? text.toLowerCase() : text}`;
+  };
+  return [part("Rack", location.rack), part("Piso", location.level), part("Lado", location.side)].filter(Boolean).join(" · ");
 };
 
-export const normalizeText = (value: string) => value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+export const normalizeText = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 const genderLabel = (value?: string | null) => {
   const key = normalizeText(value || "");
@@ -91,16 +105,17 @@ const relevance = (query: string, title: string, haystack: string) => {
 };
 
 /** Busca en productos y bundles por nombre, categoría, género o talla (sin importar acentos). */
-export function searchInventory(text: string, products: QuickProduct[], bundles: QuickBundle[], limit = 12): QuickResult[] {
+export function searchInventory(text: string, products: QuickProduct[], bundles: QuickBundle[], limit = 12, locations?: Map<number, LocationLike>): QuickResult[] {
   const query = normalizeText(text);
   if (query.length < 2) return [];
   const results: (QuickResult & { score: number })[] = [];
   for (const product of products) {
     const detail = productDetail(product);
-    const score = relevance(query, product.name, normalizeText(`${product.name} ${detail} ${product.gender || ""}`));
+    const location = formatLocation(locations?.get(product.id));
+    const score = relevance(query, product.name, normalizeText(`${product.name} ${detail} ${product.gender || ""} ${location}`));
     if (score < 0) continue;
     const available = stockOf(product);
-    results.push({ kind: "product", id: product.id, title: product.name.trim() || "Producto", detail, available, state: stockState(available, product.minStockAlert ?? 0), score });
+    results.push({ kind: "product", id: product.id, title: product.name.trim() || "Producto", detail, available, state: stockState(available, product.minStockAlert ?? 0), score, ...(location ? { location } : {}) });
   }
   for (const bundle of bundles) {
     const score = relevance(query, bundle.name, normalizeText(`${bundle.name} ${bundle.storeCategory || ""} bundle paquete`));

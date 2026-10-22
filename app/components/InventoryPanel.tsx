@@ -4,6 +4,11 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { controlRequest } from "../lib/control-api";
 import { inventoryCategoryKey, inventoryCategoryName, inventoryFilterParams, inventoryPagePath, inventoryProductName, inventorySearchText, inventoryStockState, type InventoryCategory, type InventoryPage, type InventoryProduct } from "../lib/inventory-catalog";
 import { InventoryQuantityEditor } from "./InventoryQuantityEditor";
+import { ProductLocationEditor } from "./ProductLocationEditor";
+import { LocationFinder } from "./LocationFinder";
+import { request } from "../lib/api";
+import { updateCachedLocations } from "../lib/inventory-snapshot";
+import { locationMap, suggestions, type LocationMap, type ProductLocation } from "../lib/product-locations";
 import { ChatIcon } from "./ChatIcon";
 import styles from "./InventoryPanel.module.css";
 
@@ -20,6 +25,23 @@ export function InventoryPanel({ refreshKey }: { refreshKey: number }) {
   const [revision, setRevision] = useState(0);
   const [categories, setCategories] = useState<{ key: string; data?: InventoryCategory[]; error?: string }>();
   const [suggestions, setSuggestions] = useState<{ key: string; data?: InventoryProduct[]; error?: string }>();
+  const [locations, setLocations] = useState<LocationMap>(() => new Map());
+  const [locationError, setLocationError] = useState("");
+  useEffect(() => {
+    let active = true;
+    request<ProductLocation[]>("/inventory-locations")
+      .then(rows => { if (active) setLocations(locationMap(rows)); })
+      .catch(error => { if (active) setLocationError(errorMessage(error)); });
+    return () => { active = false; };
+  }, []);
+  const locationSaved = (rows: ProductLocation[]) => {
+    setLocations(current => {
+      const next = new Map(current);
+      rows.forEach(row => { if (row.rack || row.level || row.side) next.set(row.productId, row); else next.delete(row.productId); });
+      return next;
+    });
+    updateCachedLocations(rows);
+  };
   const listId = useId();
   const rawQuery = inventorySearchText(text);
   const q = selected ? "" : rawQuery ? settledText : "";
@@ -95,6 +117,8 @@ export function InventoryPanel({ refreshKey }: { refreshKey: number }) {
         {options.length > 0 && <p className={styles.keyboardHint}>↑ ↓ para navegar · Enter para elegir · Esc para cerrar</p>}
       </div>}
     </div>
+    {locationError && <p className={styles.hint} role="alert">No se pudieron cargar las ubicaciones: {locationError}</p>}
+    <LocationFinder locations={locations} />
     <div className={styles.resultsHeading}>
       <p role="status">{!currentCategories ? "Consultando inventario…" : currentCategories.error ? "No se pudo cargar el inventario." : `${number(total)} ${total === 1 ? "producto" : "productos"} en ${categoryCount} ${categoryCount === 1 ? "categoría" : "categorías"}${selected ? " · Producto seleccionado" : q ? ` · Resultados para “${q}”` : ""}`}</p>
       {!!currentCategories?.data?.length && <div className={styles.groupActions}><button type="button" onClick={() => setExpanded(Object.fromEntries(currentCategories.data!.map(row => [inventoryCategoryKey(row), true])))}>Expandir todas</button><button type="button" onClick={() => setExpanded(Object.fromEntries(currentCategories.data!.map(row => [inventoryCategoryKey(row), false])))}>Contraer todas</button></div>}
@@ -108,13 +132,14 @@ export function InventoryPanel({ refreshKey }: { refreshKey: number }) {
         <h3><button type="button" className={styles.categoryToggle} aria-expanded={open} aria-controls={`${listId}-category-${key}`} onClick={() => setExpanded(current => ({ ...current, [key]: !open }))}>
           <span className={styles.categoryIcon} aria-hidden="true">▦</span><strong>{inventoryCategoryName(category)}</strong><span className={styles.count}>{number(category.productCount)} {category.productCount === 1 ? "producto" : "productos"}</span><span className={styles.chevron} aria-hidden="true">{open ? "⌄" : "›"}</span>
         </button></h3>
-        <div id={`${listId}-category-${key}`} hidden={!open}>{open && <InventoryCategoryProducts key={`${key}:${filter}`} category={category} q={q} productId={productId} revision={`${refreshKey}:${revision}`} onSaved={async () => setRevision(value => value + 1)}/>}</div>
+        <div id={`${listId}-category-${key}`} hidden={!open}>{open && <InventoryCategoryProducts key={`${key}:${filter}`} category={category} q={q} productId={productId} revision={`${refreshKey}:${revision}`} onSaved={async () => setRevision(value => value + 1)} locations={locations} onLocationSaved={locationSaved}/>}</div>
       </section>;
     })}</div>
   </section>;
 }
 
-function InventoryCategoryProducts({ category, q, productId, revision, onSaved }: { category: InventoryCategory; q: string; productId?: number; revision: string; onSaved: () => Promise<void> }) {
+function InventoryCategoryProducts({ category, q, productId, revision, onSaved, locations, onLocationSaved }: { category: InventoryCategory; q: string; productId?: number; revision: string; onSaved: () => Promise<void>; locations: LocationMap; onLocationSaved: (rows: ProductLocation[]) => void }) {
+  const options = { rack: suggestions(locations.values(), "rack"), level: suggestions(locations.values(), "level"), side: suggestions(locations.values(), "side") };
   const body = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(0), [retry, setRetry] = useState(0);
   const [result, setResult] = useState<{ key: string; data?: InventoryPage; error?: string }>();
@@ -133,11 +158,13 @@ function InventoryCategoryProducts({ category, q, productId, revision, onSaved }
     {!current && <p role="status">Cargando productos de {inventoryCategoryName(category)}…</p>}
     {current?.error && <div role="alert" className={styles.error}>{current.error}<button type="button" onClick={() => setRetry(value => value + 1)}>Reintentar categoría</button></div>}
     {current?.data?.content.length === 0 && <p>No hay productos en esta página.</p>}
+    {(current?.data?.content.length || 0) > 1 && <ProductLocationEditor productIds={current!.data!.content.map(product => product.id)} options={options} onSaved={onLocationSaved} bulkLabel={`Asignar una ubicación a los ${current!.data!.content.length} productos de esta página`}/>}
     <div className={styles.products}>{current?.data?.content.map(product => {
       const state = inventoryStockState(product);
       return <article key={product.id} className={styles.product}>
         <header><div><h4>{product.name}</h4><p>{[product.gender || "Sin género", product.size, `#${product.id}`].filter(Boolean).join(" · ")}</p></div><span className={`${styles.badge} ${styles[state]}`}>{state === "empty" ? "Sin existencias" : state === "low" ? "Stock bajo" : "Disponible"}</span></header>
         <div className={styles.stock}><strong>{number(product.currentStock)}</strong><span>unidades disponibles</span><small>Alerta mínima: {number(product.minStockAlert ?? 0)}</small></div>
+        <ProductLocationEditor productIds={[product.id]} location={locations.get(product.id)} options={options} onSaved={onLocationSaved}/>
         <InventoryQuantityEditor id={product.id} name={inventoryProductName(product)} stock={product.currentStock} onSaved={onSaved}/>
       </article>;
     })}</div>

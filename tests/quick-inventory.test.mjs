@@ -38,3 +38,11 @@ test('mensajes para el cliente no revelan existencias exactas', () => {
   assert.doesNotMatch(availabilityMessage(ready), /30/);
   assert.match(availabilityMessage(searchInventory('termico', products, [])[0]), /agotado/);
 });
+
+test('muestra y busca por ubicación en bodega', () => {
+  const locations = new Map([[1, { productId: 1, rack: 'A', level: '2', side: 'Izquierdo' }]]);
+  const [hit] = searchInventory('rack a', products, [], 12, locations);
+  assert.equal(hit.id, 1);
+  assert.equal(hit.location, 'Rack A · Piso 2 · Lado izquierdo');
+  assert.equal(searchInventory('caricatura nina', products, [], 12, locations)[0].location, undefined);
+});
