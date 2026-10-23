@@ -15,6 +15,7 @@ import type {
   SavedSticker,
 } from "../lib/types";
 import { ConversationPanel, type PendingChatImage } from "./ConversationPanel";
+import { InternalChatPanel, InternalChatRow, useInternalUnread } from "./InternalChat";
 
 type Props = {
   chats: Chat[];
@@ -114,6 +115,8 @@ export function Inbox({
   onDeleteConversation,
 }: Props) {
   const [mobileConversation, setMobileConversation] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [internalUnread] = useInternalUnread(internalOpen);
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [newChatOpen, setNewChatOpen] = useState(false);
@@ -126,7 +129,7 @@ export function Inbox({
   const columnFilter = filter.startsWith("column:") ? columns.find(column => `column:${column.id}` === filter) : null;
   return (
     <>
-      <div className="mobile-inbox-state" data-conversation={mobileConversation && Boolean(chat)} />
+      <div className="mobile-inbox-state" data-conversation={mobileConversation && (internalOpen || Boolean(chat))} />
       <section className="list inbox-list" aria-label="Conversaciones">
         <header>
           <div>
@@ -193,15 +196,16 @@ export function Inbox({
         </form>
         {columnFilter && <div className="inbox-current-filter"><span>{columnFilter.name}</span><button type="button" aria-label="Quitar filtro de columna" onClick={() => onFilterChange("all")}><ChatIcon name="close" /></button></div>}
         <div className="rows">
+          {(!search.trim() || "recordatorios".includes(search.trim().toLowerCase())) && <InternalChatRow active={internalOpen} unread={internalUnread} onOpen={() => { setInternalOpen(true); setMobileConversation(true); setFiltersOpen(false); setNewChatOpen(false); }} />}
           {visibleChats.length === 0 && (
             <div className="inbox-list-empty"><ChatIcon name="chat" /><strong>{search ? "Sin resultados" : "No hay conversaciones"}</strong><p>{search ? "Prueba con otro nombre o número de teléfono." : "Selecciona otro filtro o inicia una conversación."}</p></div>
           )}
           {visibleChats.map((item) => (
             <button
               type="button"
-              aria-current={item.id === chat?.id ? "true" : undefined}
-              onClick={() => { onOpen(item); setMobileConversation(true); setFiltersOpen(false); setNewChatOpen(false); }}
-              className={`${item.id === chat?.id ? "row active" : "row"}${item.unreadCount > 0 ? " has-unread" : ""}`}
+              aria-current={!internalOpen && item.id === chat?.id ? "true" : undefined}
+              onClick={() => { setInternalOpen(false); onOpen(item); setMobileConversation(true); setFiltersOpen(false); setNewChatOpen(false); }}
+              className={`${!internalOpen && item.id === chat?.id ? "row active" : "row"}${item.unreadCount > 0 ? " has-unread" : ""}`}
               key={item.id}
             >
               <b>{initials(item.name || item.phone_number)}</b>
@@ -221,7 +225,7 @@ export function Inbox({
           ))}
         </div>
       </section>
-      <ConversationPanel
+      {internalOpen ? <InternalChatPanel onMobileBack={() => setMobileConversation(false)} /> : <ConversationPanel
         inboxLayout
         onMobileBack={() => setMobileConversation(false)}
         chat={chat}
@@ -263,7 +267,7 @@ export function Inbox({
         onMoveLead={onMoveLead}
         onOpenShipping={onOpenShipping}
         onDeleteConversation={onDeleteConversation}
-      />
+      />}
     </>
   );
 }

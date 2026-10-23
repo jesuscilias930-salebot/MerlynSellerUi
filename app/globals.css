@@ -9018,3 +9018,30 @@ article.inbound:hover .message-reaction-picker, .message-reaction-picker:focus-w
 .copy-stock button:disabled { opacity: .6; cursor: progress; }
 .copy-stock small { color: var(--green); font-size: 12px; font-weight: 700; }
 .copy-stock small.copy-stock-error { color: #8a5a00; }
+
+/* Recordatorios y chat interno */
+.reminder-link { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border: 1px solid #9cc9ad; border-radius: 8px; background: #fff; color: #087f5b; font: inherit; font-size: 12px; font-weight: 800; text-decoration: none; cursor: pointer; }
+.reminder-link:hover { background: var(--mint); }
+.reminder-link.primary { border-color: #128c4a; background: #128c4a; color: #fff; }
+.reminder-link.primary:hover { background: #0f7a40; }
+.reminder-link.subtle { border-color: var(--line); color: var(--ink); }
+.reminder-card.status-notified { border-left-color: #e0a423; }
+.reminder-card.status-done { border-left-color: #b9c2c8; opacity: .8; }
+.reminder-status.scheduled { background: var(--mint); color: #11573f; }
+.reminder-status.notified { background: #fff4dc; color: #8a5a00; }
+.reminder-status.done { background: #eef1f3; color: #5f6b72; }
+.reminder-form-hint { color: var(--muted); font-size: 12px; line-height: 1.45; }
+.internal-chat-row .internal-chat-avatar, .internal-chat-panel .internal-chat-avatar { display: grid; place-items: center; background: #fff4dc !important; color: #8a5a00; font-size: 18px; }
+.internal-chat-row { border-bottom: 1px solid #eef2ef; background: #fffbf0; }
+.internal-chat-item { display: contents; }
+.inbox-shell .thread article.internal-reminder { border-left: 3px solid #e0a423; background: #fffdf6; max-width: min(92%, 640px); }
+.inbox-shell .thread article.internal-reminder.done { border-left-color: #b9c2c8; }
+.internal-reminder-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 10px 0 2px; }
+.internal-reminder-done { color: #5f6b72; font-size: 12px; font-weight: 800; }
+.inbox-shell .thread article.internal-note { background: #e7f0ff; }
+.internal-chat-more { align-self: center; padding: 5px 12px; border: 1px solid #dfe6e2; border-radius: 99px; background: #fff; color: #087f5b; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.internal-composer { display: grid; grid-template-columns: minmax(0, 1fr) 40px; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid #edf1ee; border-radius: 10px; background: #fff; }
+.internal-composer textarea { width: 100%; min-width: 0; height: 44px; min-height: 44px; max-height: 120px; padding: 12px 6px; border: 0; background: transparent; resize: none; color: #273c31; font: inherit; font-size: 14px; line-height: 20px; outline: none; }
+.internal-composer:focus-within { border-color: #b2d8c3; }
+.internal-composer .send { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%; background: #008069; color: #fff; cursor: pointer; }
+.internal-composer .send:disabled { background: #e4eae6; color: #a0afa4; cursor: default; }

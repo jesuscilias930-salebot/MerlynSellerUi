@@ -17,17 +17,19 @@ export function InventoryPicker({ onPick, allowCustom = false, placeholder = "Bu
   }, []);
   const results = useMemo(() => (data ? searchInventory(query, data.products, data.bundles, 6, data.locations) : []), [data, query]);
   const pick = (line: DeliveryLine) => { onPick(line); setQuery(""); };
+  // El nombre del producto incluye color y talla para que el pedido sea claro.
+  const lineOf = (result: (typeof results)[number]): DeliveryLine => ({ kind: result.kind, id: result.id, name: result.kind === "product" ? [result.title, result.color, result.size && `Talla ${result.size}`].filter(Boolean).join(" · ") : result.title, quantity: 1 });
   return <div className="inventory-picker">
     <input type="search" value={query} placeholder={placeholder} onChange={event => setQuery(event.target.value)} onKeyDown={event => {
       if (event.key !== "Enter") return;
       event.preventDefault();
-      if (results[0]) pick({ kind: results[0].kind, id: results[0].id, name: results[0].title, quantity: 1 });
+      if (results[0]) pick(lineOf(results[0]));
       else if (allowCustom && query.trim()) pick({ kind: "custom", name: query.trim(), quantity: 1 });
     }} />
     {error && <small className="inventory-picker-note">{error}{allowCustom ? " Puedes escribir el producto como texto." : ""}</small>}
     {query.trim().length >= 2 && <ul>
       {results.map(result => <li key={`${result.kind}-${result.id}`}>
-        <button type="button" onClick={() => pick({ kind: result.kind, id: result.id, name: result.title, quantity: 1 })}>
+        <button type="button" onClick={() => pick(lineOf(result))}>
           <i aria-hidden="true">{result.kind === "bundle" ? "🎁" : "🧦"}</i><span><b>{result.title}</b><small>{[result.color, result.size && `Talla ${result.size}`, result.detail, result.location && `📍 ${result.location}`].filter(Boolean).join(" · ")}</small></span>
           <em className={`inventory-quick-stock ${result.state}`}>{result.state === "empty" ? "Agotado" : `${result.available} disp.`}</em>
         </button>
