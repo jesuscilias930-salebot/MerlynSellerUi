@@ -77,3 +77,26 @@ test('filtra por talla en AND con el texto y sugiere tallas', async () => {
   assert.deepEqual(sizeSuggestions(list, '2'), ['25-28', '22-25', '2-4']);
   assert.deepEqual(sizeSuggestions(list, '28'), ['25-28']);
 });
+
+test('lista de existencias por talla para mensaje, sin agotados', async () => {
+  const { productFamily, stockListMessage } = await import('../app/lib/quick-inventory.ts');
+  const essential = [
+    { id: 1, name: 'Essential High Quality', currentStock: 48, size: '25-28', color: 'Negro', gender: 'Hombre' },
+    { id: 2, name: 'Essential High Quality', currentStock: 6, size: '25-28', color: 'Blanco', gender: 'Hombre' },
+    { id: 3, name: 'Essential High Quality', currentStock: 0, size: '22-25', color: 'Negro', gender: 'Hombre' },
+    { id: 4, name: 'Essential high quality', currentStock: 12, size: '22-25', color: 'Gris', gender: 'Hombre' },
+    { id: 5, name: 'Otro', currentStock: 3, size: '25-28' },
+  ];
+  const family = productFamily(essential, essential[0]);
+  assert.deepEqual(family.map(p => p.id), [1, 2, 3, 4]);
+  assert.equal(stockListMessage('Essential High Quality', family), [
+    '*Essential High Quality*', 'Existencias disponibles:', '',
+    '*Talla 25-28*', '• Blanco: 6 pares', '• Negro: 48 pares', '',
+    '*Talla 22-25*', '• Gris: 12 pares', '', 'Total: 66 pares',
+  ].join('\n'));
+  const plain = [{ id: 7, name: 'Lisa', currentStock: 1, size: '2-4' }, { id: 8, name: 'Lisa', currentStock: 10, size: '5-7' }, { id: 9, name: 'Lisa', currentStock: 0, size: '8-10' }];
+  assert.equal(stockListMessage('Lisa', plain), ['*Lisa*', 'Existencias disponibles:', '', '• Talla 5-7: 10 pares', '• Talla 2-4: 1 par', '', 'Total: 11 pares'].join('\n'));
+  assert.equal(stockListMessage('Agotado', [{ id: 10, name: 'Agotado', currentStock: 0 }]), '');
+  const variants = [{ id: 11, name: 'Deportiva · Negro', model: 'Deportiva', currentStock: 2, size: '25-28', color: 'Negro' }, { id: 12, name: 'Deportiva · Gris', model: 'deportiva', currentStock: 1, size: '25-28', color: 'Gris' }];
+  assert.equal(productFamily(variants, variants[0]).length, 2, 'variantes por modelo');
+});

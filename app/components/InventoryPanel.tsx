@@ -10,6 +10,7 @@ import { request } from "../lib/api";
 import { updateCachedLocations } from "../lib/inventory-snapshot";
 import { locationMap, suggestions, type LocationMap, type ProductLocation } from "../lib/product-locations";
 import { ChatIcon } from "./ChatIcon";
+import { CopyStockButton } from "./CopyStockButton";
 import { groupBySize } from "../lib/size-groups";
 import { colorSwatch } from "../lib/product-colors";
 
@@ -211,6 +212,7 @@ function InventoryCategoryProducts({ category, q, productId, revision, onSaved, 
             return <article key={product.id} className={styles.product}>
               <header><div><h4>{product.name}</h4><VariantChips color={colors.get(product.id)} size={product.size} /><p>{[product.gender || "Sin género", `#${product.id}`].filter(Boolean).join(" · ")}</p></div><span className={`${styles.badge} ${styles[state]}`}>{state === "empty" ? "Sin existencias" : state === "low" ? "Stock bajo" : "Disponible"}</span></header>
               <div className={styles.stock}><strong>{number(product.currentStock)}</strong><span>unidades disponibles</span><small>Alerta mínima: {number(product.minStockAlert ?? 0)}</small></div>
+              <CopyStockButton productId={product.id} />
               <ProductLocationEditor productIds={[product.id]} location={locations.get(product.id)} options={options} onSaved={onLocationSaved}/>
               <InventoryQuantityEditor id={product.id} name={inventoryProductName(product)} stock={product.currentStock} onSaved={onSaved}/>
             </article>;

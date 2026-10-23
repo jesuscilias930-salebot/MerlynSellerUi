@@ -8,6 +8,7 @@ import {
   buildVariants, cellKey, existingCells, MAX_VARIANTS, normalizeModel, sortSizes, uniqueValues,
   type ModelGroup, type ProductDetail, type VariantProduct,
 } from "../lib/product-variants";
+import { CopyStockButton } from "./CopyStockButton";
 import styles from "./ProductVariants.module.css";
 
 export const PRODUCT_GENDERS = ["Hombre", "Mujer", "Unisex", "Niño", "Niña", "Bebé niño", "Bebé niña"];
@@ -188,6 +189,7 @@ export function ModelStockCard({ group, onEdit, onAddVariants, children }: {
         <small>{[group.gender, `${group.products.length} ${group.products.length === 1 ? "variante" : "variantes"}`, `${group.stock} piezas`].filter(Boolean).join(" · ")}</small>
       </div>
       {group.low > 0 && <span className={styles.lowBadge}>{group.low} por surtir</span>}
+      {group.products[0] && <CopyStockButton productId={group.products[0].id} />}
       <button type="button" className={styles.secondary} onClick={() => onAddVariants(group)}>＋ Colores o tallas</button>
     </header>
     <div className={styles.matrixWrap}><table className={styles.matrix}>

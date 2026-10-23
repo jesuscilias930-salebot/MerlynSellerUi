@@ -5,8 +5,9 @@
 export type QuickProduct = {
   id: number; name: string; currentStock: number | null; minStockAlert?: number | null;
   category?: { id?: number | null; name?: string | null } | null; gender?: string | null; size?: string | null;
-  /** Color guardado en el CRM (product-details). */
+  /** Color y modelo guardados en el CRM (product-details). */
   color?: string | null;
+  model?: string | null;
 };
 export type QuickBundleItem = { productId: number; quantity: number; assorted?: boolean; categoryId?: number | null };
 export type QuickBundle = { id: number; name: string; fixedPrice?: number | string | null; storeCategory?: string | null; items: QuickBundleItem[] };
@@ -177,4 +178,51 @@ export function availabilityMessage(result: QuickResult) {
   const name = result.kind === "bundle" ? result.title : [result.title, result.color, result.size && `Talla ${result.size}`, result.detail].filter(Boolean).join(" · ");
   if (result.state === "empty") return `Por ahora «${name}» está agotado 😔. ¿Te muestro otra opción similar?`;
   return `¡Sí tenemos disponible «${name}»! 🙌 ¿Cuántos ${result.kind === "bundle" ? "paquetes" : "pares"} necesitas?`;
+}
+
+/**
+ * Productos de la misma familia: mismo modelo (variantes) o, sin modelo, mismo nombre.
+ * Ej.: todas las tallas y colores de «Essential High Quality».
+ */
+export function productFamily(products: QuickProduct[], product: QuickProduct) {
+  const model = normalizeText(product.model || "");
+  if (model) return products.filter(item => normalizeText(item.model || "") === model);
+  const name = normalizeText(product.name);
+  return products.filter(item => !normalizeText(item.model || "") && normalizeText(item.name) === name);
+}
+
+const pairs = (count: number) => `${new Intl.NumberFormat("es-MX").format(count)} ${count === 1 ? "par" : "pares"}`;
+/**
+ * Existencias listas para enviar por mensaje, separadas por talla (de mayor a menor).
+ * Omite lo que no tiene existencia. Devuelve "" si no hay nada disponible.
+ */
+export function stockListMessage(title: string, products: QuickProduct[]) {
+  const available = products.filter(product => stockOf(product) > 0);
+  if (!available.length) return "";
+  const genders = new Set(available.map(product => genderLabel(product.gender)).filter(Boolean));
+  const withColor = available.some(product => product.color?.trim());
+  const groups = new Map<string, { size: string; items: QuickProduct[] }>();
+  for (const product of available) {
+    const size = product.size?.trim().replace(/\s+/g, " ") || "";
+    const gender = genders.size > 1 ? genderLabel(product.gender) : "";
+    const key = `${normalizeText(size)}|${normalizeText(gender)}`;
+    const group = groups.get(key) ?? { size: [size ? `Talla ${size}` : "Sin talla", gender && `(${gender})`].filter(Boolean).join(" "), items: [] };
+    group.items.push(product);
+    groups.set(key, group);
+  }
+  const ordered = [...groups.values()].sort((a, b) => (a.size === "Sin talla" ? 1 : b.size === "Sin talla" ? -1 : naturalDesc(a.size, b.size)));
+  const total = available.reduce((sum, product) => sum + stockOf(product), 0);
+  const lines = [`*${title.trim() || "Producto"}*`, "Existencias disponibles:", ""];
+  if (!withColor) {
+    for (const group of ordered) lines.push(`• ${group.size}: ${pairs(group.items.reduce((sum, product) => sum + stockOf(product), 0))}`);
+  } else {
+    ordered.forEach((group, index) => {
+      if (index) lines.push("");
+      lines.push(`*${group.size}*`);
+      for (const product of [...group.items].sort((a, b) => (a.color || "").localeCompare(b.color || "", "es")))
+        lines.push(`• ${product.color?.trim() || "Sin color"}: ${pairs(stockOf(product))}`);
+    });
+  }
+  lines.push("", `Total: ${pairs(total)}`);
+  return lines.join("\n");
 }

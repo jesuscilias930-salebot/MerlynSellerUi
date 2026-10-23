@@ -9010,3 +9010,11 @@ article.inbound:hover .message-reaction-picker, .message-reaction-picker:focus-w
 .inventory-color-dot { flex: none; display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid #0000002e; background: repeating-linear-gradient(45deg, #d7dedb 0 3px, #f3f6f5 3px 6px); }
 .inventory-quick-copy .inventory-variant { margin: 2px 0; }
 .inventory-quick-copy .inventory-variant-chip { padding: 1px 6px; font-size: 11px; }
+
+/* Copiar existencias como lista para mensaje */
+.copy-stock { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-bottom: 8px; }
+.copy-stock button { padding: 5px 10px; border: 1px solid #9cc9ad; border-radius: 8px; background: #fff; color: var(--green); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.copy-stock button:hover { background: var(--mint); }
+.copy-stock button:disabled { opacity: .6; cursor: progress; }
+.copy-stock small { color: var(--green); font-size: 12px; font-weight: 700; }
+.copy-stock small.copy-stock-error { color: #8a5a00; }

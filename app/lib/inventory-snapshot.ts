@@ -20,10 +20,14 @@ export async function loadInventory(force = false): Promise<InventorySnapshot> {
     controlRequest<QuickBundle[]>("/bundles"),
     // Ubicaciones y colores son un extra: si fallan, el stock se muestra igual.
     request<ProductLocation[]>("/inventory-locations").catch(() => [] as ProductLocation[]),
-    request<{ productId: number; color?: string | null }[]>("/product-details").catch(() => []),
+    request<{ productId: number; color?: string | null; model?: string | null }[]>("/product-details").catch(() => []),
   ]);
-  const colors = new Map((Array.isArray(details) ? details : []).filter(row => row?.color).map(row => [row.productId, row.color as string]));
-  const withColor = (Array.isArray(products) ? products : []).map(product => colors.has(product.id) ? { ...product, color: colors.get(product.id) } : product);
+  // Color y modelo viven en el CRM; se agregan a cada producto de Control.
+  const extra = new Map((Array.isArray(details) ? details : []).filter(row => row && (row.color || row.model)).map(row => [row.productId, row]));
+  const withColor = (Array.isArray(products) ? products : []).map(product => {
+    const row = extra.get(product.id);
+    return row ? { ...product, ...(row.color ? { color: row.color } : {}), ...(row.model ? { model: row.model } : {}) } : product;
+  });
   cache = { products: withColor, bundles: Array.isArray(bundles) ? bundles : [], locations: locationMap(Array.isArray(locations) ? locations : []), loadedAt: Date.now() };
   return cache;
 }
