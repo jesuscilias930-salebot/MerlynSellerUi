@@ -233,3 +233,12 @@
   .inventory-quick li { grid-template-columns: 22px minmax(0, 1fr) auto; }
   .inventory-quick li > button { grid-column: 2 / -1; justify-self: start; }
 }
+.inventory-quick-fields { display: grid; grid-template-columns: minmax(0, 1fr) 104px; gap: 6px; }
+.inventory-quick-size { position: relative; }
+.inventory-quick-size input { width: 100%; box-sizing: border-box; min-height: 40px; padding: 8px 26px 8px 10px; border: 1px solid #cfdcd5; border-radius: 10px; background: #fff; color: #1f2a30; font: inherit; font-size: 14px; }
+.inventory-quick-size input:focus { border-color: #087f5b; outline: 2px solid #087f5b33; }
+.inventory-quick-size-clear { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #66766e; font-size: 11px; cursor: pointer; }
+.inventory-quick-size-clear:hover { background: #f0f6f3; color: #1f2a30; }
+.inventory-quick-size-list { position: absolute; z-index: 30; top: calc(100% + 4px); right: 0; min-width: 100%; max-height: 240px; overflow: auto; display: grid; gap: 1px; padding: 4px; border: 1px solid #dbe5df; border-radius: 10px; background: #fff; box-shadow: 0 12px 30px #0f2a1f24; }
+.inventory-quick-size-list button { padding: 7px 10px; border: 0; border-radius: 7px; background: transparent; color: #1f2a30; font: inherit; font-size: 13px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer; }
+.inventory-quick-size-list button[aria-selected="true"] { background: #e3f3eb; color: #087f5b; }

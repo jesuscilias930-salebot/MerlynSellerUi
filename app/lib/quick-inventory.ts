@@ -117,21 +117,48 @@ const relevance = (query: string, title: string, haystack: string) => {
   return (name.startsWith(query) ? 3 : 0) + (name.includes(query) ? 2 : 0) + tokens.filter(token => name.includes(token)).length;
 };
 
-/** Busca en productos y bundles por nombre, categoría, género o talla (sin importar acentos). */
-export function searchInventory(text: string, products: QuickProduct[], bundles: QuickBundle[], limit = 12, locations?: Map<number, LocationLike>): QuickResult[] {
+const naturalDesc = (a: string, b: string) => b.localeCompare(a, "es", { numeric: true, sensitivity: "base" });
+/** Tallas existentes para el typeahead: primero las que empiezan con lo escrito; orden descendente. */
+export function sizeSuggestions(products: QuickProduct[], typed: string, limit = 8) {
+  const sizes = new Map<string, string>();
+  for (const product of products) {
+    const size = product.size?.trim().replace(/\s+/g, " ");
+    if (size && !sizes.has(normalizeText(size))) sizes.set(normalizeText(size), size);
+  }
+  const query = normalizeText(typed);
+  const all = [...sizes.entries()].sort((a, b) => naturalDesc(a[1], b[1]));
+  if (!query) return all.slice(0, limit).map(([, size]) => size);
+  const starts = all.filter(([key]) => key.startsWith(query)), contains = all.filter(([key]) => !key.startsWith(query) && key.includes(query));
+  return [...starts, ...contains].slice(0, limit).map(([, size]) => size);
+}
+
+/**
+ * Busca en productos y bundles por nombre, color, categoría, género o talla (sin importar acentos).
+ * `size` filtra además por talla (AND): exacta si coincide con una talla existente, parcial si no.
+ * Solo con talla (sin texto) muestra todos los productos de esa talla; los bundles no tienen talla.
+ */
+export function searchInventory(text: string, products: QuickProduct[], bundles: QuickBundle[], limit = 12, locations?: Map<number, LocationLike>, sizeFilter = ""): QuickResult[] {
   const query = normalizeText(text);
-  if (query.length < 2) return [];
+  const sizeQuery = normalizeText(sizeFilter);
+  if (query.length < 2 && !sizeQuery) return [];
+  const exactSize = Boolean(sizeQuery) && products.some(product => normalizeText(product.size || "") === sizeQuery);
+  const sizeMatches = (product: QuickProduct) => {
+    if (!sizeQuery) return true;
+    const value = normalizeText(product.size || "");
+    return exactSize ? value === sizeQuery : value.includes(sizeQuery);
+  };
   const results: (QuickResult & { score: number })[] = [];
   for (const product of products) {
+    if (!sizeMatches(product)) continue;
     const detail = productGroup(product);
     const color = product.color?.trim() || "", size = product.size?.trim() || "";
     const location = formatLocation(locations?.get(product.id));
-    const score = relevance(query, product.name, normalizeText(`${product.name} ${color} ${size} ${detail} ${product.gender || ""} ${location}`));
+    const score = query.length >= 2 ? relevance(query, product.name, normalizeText(`${product.name} ${color} ${size} ${detail} ${product.gender || ""} ${location}`)) : 0;
     if (score < 0) continue;
     const available = stockOf(product);
     results.push({ kind: "product", id: product.id, title: product.name.trim() || "Producto", detail, available, state: stockState(available, product.minStockAlert ?? 0), score, ...(location ? { location } : {}), ...(ownColor(product) ? { color: ownColor(product) } : {}), ...(size ? { size } : {}) });
   }
-  for (const bundle of bundles) {
+  for (const bundle of sizeQuery || query.length < 2 ? [] : bundles) {
     const score = relevance(query, bundle.name, normalizeText(`${bundle.name} ${bundle.storeCategory || ""} bundle paquete`));
     if (score < 0) continue;
     const available = bundleAvailability(bundle, products);

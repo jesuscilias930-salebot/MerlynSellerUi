@@ -58,3 +58,22 @@ test('muestra y busca por color y talla (producto · color · talla)', async () 
   assert.equal(productDetail(essential), 'Negro · Talla 25-28 · Básicos · Hombre');
   assert.deepEqual(searchInventory('negro', [essential, variant], []).map(r => r.id).sort(), [20, 21]);
 });
+
+test('filtra por talla en AND con el texto y sugiere tallas', async () => {
+  const { sizeSuggestions } = await import('../app/lib/quick-inventory.ts');
+  const list = [
+    { id: 1, name: 'Essential High Quality', currentStock: 10, size: '25-28', color: 'Negro' },
+    { id: 2, name: 'Essential High Quality', currentStock: 5, size: '22-25', color: 'Negro' },
+    { id: 3, name: 'Deportiva', currentStock: 8, size: '25-28' },
+    { id: 4, name: 'Bebé', currentStock: 8, size: '2-4' },
+  ];
+  const bundles = [{ id: 9, name: 'Essential 50 pares', items: [{ productId: 1, quantity: 50 }] }];
+  assert.deepEqual(searchInventory('essential', list, bundles, 12, undefined, '25-28').map(r => r.id), [1], 'texto AND talla, sin bundles');
+  assert.deepEqual(searchInventory('', list, bundles, 12, undefined, '25-28').map(r => r.id).sort(), [1, 3], 'solo talla');
+  assert.deepEqual(searchInventory('essential', list, bundles, 12, undefined, '25').map(r => r.id).sort(), [1, 2], 'talla parcial mientras se escribe');
+  assert.deepEqual(searchInventory('bebe', list, [], 12, undefined, '2-4').map(r => r.id), [4], 'exacta: 2-4 no coincide con 22-25');
+  assert.equal(searchInventory('essential', list, bundles).length, 3, 'sin talla incluye bundles');
+  assert.deepEqual(sizeSuggestions(list, ''), ['25-28', '22-25', '2-4']);
+  assert.deepEqual(sizeSuggestions(list, '2'), ['25-28', '22-25', '2-4']);
+  assert.deepEqual(sizeSuggestions(list, '28'), ['25-28']);
+});
