@@ -46,12 +46,3 @@ test('muestra y busca por ubicación en bodega', () => {
   assert.equal(hit.location, 'Rack A · Piso 2 · Lado izquierdo');
   assert.equal(searchInventory('caricatura nina', products, [], 12, locations)[0].location, undefined);
 });
-
-test('incluye ubicaciones por talla y color y permite buscarlas', async () => {
-  const { searchInventory } = await import('../app/lib/quick-inventory.ts');
-  const products = [{ id: 9, name: 'Essential High Quality', currentStock: 200, minStockAlert: 10, size: null }];
-  const slots = new Map([[9, [{ size: '25-28', color: 'Negro', quantity: 40, rack: 'A', level: '2', side: null }]]]);
-  const [result] = searchInventory('essential 25-28', products, [], 12, new Map(), slots);
-  assert.deepEqual(result.slots, ['Talla 25-28 · Negro: Rack A · Piso 2 (40 pzas)']);
-  assert.equal(searchInventory('essential 22-25', products, [], 12, new Map(), slots).length, 0);
-});

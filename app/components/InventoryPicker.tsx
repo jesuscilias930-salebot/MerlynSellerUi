@@ -15,7 +15,7 @@ export function InventoryPicker({ onPick, allowCustom = false, placeholder = "Bu
     loadInventory().then(snapshot => { if (active) setData(snapshot); }).catch(reason => { if (active) setError(reason instanceof Error ? reason.message : "No se pudo consultar el inventario."); });
     return () => { active = false; };
   }, []);
-  const results = useMemo(() => (data ? searchInventory(query, data.products, data.bundles, 6, data.locations, data.slots) : []), [data, query]);
+  const results = useMemo(() => (data ? searchInventory(query, data.products, data.bundles, 6, data.locations) : []), [data, query]);
   const pick = (line: DeliveryLine) => { onPick(line); setQuery(""); };
   return <div className="inventory-picker">
     <input type="search" value={query} placeholder={placeholder} onChange={event => setQuery(event.target.value)} onKeyDown={event => {
