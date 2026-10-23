@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import { controlSession } from "../lib/control-api";
 import { cachedInventory, loadInventory, type InventorySnapshot as Snapshot } from "../lib/inventory-snapshot";
 import { availabilityMessage, searchInventory, type QuickResult } from "../lib/quick-inventory";
+import { colorSwatch } from "../lib/product-colors";
 
 const money = (value: number) => value.toLocaleString("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: value % 1 ? 2 : 0 });
 const ago = (time: number) => {
@@ -55,7 +56,7 @@ export function InventoryQuickSearch({ onInsert, autoFocus = true }: { onInsert:
         ref={input}
         type="search"
         value={query}
-        placeholder="Producto, talla, categoría, rack o bundle…"
+        placeholder="Producto, color, talla, categoría, rack o bundle…"
         role="combobox"
         aria-expanded={results.length > 0}
         aria-controls="inventory-quick-results"
@@ -66,13 +67,17 @@ export function InventoryQuickSearch({ onInsert, autoFocus = true }: { onInsert:
     </label>
     {error && <p className="inventory-quick-error" role="alert">{error} {controlSession.get() && <button type="button" onClick={() => void load(true)}>Reintentar</button>}</p>}
     {!error && loading && !data && <p className="inventory-quick-hint">Cargando inventario…</p>}
-    {!error && data && query.trim().length < 2 && <p className="inventory-quick-hint">Escribe al menos 2 letras. Ej.: «caricatura niña», «2-4», «deportivo», «50 pares».</p>}
+    {!error && data && query.trim().length < 2 && <p className="inventory-quick-hint">Escribe al menos 2 letras. Ej.: «essential negro 25-28», «caricatura niña», «2-4», «50 pares».</p>}
     {!error && data && query.trim().length >= 2 && !results.length && <p className="inventory-quick-hint">Sin coincidencias para «{query.trim()}».</p>}
     {results.length > 0 && <ul id="inventory-quick-results" role="listbox" aria-label="Resultados de inventario">
       {results.map((result, index) => <li key={`${result.kind}-${result.id}`} id={`inventory-quick-${index}`} role="option" aria-selected={index === active} className={index === active ? "active" : ""} onMouseEnter={() => setActive(index)}>
         <span className="inventory-quick-kind" aria-hidden="true">{result.kind === "bundle" ? "🎁" : "🧦"}</span>
         <span className="inventory-quick-copy">
           <b>{result.title}</b>
+          {(result.color || result.size) && <span className="inventory-variant">
+            {result.color && <span className="inventory-variant-chip"><i className="inventory-color-dot" style={colorSwatch(result.color) ? { background: colorSwatch(result.color) || undefined } : undefined} aria-hidden="true" />{result.color}</span>}
+            {result.size && <span className="inventory-variant-chip">Talla {result.size}</span>}
+          </span>}
           <small>{[result.detail, result.price ? money(result.price) : ""].filter(Boolean).join(" · ")}</small>
           {result.location && <small className="inventory-quick-location">📍 {result.location}</small>}
         </span>

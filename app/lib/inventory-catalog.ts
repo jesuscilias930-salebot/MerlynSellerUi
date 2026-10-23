@@ -21,3 +21,20 @@ export function inventoryPagePath(category: InventoryCategory, q: string, produc
   params.set("page", String(page)); params.set("size", String(size));
   return `/products/inventory?${params}`;
 }
+
+const fold = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+/**
+ * Control no conoce el color (vive en el CRM): separa del texto los colores conocidos
+ * para buscar el resto en Control y filtrar por color aquí. «essential negro» → «essential» + [negro].
+ */
+export function splitColorQuery(text: string, colors: Iterable<string>) {
+  let rest = ` ${fold(text)} `;
+  const found: string[] = [];
+  const known = [...new Set([...colors].map(fold).filter(Boolean))].sort((a, b) => b.length - a.length);
+  for (const color of known) {
+    const word = ` ${color} `;
+    if (rest.includes(word)) { found.push(color); rest = rest.replace(word, " "); }
+  }
+  return found.length ? { text: rest.replace(/\s+/g, " ").trim(), colors: found } : { text: text.trim(), colors: [] };
+}
+export const matchesColor = (color: string | undefined, colors: string[]) => !colors.length || Boolean(color && colors.includes(fold(color)));

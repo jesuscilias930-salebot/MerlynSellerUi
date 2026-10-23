@@ -28,7 +28,7 @@ export function InventoryPicker({ onPick, allowCustom = false, placeholder = "Bu
     {query.trim().length >= 2 && <ul>
       {results.map(result => <li key={`${result.kind}-${result.id}`}>
         <button type="button" onClick={() => pick({ kind: result.kind, id: result.id, name: result.title, quantity: 1 })}>
-          <i aria-hidden="true">{result.kind === "bundle" ? "🎁" : "🧦"}</i><span><b>{result.title}</b><small>{[result.detail, result.location && `📍 ${result.location}`].filter(Boolean).join(" · ")}</small></span>
+          <i aria-hidden="true">{result.kind === "bundle" ? "🎁" : "🧦"}</i><span><b>{result.title}</b><small>{[result.color, result.size && `Talla ${result.size}`, result.detail, result.location && `📍 ${result.location}`].filter(Boolean).join(" · ")}</small></span>
           <em className={`inventory-quick-stock ${result.state}`}>{result.state === "empty" ? "Agotado" : `${result.available} disp.`}</em>
         </button>
       </li>)}

@@ -28,3 +28,13 @@ test("zero and low stock remain visible and are distinct states", () => {
   assert.equal(inventoryStockState(product), "ready"); assert.equal(inventoryStockState({ ...product, currentStock: 20 }), "low");
   assert.equal(inventoryStockState({ ...product, currentStock: 0 }), "empty");
 });
+
+test('separa los colores del texto para filtrar en el CRM', async () => {
+  const { splitColorQuery, matchesColor } = await import('../app/lib/inventory-catalog.ts');
+  const colors = ['Negro', 'Azul marino', 'Azul', 'Café'];
+  assert.deepEqual(splitColorQuery('Essential NEGRO 25-28', colors), { text: 'essential 25-28', colors: ['negro'] });
+  assert.deepEqual(splitColorQuery('deportiva azul marino', colors), { text: 'deportiva', colors: ['azul marino'] });
+  assert.deepEqual(splitColorQuery('cafe', colors), { text: '', colors: ['cafe'] });
+  assert.deepEqual(splitColorQuery('Negrita', colors), { text: 'Negrita', colors: [] });
+  assert.ok(matchesColor('Negro', ['negro'])); assert.ok(!matchesColor('Azul', ['negro'])); assert.ok(matchesColor(undefined, []));
+});

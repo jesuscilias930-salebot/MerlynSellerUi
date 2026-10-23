@@ -9003,3 +9003,10 @@ article.inbound:hover .message-reaction-picker, .message-reaction-picker:focus-w
 .product-size-group > summary span { padding: 2px 8px; border-radius: 99px; background: #fff; border: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 .product-size-group[open] > summary { border-bottom: 1px solid var(--line); }
 .product-size-group .product-category-row:last-child { border-bottom: 0; }
+
+/* Producto · color · talla en inventario y buscador del inbox */
+.inventory-variant { display: flex; flex-wrap: wrap; gap: 5px; margin: 5px 0 2px; }
+.inventory-variant-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--app-subtle, #f7f9fa); color: var(--ink); font-size: 12px; font-weight: 700; line-height: 1.5; white-space: nowrap; }
+.inventory-color-dot { flex: none; display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid #0000002e; background: repeating-linear-gradient(45deg, #d7dedb 0 3px, #f3f6f5 3px 6px); }
+.inventory-quick-copy .inventory-variant { margin: 2px 0; }
+.inventory-quick-copy .inventory-variant-chip { padding: 1px 6px; font-size: 11px; }

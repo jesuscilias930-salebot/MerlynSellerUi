@@ -34,7 +34,7 @@ test('busca sin acentos por nombre, categoría, talla y bundles', () => {
 
 test('mensajes para el cliente no revelan existencias exactas', () => {
   const [ready] = searchInventory('caricatura nino', products, []);
-  assert.match(availabilityMessage(ready), /^¡Sí tenemos disponible «Caricatura niño · Caricatura · Hombre · Talla 2-4»!/);
+  assert.match(availabilityMessage(ready), /^¡Sí tenemos disponible «Caricatura niño · Talla 2-4 · Caricatura · Hombre»!/);
   assert.doesNotMatch(availabilityMessage(ready), /30/);
   assert.match(availabilityMessage(searchInventory('termico', products, [])[0]), /agotado/);
 });
@@ -45,4 +45,16 @@ test('muestra y busca por ubicación en bodega', () => {
   assert.equal(hit.id, 1);
   assert.equal(hit.location, 'Rack A · Piso 2 · Lado izquierdo');
   assert.equal(searchInventory('caricatura nina', products, [], 12, locations)[0].location, undefined);
+});
+
+test('muestra y busca por color y talla (producto · color · talla)', async () => {
+  const { productDetail, productVariant } = await import('../app/lib/quick-inventory.ts');
+  const essential = { id: 20, name: 'Essential High Quality', currentStock: 12, minStockAlert: 5, category: { id: 9, name: 'Básicos' }, gender: 'Hombre', size: '25-28', color: 'Negro' };
+  const variant = { id: 21, name: 'Deportiva algodón · Negro', currentStock: 3, size: '22-25', color: 'Negro' };
+  const [hit] = searchInventory('essential negro 25-28', [essential, variant], []);
+  assert.equal(hit.id, 20); assert.equal(hit.color, 'Negro'); assert.equal(hit.size, '25-28');
+  assert.match(availabilityMessage(hit), /«Essential High Quality · Negro · Talla 25-28 · Básicos · Hombre»/);
+  assert.equal(productVariant(variant), 'Talla 22-25', 'no repite el color si ya está en el nombre');
+  assert.equal(productDetail(essential), 'Negro · Talla 25-28 · Básicos · Hombre');
+  assert.deepEqual(searchInventory('negro', [essential, variant], []).map(r => r.id).sort(), [20, 21]);
 });

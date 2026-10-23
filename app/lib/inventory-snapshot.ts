@@ -15,13 +15,16 @@ export const CONTROL_LOGIN_MESSAGE = "Inicia sesión en Control de ventas para c
 export async function loadInventory(force = false): Promise<InventorySnapshot> {
   if (!force && cache && Date.now() - cache.loadedAt < FRESH_MS) return cache;
   if (!controlSession.get()) throw new Error(CONTROL_LOGIN_MESSAGE);
-  const [products, bundles, locations] = await Promise.all([
+  const [products, bundles, locations, details] = await Promise.all([
     controlRequest<QuickProduct[]>("/products/all"),
     controlRequest<QuickBundle[]>("/bundles"),
-    // Las ubicaciones son un extra: si fallan, el stock se muestra igual.
+    // Ubicaciones y colores son un extra: si fallan, el stock se muestra igual.
     request<ProductLocation[]>("/inventory-locations").catch(() => [] as ProductLocation[]),
+    request<{ productId: number; color?: string | null }[]>("/product-details").catch(() => []),
   ]);
-  cache = { products: Array.isArray(products) ? products : [], bundles: Array.isArray(bundles) ? bundles : [], locations: locationMap(Array.isArray(locations) ? locations : []), loadedAt: Date.now() };
+  const colors = new Map((Array.isArray(details) ? details : []).filter(row => row?.color).map(row => [row.productId, row.color as string]));
+  const withColor = (Array.isArray(products) ? products : []).map(product => colors.has(product.id) ? { ...product, color: colors.get(product.id) } : product);
+  cache = { products: withColor, bundles: Array.isArray(bundles) ? bundles : [], locations: locationMap(Array.isArray(locations) ? locations : []), loadedAt: Date.now() };
   return cache;
 }
 /** Después de vender, el stock cambió: la próxima consulta vuelve a Control. */

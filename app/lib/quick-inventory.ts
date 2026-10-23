@@ -5,12 +5,16 @@
 export type QuickProduct = {
   id: number; name: string; currentStock: number | null; minStockAlert?: number | null;
   category?: { id?: number | null; name?: string | null } | null; gender?: string | null; size?: string | null;
+  /** Color guardado en el CRM (product-details). */
+  color?: string | null;
 };
 export type QuickBundleItem = { productId: number; quantity: number; assorted?: boolean; categoryId?: number | null };
 export type QuickBundle = { id: number; name: string; fixedPrice?: number | string | null; storeCategory?: string | null; items: QuickBundleItem[] };
 export type StockState = "ready" | "low" | "empty";
 export type QuickResult = {
   kind: "product" | "bundle"; id: number; title: string; detail: string; available: number; state: StockState; price?: number;
+  /** Color y talla del producto (solo productos). */
+  color?: string; size?: string;
   /** Ubicación en bodega (solo productos), p. ej. «Rack A · Piso 2 · Lado izquierdo». */
   location?: string;
 };
@@ -33,8 +37,17 @@ const genderLabel = (value?: string | null) => {
   const key = normalizeText(value || "");
   return ({ male: "Hombre", hombre: "Hombre", female: "Mujer", mujer: "Mujer", unisex: "Unisex", kids: "Niño", nino: "Niño", child: "Niño", children: "Niño" } as Record<string, string>)[key] || (value?.trim() || "");
 };
-export const productDetail = (product: QuickProduct) =>
-  [product.category?.name?.trim(), genderLabel(product.gender), product.size?.trim() && `Talla ${product.size.trim()}`].filter(Boolean).join(" · ");
+/** Color, salvo que el nombre ya lo traiga (p. ej. «Deportiva algodón · Negro»). */
+const ownColor = (product: QuickProduct) => {
+  const color = product.color?.trim() || "";
+  return color && !normalizeText(product.name).includes(normalizeText(color)) ? color : "";
+};
+/** «Negro · Talla 25-28». */
+export const productVariant = (product: QuickProduct) =>
+  [ownColor(product), product.size?.trim() && `Talla ${product.size.trim()}`].filter(Boolean).join(" · ");
+const productGroup = (product: QuickProduct) => [product.category?.name?.trim(), genderLabel(product.gender)].filter(Boolean).join(" · ");
+/** Color, talla, categoría y género. */
+export const productDetail = (product: QuickProduct) => [productVariant(product), productGroup(product)].filter(Boolean).join(" · ");
 export const stockState = (available: number, minimum = 0): StockState => available <= 0 ? "empty" : available <= Math.max(0, minimum) ? "low" : "ready";
 
 const stockOf = (product?: QuickProduct) => Math.max(0, Math.floor(Number(product?.currentStock) || 0));
@@ -110,12 +123,13 @@ export function searchInventory(text: string, products: QuickProduct[], bundles:
   if (query.length < 2) return [];
   const results: (QuickResult & { score: number })[] = [];
   for (const product of products) {
-    const detail = productDetail(product);
+    const detail = productGroup(product);
+    const color = product.color?.trim() || "", size = product.size?.trim() || "";
     const location = formatLocation(locations?.get(product.id));
-    const score = relevance(query, product.name, normalizeText(`${product.name} ${detail} ${product.gender || ""} ${location}`));
+    const score = relevance(query, product.name, normalizeText(`${product.name} ${color} ${size} ${detail} ${product.gender || ""} ${location}`));
     if (score < 0) continue;
     const available = stockOf(product);
-    results.push({ kind: "product", id: product.id, title: product.name.trim() || "Producto", detail, available, state: stockState(available, product.minStockAlert ?? 0), score, ...(location ? { location } : {}) });
+    results.push({ kind: "product", id: product.id, title: product.name.trim() || "Producto", detail, available, state: stockState(available, product.minStockAlert ?? 0), score, ...(location ? { location } : {}), ...(ownColor(product) ? { color: ownColor(product) } : {}), ...(size ? { size } : {}) });
   }
   for (const bundle of bundles) {
     const score = relevance(query, bundle.name, normalizeText(`${bundle.name} ${bundle.storeCategory || ""} bundle paquete`));
@@ -133,7 +147,7 @@ export function searchInventory(text: string, products: QuickProduct[], bundles:
 
 /** Texto listo para el cliente; no revela cuántas piezas exactas hay. */
 export function availabilityMessage(result: QuickResult) {
-  const name = result.kind === "bundle" ? result.title : [result.title, result.detail].filter(Boolean).join(" · ");
+  const name = result.kind === "bundle" ? result.title : [result.title, result.color, result.size && `Talla ${result.size}`, result.detail].filter(Boolean).join(" · ");
   if (result.state === "empty") return `Por ahora «${name}» está agotado 😔. ¿Te muestro otra opción similar?`;
   return `¡Sí tenemos disponible «${name}»! 🙌 ¿Cuántos ${result.kind === "bundle" ? "paquetes" : "pares"} necesitas?`;
 }
