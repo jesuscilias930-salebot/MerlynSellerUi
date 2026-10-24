@@ -32,6 +32,7 @@ import { InteractiveOptionsPanel } from "./components/InteractiveOptionsPanel";
 import { BusinessHoursPanel } from "./components/BusinessHoursPanel";
 import { DeliveriesPanel } from "./components/DeliveriesPanel";
 import { RemindersPanel } from "./components/RemindersPanel";
+import { OPEN_CHAT_EVENT } from "./lib/reminders";
 import { WhatsAppTemplatesPanel } from "./components/WhatsAppTemplatesPanel";
 import { EnviaShippingPanel } from "./components/EnviaShippingPanel";
 import { VideosPanel } from "./components/VideosPanel";
@@ -333,6 +334,26 @@ export default function Home() {
       document.removeEventListener("visibilitychange", refreshVisible);
     };
   }, [user, visibleChat?.id, modalChat?.id]);
+
+  // «Abrir chat» desde Recordatorios, el chat interno o un enlace ?chat=<id>.
+  const openChatById = useEffectEvent(async (id: string) => {
+    let item = chats.find(entry => entry.id === id);
+    if (!item) {
+      try { const items = await request<Chat[]>("/conversations"); setChats(items); item = items.find(entry => entry.id === id); }
+      catch { /* Se informa abajo. */ }
+    }
+    if (!item) { setNotice("No se encontró esa conversación en el inbox."); return; }
+    setView("inbox");
+    await openInbox(item);
+  });
+  useEffect(() => {
+    if (!user) return;
+    const handler = (event: Event) => { const id = (event as CustomEvent<string>).detail; if (id) void openChatById(id); };
+    window.addEventListener(OPEN_CHAT_EVENT, handler);
+    const pending = new URLSearchParams(window.location.search).get("chat");
+    if (pending) { window.history.replaceState(null, "", window.location.pathname); void Promise.resolve().then(() => openChatById(pending)); }
+    return () => window.removeEventListener(OPEN_CHAT_EVENT, handler);
+  }, [user]);
 
   const onConversationUpdate = useEffectEvent(async (event: Event) => {
     try {

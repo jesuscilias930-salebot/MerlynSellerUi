@@ -26,3 +26,22 @@ test('borrador: validación y envío', () => {
   assert.equal(payload.contactName, 'Ana'); assert.equal(payload.phone, '522721234567'); assert.equal(payload.notes, null);
   assert.equal(new Date(payload.remindAt).getHours(), 10);
 });
+
+test('plantilla del recordatorio: variables propuestas, validación y vista previa', async () => {
+  const { defaultMappings, templateIssues, templatePreview, agreedDateLabel, reminderPayload } = await import('../app/lib/reminders.ts');
+  const template = { id: 't1', name: 'recordatorio_pedido', language: 'es_MX', status: 'APPROVED',
+    components: [{ type: 'BODY', text: 'Hola {{1}}, tu pedido: {{2}}. Quedamos el {{3}}. {{4}}' }],
+    variables: [1, 2, 3, 4].map(position => ({ component: 'body', position })) };
+  const mappings = defaultMappings(template);
+  assert.deepEqual(mappings.map(m => m.source), ['reminder.name', 'reminder.products', 'reminder.agreed_date', 'fixed']);
+  const draft = { ...emptyReminderDraft(new Date(2026, 9, 23)), contactName: 'Ana', phone: '2721234567', agreedDate: '2026-10-31', sendMode: 'template', templateId: 't1', templateMappings: mappings };
+  assert.deepEqual(templateIssues(template, draft), ['{{2}} usa la lista de productos: agrega al menos uno.', 'Escribe el texto fijo de {{4}}.']);
+  const ready = { ...draft, products: [{ kind: 'custom', name: 'Bolsa', quantity: 2 }], templateMappings: mappings.map(m => m.source === 'fixed' ? { ...m, value: '¡Gracias!' } : m) };
+  assert.deepEqual(templateIssues(template, ready), []);
+  assert.equal(templatePreview(template, ready), 'Hola Ana, tu pedido: 2 × Bolsa. Quedamos el sábado, 31 de octubre. ¡Gracias!');
+  assert.equal(agreedDateLabel(''), '');
+  const payload = reminderPayload(ready);
+  assert.equal(payload.sendMode, 'template'); assert.equal(payload.templateId, 't1'); assert.equal(payload.agreedDate, '2026-10-31');
+  assert.equal(payload.templateMappings[0].value, undefined); assert.equal(payload.templateMappings[3].value, '¡Gracias!');
+  assert.deepEqual(reminderPayload({ ...ready, sendMode: 'manual' }).templateMappings, []);
+});

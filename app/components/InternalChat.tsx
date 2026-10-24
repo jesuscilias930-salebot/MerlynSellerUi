@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { request } from "../lib/api";
-import type { InternalMessage } from "../lib/reminders";
+import { conversationHref, openConversation, type InternalMessage } from "../lib/reminders";
 import { ChatIcon } from "./ChatIcon";
 import { ReminderForm, ReminderLinks } from "./RemindersPanel";
 
@@ -117,12 +117,14 @@ export function InternalChatPanel({ onMobileBack }: { onMobileBack?: () => void 
       {!loading && !messages.length && <div className="inbox-thread-empty"><p>Aquí llegan tus recordatorios</p><small>Crea uno en WhatsApp → Recordatorios o con «Nuevo recordatorio». También puedes dejar notas para tu equipo.</small></div>}
       {messages.map((message, index) => <div key={message.id} className="internal-chat-item">
         {(index === 0 || dayKey(message.createdAt) !== dayKey(messages[index - 1].createdAt)) && <div className="inbox-day-separator"><span>{dayLabel(message.createdAt)}</span></div>}
-        {message.kind === "reminder" ? <article className={`inbound internal-reminder${message.reminderStatus === "done" ? " done" : ""}`}>
+        {message.kind === "reminder" ? <article className={`inbound internal-reminder${message.reminderStatus === "done" || message.reminderStatus === "cancelled" ? " done" : ""}${message.payload?.mode === "template" ? ` auto ${message.payload.delivery || ""}` : ""}`}>
           <p>{message.body}</p>
           {message.payload?.phone && <div className="internal-reminder-actions">
-            <ReminderLinks contactName={message.payload.contactName} phone={message.payload.phone} products={message.payload.products} />
+            {message.payload.conversationId && <a className={`reminder-link${message.payload.delivery === "sent" ? " primary" : ""}`} href={conversationHref(message.payload.conversationId)} onClick={event => { event.preventDefault(); openConversation(message.payload?.conversationId as string); }}>💬 Abrir chat en el inbox</a>}
+            {message.payload.delivery !== "sent" && <ReminderLinks contactName={message.payload.contactName} phone={message.payload.phone} products={message.payload.products} />}
             {message.reminderId && message.reminderStatus === "scheduled" && <button type="button" className="reminder-link subtle" onClick={() => void markDone(message)}>✓ Marcar hecho</button>}
             {message.reminderStatus === "done" && <span className="internal-reminder-done">✓ Hecho</span>}
+            {message.reminderStatus === "cancelled" && <span className="internal-reminder-done">Cancelado</span>}
           </div>}
           <div className="message-meta"><small><time dateTime={message.createdAt}>{time(message.createdAt)}</time></small></div>
         </article> : <article className="outbound internal-note">

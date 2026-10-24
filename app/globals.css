@@ -9045,3 +9045,40 @@ article.inbound:hover .message-reaction-picker, .message-reaction-picker:focus-w
 .internal-composer:focus-within { border-color: #b2d8c3; }
 .internal-composer .send { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%; background: #008069; color: #fff; cursor: pointer; }
 .internal-composer .send:disabled { background: #e4eae6; color: #a0afa4; cursor: default; }
+
+/* Recordatorios: envío automático con plantilla y venta pendiente */
+.reminder-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.reminder-mode button { display: grid; gap: 3px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.reminder-mode button b { font-size: 13px; }
+.reminder-mode button small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+.reminder-mode button[aria-checked="true"] { border-color: var(--green); background: var(--mint); box-shadow: 0 0 0 2px #0080691f; }
+.reminder-template { display: grid; gap: 10px; padding: 12px; border: 1px solid #cfe5d8; border-radius: 10px; background: #f7fbf8; }
+.reminder-template label { display: grid; gap: 4px; font-size: 12px; font-weight: 700; color: #355247; }
+.reminder-template select, .reminder-mapping input, .reminder-mapping select { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #dbe3df; border-radius: 8px; background: #fff; font: inherit; font-size: 13px; }
+.reminder-mappings { display: grid; gap: 6px; }
+.reminder-mapping { display: grid; grid-template-columns: 92px minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 6px; }
+.reminder-mapping code { padding: 4px 6px; border-radius: 6px; background: #fff; color: #087f5b; font-size: 12px; font-weight: 800; text-align: center; }
+.reminder-preview { display: grid; gap: 4px; padding: 10px 12px; border-radius: 10px; background: #fff; border: 1px dashed #b8d6c5; }
+.reminder-preview span { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.reminder-preview p { margin: 0; color: var(--ink); font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+.reminder-mode-line { color: #355247 !important; }
+.reminder-send-error { color: var(--app-danger, #b42332) !important; font-weight: 700; }
+.reminder-sale { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 4px; padding: 7px 9px; border-radius: 9px; background: #fff8e8; font-size: 12px; color: #6b4c00; }
+.reminder-sale.sale-paid { background: var(--mint); color: #11573f; }
+.reminder-sale.sale-cancelled { background: #eef1f3; color: #5f6b72; }
+.reminder-sale-actions { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.reminder-card.status-cancelled { border-left-color: #b9c2c8; opacity: .75; }
+.reminder-status.cancelled { background: #eef1f3; color: #5f6b72; }
+.pending-sale-card.sale-open { border-left-color: #e0a423; }
+.pending-sale-card.sale-cancelled { border-left-color: #b9c2c8; opacity: .8; }
+.sale-status.open { background: #fff4dc; color: #8a5a00; }
+.sale-status.paid { background: var(--mint); color: #11573f; }
+.sale-status.cancelled { background: #eef1f3; color: #5f6b72; }
+.inbox-shell .thread article.internal-reminder.auto.sent { border-left-color: #128c4a; background: #f3fbf6; }
+.inbox-shell .thread article.internal-reminder.auto.failed { border-left-color: var(--app-danger, #b42332); background: #fff6f6; }
+a.delivery-action { text-decoration: none; display: inline-flex; align-items: center; }
+@media (max-width: 640px) {
+  .reminder-mode { grid-template-columns: 1fr; }
+  .reminder-mapping { grid-template-columns: 70px minmax(0, 1fr); }
+  .reminder-mapping input { grid-column: 2; }
+}

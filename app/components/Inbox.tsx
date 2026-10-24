@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useId, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useId, useRef, useState } from "react";
 import { initials } from "../lib/format";
 import { filterInboxContacts, inboxTimestamp } from "../lib/inbox-presentation";
 import { ChatIcon } from "./ChatIcon";
@@ -16,6 +16,7 @@ import type {
 } from "../lib/types";
 import { ConversationPanel, type PendingChatImage } from "./ConversationPanel";
 import { InternalChatPanel, InternalChatRow, useInternalUnread } from "./InternalChat";
+import { OPEN_CHAT_EVENT } from "../lib/reminders";
 
 type Props = {
   chats: Chat[];
@@ -117,6 +118,12 @@ export function Inbox({
   const [mobileConversation, setMobileConversation] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
   const [internalUnread] = useInternalUnread(internalOpen);
+  useEffect(() => {
+    // «Abrir chat» desde Recordatorios o el chat interno: mostrar la conversación.
+    const open = () => { setInternalOpen(false); setMobileConversation(true); };
+    window.addEventListener(OPEN_CHAT_EVENT, open);
+    return () => window.removeEventListener(OPEN_CHAT_EVENT, open);
+  }, []);
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [newChatOpen, setNewChatOpen] = useState(false);
