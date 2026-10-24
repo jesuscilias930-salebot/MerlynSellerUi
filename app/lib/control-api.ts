@@ -10,7 +10,7 @@ export const controlSession = {
 export function controlStatusMessage(status: number): string {
   if (status === 413) return "Control rechazó el archivo por tamaño (413). Si acabas de subir el límite, reinicia o vuelve a desplegar Control.";
   if (status === 401) return "Tu sesión de Control expiró (401). Vuelve a iniciar sesión en Control.";
-  if (status === 403) return "Control rechazó la solicitud (403). Puede ser tu sesión o un error interno al procesar la foto; revisa la consola de Control.";
+  if (status === 403) return "Control rechazó la solicitud (403). Tu sesión de Control pudo expirar: cierra sesión de Control y vuelve a entrar.";
   if (status >= 500) return `Control tuvo un error interno (${status}). Revisa la consola de Control.`;
   return `No fue posible completar la solicitud de Control (${status}).`;
 }
@@ -23,7 +23,7 @@ export async function controlRequest<T>(path: string, init?: RequestInit): Promi
   });
   const body = (await response.json().catch(() => undefined)) as unknown;
   const errorBody = body && typeof body === "object" ? body as { message?: string; error?: string } : undefined;
-  if (!response.ok) throw new Error(typeof body === "string" ? body : errorBody?.message || errorBody?.error || controlStatusMessage(response.status));
+  if (!response.ok) throw new Error(typeof body === "string" ? body : errorBody?.message || (response.status === 401 || response.status === 403 || response.status === 413 || response.status >= 500 ? controlStatusMessage(response.status) : errorBody?.error || controlStatusMessage(response.status)));
   return body as T;
 }
 
