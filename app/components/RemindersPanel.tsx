@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { request } from "../lib/api";
 import { money } from "../lib/deliveries";
-import { cachedInventory, loadInventory } from "../lib/inventory-snapshot";
+import { useInventoryProducts } from "../lib/use-inventory-products";
 import {
   agreedDateLabel, conversationHref, defaultMappings, draftFromReminder, emptyReminderDraft, groupRemindersByDay, linesSummary, MESSAGE_STATUS_LABELS,
   openConversation, orderMessage, phoneLabel, productsChanged, withProductDetails, reminderIssues, reminderPayload, reminderTime, SALE_STATUS_LABELS, SOURCE_LABELS, templateIssues,
@@ -12,17 +12,6 @@ import {
 import { ConfirmDialog } from "./ConfirmDialog";
 import { addLine, DeliveryLinesEditor, InventoryPicker } from "./InventoryPicker";
 import { PendingSalesList, SaleActions } from "./PendingSales";
-
-/** Productos de Control (con color y talla) para completar los nombres guardados sin ellos. */
-export function useInventoryProducts() {
-  const [products, setProducts] = useState(() => cachedInventory()?.products ?? []);
-  useEffect(() => {
-    let active = true;
-    loadInventory().then(snapshot => { if (active) setProducts(snapshot.products); }).catch(() => { /* Sin sesión de Control se muestran los nombres guardados. */ });
-    return () => { active = false; };
-  }, []);
-  return products;
-}
 
 /** Botones para escribirle por WhatsApp: solo abrir el chat, o con saludo y su pedido para confirmar. */
 export function ReminderLinks({ contactName, phone, products: saved }: { contactName: string; phone: string; products?: ReminderLine[] | null }) {
