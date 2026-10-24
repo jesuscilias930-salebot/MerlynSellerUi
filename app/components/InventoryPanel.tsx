@@ -13,6 +13,8 @@ import { ChatIcon } from "./ChatIcon";
 import { CopyStockButton } from "./CopyStockButton";
 import { groupBySize } from "../lib/size-groups";
 import { colorSwatch } from "../lib/product-colors";
+import { loansByProduct, piecesOut, type InventoryLoan } from "../lib/inventory-loans";
+import { LoansSummary, ProductLoans } from "./ProductLoans";
 
 type Colors = Map<number, string>;
 function VariantChips({ color, size }: { color?: string; size?: string | null }) {
@@ -51,6 +53,16 @@ export function InventoryPanel({ refreshKey }: { refreshKey: number }) {
       .catch(error => { if (active) setLocationError(errorMessage(error)); });
     return () => { active = false; };
   }, []);
+  // Prendas tomadas temporalmente (solo aviso; no cambia la existencia).
+  const [loans, setLoans] = useState<InventoryLoan[]>([]);
+  const [loansKey, setLoansKey] = useState(0);
+  useEffect(() => {
+    let active = true;
+    request<InventoryLoan[]>("/inventory-loans").then(rows => { if (active) setLoans(Array.isArray(rows) ? rows : []); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [refreshKey, loansKey]);
+  const loansMap = useMemo(() => loansByProduct(loans), [loans]);
+  const reloadLoans = () => setLoansKey(value => value + 1);
   const locationSaved = (rows: ProductLocation[]) => {
     setLocations(current => {
       const next = new Map(current);
@@ -143,6 +155,7 @@ export function InventoryPanel({ refreshKey }: { refreshKey: number }) {
     </div>
     {locationError && <p className={styles.hint} role="alert">No se pudieron cargar las ubicaciones: {locationError}</p>}
     <LocationFinder locations={locations} />
+    <LoansSummary loans={loans} />
     <div className={styles.resultsHeading}>
       <p role="status">{!currentCategories ? "Consultando inventario…" : currentCategories.error ? "No se pudo cargar el inventario." : `${colorFilter.length ? "Revisando" : `${number(total)} ${total === 1 ? "producto" : "productos"} en`} ${categoryCount} ${categoryCount === 1 ? "categoría" : "categorías"}${selected ? " · Producto seleccionado" : q ? ` · Resultados para “${q}”` : ""}${colorFilter.length ? ` · Color: ${colorFilter.join(", ")}` : ""}`}</p>
       {!!currentCategories?.data?.length && <div className={styles.groupActions}><button type="button" onClick={() => setExpanded(Object.fromEntries(currentCategories.data!.map(row => [inventoryCategoryKey(row), true])))}>Expandir todas</button><button type="button" onClick={() => setExpanded(Object.fromEntries(currentCategories.data!.map(row => [inventoryCategoryKey(row), false])))}>Contraer todas</button></div>}
@@ -156,7 +169,7 @@ export function InventoryPanel({ refreshKey }: { refreshKey: number }) {
         <h3><button type="button" className={styles.categoryToggle} aria-expanded={open} aria-controls={`${listId}-category-${key}`} onClick={() => setExpanded(current => ({ ...current, [key]: !open }))}>
           <span className={styles.categoryIcon} aria-hidden="true">▦</span><strong>{inventoryCategoryName(category)}</strong><span className={styles.count}>{number(category.productCount)} {category.productCount === 1 ? "producto" : "productos"}</span><span className={styles.chevron} aria-hidden="true">{open ? "⌄" : "›"}</span>
         </button></h3>
-        <div id={`${listId}-category-${key}`} hidden={!open}>{open && <InventoryCategoryProducts key={`${key}:${filter}`} category={category} q={q} productId={productId} revision={`${refreshKey}:${revision}`} onSaved={async () => setRevision(value => value + 1)} locations={locations} onLocationSaved={locationSaved} colors={colors} colorFilter={colorFilter}/>}</div>
+        <div id={`${listId}-category-${key}`} hidden={!open}>{open && <InventoryCategoryProducts key={`${key}:${filter}`} category={category} q={q} productId={productId} revision={`${refreshKey}:${revision}`} onSaved={async () => setRevision(value => value + 1)} locations={locations} onLocationSaved={locationSaved} colors={colors} colorFilter={colorFilter} loans={loansMap} allLoans={loans} onLoansChanged={reloadLoans}/>}</div>
       </section>;
     })}</div>
   </section>;
@@ -164,7 +177,7 @@ export function InventoryPanel({ refreshKey }: { refreshKey: number }) {
 
 // Control entrega máximo 50 por página; juntamos la categoría completa para agruparla por talla.
 const PAGE_SIZE = 50, MAX_PAGES = 40;
-function InventoryCategoryProducts({ category, q, productId, revision, onSaved, locations, onLocationSaved, colors, colorFilter }: { category: InventoryCategory; q: string; productId?: number; revision: string; onSaved: () => Promise<void>; locations: LocationMap; onLocationSaved: (rows: ProductLocation[]) => void; colors: Colors; colorFilter: string[] }) {
+function InventoryCategoryProducts({ category, q, productId, revision, onSaved, locations, onLocationSaved, colors, colorFilter, loans, allLoans, onLoansChanged }: { category: InventoryCategory; q: string; productId?: number; revision: string; onSaved: () => Promise<void>; locations: LocationMap; onLocationSaved: (rows: ProductLocation[]) => void; colors: Colors; colorFilter: string[]; loans: Map<number, InventoryLoan[]>; allLoans: InventoryLoan[]; onLoansChanged: () => void }) {
   const options = { rack: suggestions(locations.values(), "rack"), level: suggestions(locations.values(), "level"), side: suggestions(locations.values(), "side") };
   const [retry, setRetry] = useState(0);
   const [result, setResult] = useState<{ key: string; data?: { items: InventoryProduct[]; total: number }; error?: string }>();
@@ -210,10 +223,11 @@ function InventoryCategoryProducts({ category, q, productId, revision, onSaved, 
           <div className={styles.products}>{size.items.map(product => {
             const state = inventoryStockState(product);
             return <article key={product.id} className={styles.product}>
-              <header><div><h4>{product.name}</h4><VariantChips color={colors.get(product.id)} size={product.size} /><p>{[product.gender || "Sin género", `#${product.id}`].filter(Boolean).join(" · ")}</p></div><span className={`${styles.badge} ${styles[state]}`}>{state === "empty" ? "Sin existencias" : state === "low" ? "Stock bajo" : "Disponible"}</span></header>
+              <header><div><h4>{product.name}</h4><VariantChips color={colors.get(product.id)} size={product.size} /><p>{[product.gender || "Sin género", `#${product.id}`].filter(Boolean).join(" · ")}</p>{piecesOut(loans.get(product.id)) > 0 && <span className="loan-badge">🚚 {piecesOut(loans.get(product.id))} fuera</span>}</div><span className={`${styles.badge} ${styles[state]}`}>{state === "empty" ? "Sin existencias" : state === "low" ? "Stock bajo" : "Disponible"}</span></header>
               <div className={styles.stock}><strong>{number(product.currentStock)}</strong><span>unidades disponibles</span><small>Alerta mínima: {number(product.minStockAlert ?? 0)}</small></div>
               <CopyStockButton productId={product.id} />
               <ProductLocationEditor productIds={[product.id]} location={locations.get(product.id)} options={options} onSaved={onLocationSaved}/>
+              <ProductLoans productId={product.id} productName={[product.name?.trim() || "Producto", product.gender?.trim(), colors.get(product.id), product.size?.trim() && `Talla ${product.size.trim()}`].filter(Boolean).join(" · ")} loans={loans.get(product.id) || []} allLoans={allLoans} onChanged={onLoansChanged} />
               <InventoryQuantityEditor id={product.id} name={inventoryProductName(product)} stock={product.currentStock} onSaved={onSaved}/>
             </article>;
           })}</div>
