@@ -57,3 +57,7 @@
 .variant{display:flex;flex-wrap:wrap;gap:6px;margin:0}
 .variantChip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border:1px solid var(--line,#e5eae7);border-radius:99px;background:var(--app-subtle,#f7f9fa);color:var(--ink,#17251f);font-size:12px;font-weight:700}
 .shared{color:#0b6b44 !important;font-weight:600}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;margin:8px 0 4px;border-bottom:1px solid var(--line);scrollbar-width:thin;}
+.panel .tabs button{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;background:var(--app-surface);color:var(--ink);border:1px solid var(--app-border-strong);border-radius:999px;padding:8px 14px;font-weight:500;}
+.panel .tabs button.tabActive{background:var(--green);color:#fff;border-color:var(--green);font-weight:600;}
+.tabs small{font-size:11px;opacity:.75;}

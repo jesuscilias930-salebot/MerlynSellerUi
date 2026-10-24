@@ -160,6 +160,11 @@ export function EcommerceCatalogPanel({kind}:{kind:"products"|"bundles"}) {
   const [search,setSearch]=useState("");
   const [category,setCategory]=useState("");
   const [colors,setColors]=useState<Record<number,string>>({});
+  // Productos: una pestaña por categoría; cada una se descarga solo al abrirla.
+  const [tabs,setTabs]=useState<{id:number;name:string}[]|null>(null);
+  const [tab,setTab]=useState<number|null>(null);
+  const loaded=useRef(new Map<number,{items:Item[];images:Record<string,SavedPhoto[]>}>());
+  const [counts,setCounts]=useState<Record<number,number>>({});
   useEffect(()=>{
     if(kind!=="products")return;
     let active=true;
@@ -167,15 +172,41 @@ export function EcommerceCatalogPanel({kind}:{kind:"products"|"bundles"}) {
     request<ProductDetail[]>("/product-details").then(rows=>{if(active)setColors(detailMaps(rows).colors);}).catch(()=>undefined);
     return()=>{active=false;};
   },[kind]);
-  async function refresh(){setLoading(true);setError("");try{if(!controlSession.get())throw Error("Inicia sesión en Control de ventas y después vuelve a E-commerce.");const [data,urls]=await Promise.all([controlRequest<Item[]>(kind==="products"?"/products/all":"/bundles"),controlRequest<Record<string,SavedPhoto[]>>(`/${kind}/store-gallery`)]);setItems(data);setImages(urls);}catch(e){setError(e instanceof Error?e.message:"No se pudo cargar el catálogo");}finally{setLoading(false);}}
-  useEffect(()=>{let active=true;Promise.all([controlRequest<Item[]>(kind==="products"?"/products/all":"/bundles"),controlRequest<Record<string,SavedPhoto[]>>(`/${kind}/store-gallery`)]).then(([data,urls])=>{if(active){setItems(data);setImages(urls);}}).catch(e=>{if(active)setError(controlSession.get()?(e instanceof Error?e.message:"No se pudo cargar el catálogo"):"Inicia sesión en Control de ventas y después vuelve a E-commerce.");}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[kind]);
+  async function fetchTab(id:number){
+    const data=(await controlRequest<Item[]>(`/products/all?categoryId=${id}`)).filter(item=>item.category?.id===id);
+    const ids=data.map(item=>item.id);
+    const urls=ids.length?await controlRequest<Record<string,SavedPhoto[]>>(`/products/store-gallery?ids=${ids.join(",")}`):{};
+    const entry={items:data,images:urls};loaded.current.set(id,entry);setCounts(current=>({...current,[id]:data.length}));return entry;
+  }
+  async function refresh(){setLoading(true);setError("");try{if(!controlSession.get())throw Error("Inicia sesión en Control de ventas y después vuelve a E-commerce.");
+    if(kind==="products"){if(tab==null)return;const entry=await fetchTab(tab);setItems(entry.items);setImages(entry.images);return;}
+    const [data,urls]=await Promise.all([controlRequest<Item[]>("/bundles"),controlRequest<Record<string,SavedPhoto[]>>(`/${kind}/store-gallery`)]);setItems(data);setImages(urls);}catch(e){setError(e instanceof Error?e.message:"No se pudo cargar el catálogo");}finally{setLoading(false);}}
+  const noSession="Inicia sesión en Control de ventas y después vuelve a E-commerce.";
+  useEffect(()=>{if(kind!=="bundles")return;let active=true;Promise.all([controlRequest<Item[]>("/bundles"),controlRequest<Record<string,SavedPhoto[]>>(`/${kind}/store-gallery`)]).then(([data,urls])=>{if(active){setItems(data);setImages(urls);}}).catch(e=>{if(active)setError(controlSession.get()?(e instanceof Error?e.message:"No se pudo cargar el catálogo"):noSession);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[kind]);
+  // Solo la lista de categorías para las pestañas; los productos esperan a que elijas una.
+  useEffect(()=>{if(kind!=="products")return;let active=true;
+    controlRequest<{id:number;name:string}[]>("/category").then(rows=>{if(!active)return;const list=(Array.isArray(rows)?rows:[]).filter(row=>row&&row.id!=null).map(row=>({id:row.id,name:row.name?.trim()||`Categoría ${row.id}`})).sort((a,b)=>a.name.localeCompare(b.name,"es"));
+      setTabs(list);let saved:number|null=null;try{saved=Number(localStorage.getItem("merlyn-ecommerce-products-tab"))||null;}catch{}
+      setTab(list.some(row=>row.id===saved)?saved:list[0]?.id??null);if(!list.length)setLoading(false);})
+      .catch(e=>{if(active){setTabs([]);setLoading(false);setError(controlSession.get()?(e instanceof Error?e.message:"No se pudieron cargar las categorías"):noSession);}});
+    return()=>{active=false;};},[kind]);
+  useEffect(()=>{if(kind!=="products"||tab==null)return;let active=true;
+    try{localStorage.setItem("merlyn-ecommerce-products-tab",String(tab));}catch{}
+    const cached=loaded.current.get(tab);
+    void Promise.resolve().then(()=>{if(!active)return;setError("");
+      if(cached){setItems(cached.items);setImages(cached.images);setLoading(false);return;}
+      setItems([]);setImages({});setLoading(true);
+      fetchTab(tab).then(entry=>{if(active){setItems(entry.items);setImages(entry.images);}}).catch(e=>{if(active)setError(e instanceof Error?e.message:"No se pudo cargar la categoría");}).finally(()=>{if(active)setLoading(false);});});
+    return()=>{active=false;};
+  },[kind,tab]);
   const categories = [...new Set(items.map(bundleCategory))].sort((a,b)=>a.localeCompare(b,"es"));
   const visible=items.filter(i=>(kind === "products" ? `${catalogProductName(i)} ${colors[i.id]||""} ${i.size||""}` : i.name).toLocaleLowerCase("es").includes(search.trim().toLocaleLowerCase("es")) && (kind!=="bundles" || !category || bundleCategory(i)===category));
   const productGroups = kind === "products" ? groupCatalogProducts(visible) : [];
   return <section className={styles.panel}><header><div><small>E-COMMERCE</small><h1>{kind==="bundles"?"Bundles":"Productos"}</h1><p>{kind==="products"?"Administra las fotografías y la lista de composición de cada producto para la tienda.":"Galería de cada artículo para la tienda. Agrega varias fotos sin reemplazar las existentes."} No modifica las fotos para chats.</p></div><button type="button" disabled={loading} onClick={()=>void refresh()}>Actualizar</button></header>
+    {kind==="products"&&tabs&&tabs.length>0&&<div className={styles.tabs} role="tablist" aria-label="Categorías de productos">{tabs.map(row=><button key={row.id} type="button" role="tab" aria-selected={tab===row.id} className={tab===row.id?styles.tabActive:""} onClick={()=>{if(row.id!==tab){setSearch("");setTab(row.id);}}}>{row.name}{counts[row.id]!=null?<small>{counts[row.id]}</small>:null}</button>)}</div>}
     <p>JPG o PNG · Hasta 20 MB y 16 megapíxeles. Solo sube imágenes que quieras mostrar a los compradores.</p>
     <div className={styles.filters}>
-      <label>Buscar<input aria-label="Buscar en catálogo" placeholder={kind === "products" ? "Nombre, categoría, género, color o talla…" : "Buscar por nombre…"} value={search} onChange={e=>setSearch(e.target.value)}/></label>
+      <label>Buscar<input aria-label="Buscar en catálogo" placeholder={kind === "products" ? "Nombre, género, color o talla en esta categoría…" : "Buscar por nombre…"} value={search} onChange={e=>setSearch(e.target.value)}/></label>
       {kind==="bundles"&&<label>Categoría de bundles<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">Todas las categorías</option>{categories.map(value=><option key={value} value={value}>{value}</option>)}</select></label>}
       {(search||category)&&<button type="button" onClick={()=>{setSearch("");setCategory("");}}>Limpiar filtros</button>}
     </div>
