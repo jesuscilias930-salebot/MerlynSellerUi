@@ -56,3 +56,4 @@
 
 .variant{display:flex;flex-wrap:wrap;gap:6px;margin:0}
 .variantChip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border:1px solid var(--line,#e5eae7);border-radius:99px;background:var(--app-subtle,#f7f9fa);color:var(--ink,#17251f);font-size:12px;font-weight:700}
+.shared{color:#0b6b44 !important;font-weight:600}
