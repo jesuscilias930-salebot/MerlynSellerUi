@@ -53,3 +53,6 @@
 .productCategory>.grid{margin:0;padding:0 16px 16px;}
 .productCategory .card h3{font-size:17px;line-height:1.45;overflow-wrap:anywhere;}
 @media(max-width:580px){.productCategory>summary{padding:14px;gap:8px;}.productCategory>.grid{padding:0 10px 10px;}}
+
+.variant{display:flex;flex-wrap:wrap;gap:6px;margin:0}
+.variantChip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border:1px solid var(--line,#e5eae7);border-radius:99px;background:var(--app-subtle,#f7f9fa);color:var(--ink,#17251f);font-size:12px;font-weight:700}

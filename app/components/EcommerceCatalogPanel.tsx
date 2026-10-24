@@ -4,7 +4,10 @@ import { controlRequest, controlSession } from "../lib/control-api";
 import { catalogProductName, groupCatalogProducts, type CatalogProductIdentity } from "../lib/catalog-product-groups";
 import styles from "./EcommerceCatalogPanel.module.css";
 import { compositionLines } from "../lib/product-composition";
-type Item = CatalogProductIdentity & { id: number; composition?:string[]; storeCategory?:string|null; description?:string|null; currentStock?: number; fixedPrice?: number; items?: {quantity:number}[] };
+import { request } from "../lib/api";
+import { colorSwatch } from "../lib/product-colors";
+import { detailMaps, type ProductDetail } from "../lib/product-variants";
+type Item = CatalogProductIdentity & { id: number; size?: string | null; composition?:string[]; storeCategory?:string|null; description?:string|null; currentStock?: number; fixedPrice?: number; items?: {quantity:number}[] };
 const bundleCategory = (item: Item) => item.storeCategory?.trim() || "Sin categoría";
 type SavedPhoto = {id:number;url:string};
 function ProductCompositionEditor({item}:{item:Item}) {
@@ -60,7 +63,16 @@ function Photo({ src, file, name }: {src?:string;file:File|null;name:string}) {
   // eslint-disable-next-line @next/next/no-img-element
   return src||file ? <img ref={ref} src={file?undefined:src} alt={name} loading="lazy" /> : <div className={styles.placeholder}>Sin imagen de tienda</div>;
 }
-function CatalogCard({item,photos,kind,refresh}:{item:Item;photos:SavedPhoto[];kind:string;refresh:()=>Promise<void>}) {
+/** Color (de MerlynSeller) y talla para distinguir productos con el mismo nombre. */
+function VariantLine({color,size}:{color?:string;size?:string|null}) {
+  if(!color&&!size)return null;
+  const swatch=colorSwatch(color);
+  return <p className={styles.variant}>
+    {color&&<span className={styles.variantChip}><i className="product-color-dot" style={swatch?{background:swatch}:undefined} aria-hidden="true"/>{color}</span>}
+    {size&&<span className={styles.variantChip}>Talla {size}</span>}
+  </p>;
+}
+function CatalogCard({item,photos,kind,refresh,color}:{item:Item;photos:SavedPhoto[];kind:string;refresh:()=>Promise<void>;color?:string}) {
   const title = kind === "products" ? catalogProductName(item) : item.name;
   const [files,setFiles]=useState<File[]>([]);
   const [busy,setBusy]=useState(false);
@@ -101,7 +113,7 @@ function CatalogCard({item,photos,kind,refresh}:{item:Item;photos:SavedPhoto[];k
   const EditorContainer = kind === "bundles" ? "details" : "div";
   return <article className={`${styles.card} ${kind === "bundles" ? styles.compactCard : ""}`}>
     <Photo src={photos[0]?.url} file={null} name={title}/>
-    <h3>{title}</h3><small>#{item.id} · {kind==="products"?`${item.currentStock||0} piezas disponibles`:`${item.items?.reduce((n,i)=>n+i.quantity,0)||0} piezas por paquete`}</small>
+    <h3>{title}</h3>{kind==="products"&&<VariantLine color={color} size={item.size}/>}<small>#{item.id} · {kind==="products"?`${item.currentStock||0} piezas disponibles`:`${item.items?.reduce((n,i)=>n+i.quantity,0)||0} piezas por paquete`}</small>
     {kind==="bundles"&&<span className={styles.categoryBadge}>{bundleCategory(item)}</span>}
     {item.fixedPrice!=null&&<b>{new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN"}).format(item.fixedPrice)}</b>}
     <small>{photos.length} fotos guardadas · La primera es la portada.</small>
@@ -141,15 +153,23 @@ export function EcommerceCatalogPanel({kind}:{kind:"products"|"bundles"}) {
   const [error,setError]=useState("");
   const [search,setSearch]=useState("");
   const [category,setCategory]=useState("");
+  const [colors,setColors]=useState<Record<number,string>>({});
+  useEffect(()=>{
+    if(kind!=="products")return;
+    let active=true;
+    // El color vive en MerlynSeller; si no carga, el catálogo se muestra igual.
+    request<ProductDetail[]>("/product-details").then(rows=>{if(active)setColors(detailMaps(rows).colors);}).catch(()=>undefined);
+    return()=>{active=false;};
+  },[kind]);
   async function refresh(){setLoading(true);setError("");try{if(!controlSession.get())throw Error("Inicia sesión en Control de ventas y después vuelve a E-commerce.");const [data,urls]=await Promise.all([controlRequest<Item[]>(kind==="products"?"/products/all":"/bundles"),controlRequest<Record<string,SavedPhoto[]>>(`/${kind}/store-gallery`)]);setItems(data);setImages(urls);}catch(e){setError(e instanceof Error?e.message:"No se pudo cargar el catálogo");}finally{setLoading(false);}}
   useEffect(()=>{let active=true;Promise.all([controlRequest<Item[]>(kind==="products"?"/products/all":"/bundles"),controlRequest<Record<string,SavedPhoto[]>>(`/${kind}/store-gallery`)]).then(([data,urls])=>{if(active){setItems(data);setImages(urls);}}).catch(e=>{if(active)setError(controlSession.get()?(e instanceof Error?e.message:"No se pudo cargar el catálogo"):"Inicia sesión en Control de ventas y después vuelve a E-commerce.");}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[kind]);
   const categories = [...new Set(items.map(bundleCategory))].sort((a,b)=>a.localeCompare(b,"es"));
-  const visible=items.filter(i=>(kind === "products" ? catalogProductName(i) : i.name).toLocaleLowerCase("es").includes(search.trim().toLocaleLowerCase("es")) && (kind!=="bundles" || !category || bundleCategory(i)===category));
+  const visible=items.filter(i=>(kind === "products" ? `${catalogProductName(i)} ${colors[i.id]||""} ${i.size||""}` : i.name).toLocaleLowerCase("es").includes(search.trim().toLocaleLowerCase("es")) && (kind!=="bundles" || !category || bundleCategory(i)===category));
   const productGroups = kind === "products" ? groupCatalogProducts(visible) : [];
   return <section className={styles.panel}><header><div><small>E-COMMERCE</small><h1>{kind==="bundles"?"Bundles":"Productos"}</h1><p>{kind==="products"?"Administra las fotografías y la lista de composición de cada producto para la tienda.":"Galería de cada artículo para la tienda. Agrega varias fotos sin reemplazar las existentes."} No modifica las fotos para chats.</p></div><button type="button" disabled={loading} onClick={()=>void refresh()}>Actualizar</button></header>
     <p>JPG o PNG · Hasta 5 MB y 16 megapíxeles. Solo sube imágenes que quieras mostrar a los compradores.</p>
     <div className={styles.filters}>
-      <label>Buscar<input aria-label="Buscar en catálogo" placeholder={kind === "products" ? "Nombre, categoría o género…" : "Buscar por nombre…"} value={search} onChange={e=>setSearch(e.target.value)}/></label>
+      <label>Buscar<input aria-label="Buscar en catálogo" placeholder={kind === "products" ? "Nombre, categoría, género, color o talla…" : "Buscar por nombre…"} value={search} onChange={e=>setSearch(e.target.value)}/></label>
       {kind==="bundles"&&<label>Categoría de bundles<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">Todas las categorías</option>{categories.map(value=><option key={value} value={value}>{value}</option>)}</select></label>}
       {(search||category)&&<button type="button" onClick={()=>{setSearch("");setCategory("");}}>Limpiar filtros</button>}
     </div>
@@ -158,7 +178,7 @@ export function EcommerceCatalogPanel({kind}:{kind:"products"|"bundles"}) {
     {!loading&&!error&&!visible.length&&<p>No hay artículos para mostrar.</p>}
     {kind === "products" ? <div className={styles.categoryGroups}>{productGroups.map(group => <details key={group.key} className={styles.productCategory} open>
       <summary><span className={styles.categoryName}>{group.name}</span><span className={styles.categoryCount}>{group.products.length} {group.products.length === 1 ? "producto" : "productos"}</span><span className={styles.categoryArrow} aria-hidden="true">⌄</span></summary>
-      <div className={styles.grid}>{group.products.map(item => <CatalogCard key={`products-${item.id}`} item={item} photos={images[item.id]||[]} kind={kind} refresh={refresh}/>)}</div>
+      <div className={styles.grid}>{group.products.map(item => <CatalogCard key={`products-${item.id}`} item={item} photos={images[item.id]||[]} kind={kind} refresh={refresh} color={colors[item.id]}/>)}</div>
     </details>)}</div> : <div className={styles.grid}>{visible.map(item=><CatalogCard key={`${kind}-${item.id}`} item={item} photos={images[item.id]||[]} kind={kind} refresh={refresh}/>)}</div>}
   </section>;
 }
