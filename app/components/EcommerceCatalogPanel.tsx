@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { controlRequest, controlSession } from "../lib/control-api";
 import { catalogProductName, groupCatalogProducts, groupSizeSiblings, type CatalogProductIdentity } from "../lib/catalog-product-groups";
 import styles from "./EcommerceCatalogPanel.module.css";
+
+const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
 import { compositionLines } from "../lib/product-composition";
 import { request } from "../lib/api";
 import { colorSwatch } from "../lib/product-colors";
@@ -93,7 +95,7 @@ function CatalogCard({item,photos,kind,refresh,color,siblings=[item],sizes=[],ow
   }
   function replace(photoId:number,file?:File){
     if(!file)return;
-    if(!["image/jpeg","image/png"].includes(file.type)||!file.size||file.size>5*1024*1024){setNotice("Usa JPG o PNG de hasta 5 MB.");return;}
+    if(!["image/jpeg","image/png"].includes(file.type)||!file.size||file.size>MAX_PHOTO_BYTES){setNotice("Usa JPG o PNG de hasta 20 MB.");return;}
     const body=new FormData();body.append("file",file);
     void editGallery(()=>controlRequest(`/${kind}/${item.id}/store-gallery/${photoId}`,{method:"PUT",body}),"Fotografía reemplazada, conservando su posición.");
   }
@@ -139,7 +141,7 @@ function CatalogCard({item,photos,kind,refresh,color,siblings=[item],sizes=[],ow
     </figure>)}</div>
     <label>Agregar fotografías<input type="file" multiple accept="image/jpeg,image/png" disabled={busy} onChange={e=>{
       const next=Array.from(e.target.files||[]);e.target.value="";
-      if(next.some(file=>!["image/jpeg","image/png"].includes(file.type)||file.size>5*1024*1024||!file.size)){setNotice("Usa JPG o PNG de hasta 5 MB por imagen.");return;}
+      if(next.some(file=>!["image/jpeg","image/png"].includes(file.type)||file.size>MAX_PHOTO_BYTES||!file.size)){setNotice("Usa JPG o PNG de hasta 20 MB por imagen.");return;}
       setFiles(current=>[...current,...next]);setNotice("");
     }}/></label>
     <div className={styles.photos}>{files.map((file,index)=><figure key={`${file.name}-${file.lastModified}-${index}`}><Photo file={file} name={`Vista previa de ${file.name}`}/><figcaption className={styles.filename}>{file.name}</figcaption><button type="button" disabled={busy} aria-label={`Quitar ${file.name} de las pendientes`} onClick={()=>setFiles(current=>current.filter((_,i)=>i!==index))}>Quitar</button></figure>)}</div>
@@ -171,7 +173,7 @@ export function EcommerceCatalogPanel({kind}:{kind:"products"|"bundles"}) {
   const visible=items.filter(i=>(kind === "products" ? `${catalogProductName(i)} ${colors[i.id]||""} ${i.size||""}` : i.name).toLocaleLowerCase("es").includes(search.trim().toLocaleLowerCase("es")) && (kind!=="bundles" || !category || bundleCategory(i)===category));
   const productGroups = kind === "products" ? groupCatalogProducts(visible) : [];
   return <section className={styles.panel}><header><div><small>E-COMMERCE</small><h1>{kind==="bundles"?"Bundles":"Productos"}</h1><p>{kind==="products"?"Administra las fotografías y la lista de composición de cada producto para la tienda.":"Galería de cada artículo para la tienda. Agrega varias fotos sin reemplazar las existentes."} No modifica las fotos para chats.</p></div><button type="button" disabled={loading} onClick={()=>void refresh()}>Actualizar</button></header>
-    <p>JPG o PNG · Hasta 5 MB y 16 megapíxeles. Solo sube imágenes que quieras mostrar a los compradores.</p>
+    <p>JPG o PNG · Hasta 20 MB y 16 megapíxeles. Solo sube imágenes que quieras mostrar a los compradores.</p>
     <div className={styles.filters}>
       <label>Buscar<input aria-label="Buscar en catálogo" placeholder={kind === "products" ? "Nombre, categoría, género, color o talla…" : "Buscar por nombre…"} value={search} onChange={e=>setSearch(e.target.value)}/></label>
       {kind==="bundles"&&<label>Categoría de bundles<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">Todas las categorías</option>{categories.map(value=><option key={value} value={value}>{value}</option>)}</select></label>}
