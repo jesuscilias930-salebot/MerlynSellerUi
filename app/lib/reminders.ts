@@ -177,3 +177,26 @@ export const openConversation = (conversationId: string) => window.dispatchEvent
 export const conversationHref = (conversationId: string) => `?chat=${encodeURIComponent(conversationId)}`;
 export const SALE_STATUS_LABELS: Record<SaleStatus, string> = { open: "Pendiente de pago", paid: "Pagada", cancelled: "Cerrada sin venta" };
 export const MESSAGE_STATUS_LABELS: Record<string, string> = { pending: "En cola de envío", sent: "Enviado", delivered: "Entregado", read: "Leído", failed: "Falló el envío" };
+
+type ProductInfo = { id: number; color?: string | null; size?: string | null };
+const fold = (value: string) => value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+/**
+ * Agrega color y talla al nombre de los productos que aún no los traen
+ * (p. ej. recordatorios guardados antes de asignarles color). No duplica lo que ya dice el nombre.
+ */
+export function withProductDetails(lines: ReminderLine[] | null | undefined, products: ProductInfo[] | null | undefined): ReminderLine[] {
+  const list = lines || [];
+  if (!list.length || !products?.length) return list;
+  const byId = new Map(products.map(product => [product.id, product]));
+  return list.map(line => {
+    const product = line.kind === "product" && line.id != null ? byId.get(Number(line.id)) : undefined;
+    if (!product) return line;
+    const name = fold(line.name);
+    const color = product.color?.trim() || "", size = product.size?.trim() || "";
+    const extra = [color && !name.includes(fold(color)) ? color : "", size && !name.includes(fold(size)) ? `Talla ${size}` : ""].filter(Boolean);
+    return extra.length ? { ...line, name: [line.name.trim(), ...extra].join(" · ").slice(0, 160) } : line;
+  });
+}
+/** true si algún producto cambió de nombre al agregarle color o talla. */
+export const productsChanged = (before: ReminderLine[] | null | undefined, after: ReminderLine[]) =>
+  (before || []).some((line, index) => line.name !== after[index]?.name);

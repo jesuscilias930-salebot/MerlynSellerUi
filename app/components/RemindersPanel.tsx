@@ -1,19 +1,33 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { request } from "../lib/api";
 import { money } from "../lib/deliveries";
+import { cachedInventory, loadInventory } from "../lib/inventory-snapshot";
 import {
   agreedDateLabel, conversationHref, defaultMappings, draftFromReminder, emptyReminderDraft, groupRemindersByDay, linesSummary, MESSAGE_STATUS_LABELS,
-  openConversation, orderMessage, phoneLabel, reminderIssues, reminderPayload, reminderTime, SALE_STATUS_LABELS, SOURCE_LABELS, templateIssues,
+  openConversation, orderMessage, phoneLabel, productsChanged, withProductDetails, reminderIssues, reminderPayload, reminderTime, SALE_STATUS_LABELS, SOURCE_LABELS, templateIssues,
   templatePreview, whatsappLink, type MappingSource, type Reminder, type ReminderDraft, type ReminderLine, type ReminderTemplate,
 } from "../lib/reminders";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { addLine, DeliveryLinesEditor, InventoryPicker } from "./InventoryPicker";
 import { PendingSalesList, SaleActions } from "./PendingSales";
 
+/** Productos de Control (con color y talla) para completar los nombres guardados sin ellos. */
+export function useInventoryProducts() {
+  const [products, setProducts] = useState(() => cachedInventory()?.products ?? []);
+  useEffect(() => {
+    let active = true;
+    loadInventory().then(snapshot => { if (active) setProducts(snapshot.products); }).catch(() => { /* Sin sesión de Control se muestran los nombres guardados. */ });
+    return () => { active = false; };
+  }, []);
+  return products;
+}
+
 /** Botones para escribirle por WhatsApp: solo abrir el chat, o con saludo y su pedido para confirmar. */
-export function ReminderLinks({ contactName, phone, products }: { contactName: string; phone: string; products?: ReminderLine[] | null }) {
+export function ReminderLinks({ contactName, phone, products: saved }: { contactName: string; phone: string; products?: ReminderLine[] | null }) {
+  const inventory = useInventoryProducts();
+  const products = useMemo(() => withProductDetails(saved, inventory), [saved, inventory]);
   return <>
     <a className="reminder-link" href={whatsappLink(phone)} target="_blank" rel="noreferrer">💬 Enviar mensaje</a>
     <a className="reminder-link primary" href={whatsappLink(phone, orderMessage({ contactName, products }))} target="_blank" rel="noreferrer" title={orderMessage({ contactName, products })}>🧾 Enviar mensaje con pedido</a>
@@ -161,6 +175,20 @@ export function RemindersPanel() {
   const [pending, setPending] = useState<Pending>(null);
   const [busy, setBusy] = useState(false);
   const [salesKey, setSalesKey] = useState(0);
+  const inventory = useInventoryProducts();
+  // Color y talla actuales de cada producto, aunque el recordatorio se haya guardado sin ellos.
+  const shown = useMemo(() => reminders.map(reminder => ({ ...reminder, products: withProductDetails(reminder.products, inventory) })), [reminders, inventory]);
+  const repaired = useRef(new Set<string>());
+  useEffect(() => {
+    // Los pendientes de avisar se guardan con color y talla para que la plantilla automática también los lleve.
+    for (const reminder of reminders) {
+      if (reminder.status !== "scheduled" || reminder.notifiedAt || repaired.current.has(reminder.id)) continue;
+      const products = withProductDetails(reminder.products, inventory);
+      if (!productsChanged(reminder.products, products)) continue;
+      repaired.current.add(reminder.id);
+      void request(`/reminders/${reminder.id}/products`, { method: "PATCH", body: JSON.stringify({ products }) }).catch(() => { /* Se reintenta la próxima vez que abras la sección. */ });
+    }
+  }, [reminders, inventory]);
   const load = useCallback(async () => {
     if (view === "sales") { setSalesKey(value => value + 1); return; }
     setLoading(true); setError("");
@@ -203,7 +231,7 @@ export function RemindersPanel() {
       {error && <p className="delivery-error" role="alert">{error} <button type="button" className="delivery-link" onClick={() => void load()}>Reintentar</button></p>}
       {loading && !reminders.length ? <p className="deliveries-empty">Cargando recordatorios…</p>
         : reminders.length === 0 ? <div className="deliveries-empty"><b>{view === "done" ? "Aún no hay recordatorios hechos o cancelados." : "No hay recordatorios pendientes."}</b><span>Crea uno con «Nuevo recordatorio».</span></div>
-          : groupRemindersByDay(reminders).map(group => <section key={group.key} className="delivery-day"><h3>{group.label}</h3>
+          : groupRemindersByDay(shown).map(group => <section key={group.key} className="delivery-day"><h3>{group.label}</h3>
             {group.items.map(reminder => <ReminderCard key={reminder.id} reminder={reminder} onChanged={() => void load()} actions={<>
               {reminder.status === "scheduled" && <ReminderLinks contactName={reminder.contactName} phone={reminder.phone} products={reminder.products} />}
               {reminder.conversationId && <a className="delivery-action" href={conversationHref(reminder.conversationId)} onClick={event => { event.preventDefault(); openConversation(reminder.conversationId as string); }}>💬 Abrir chat</a>}

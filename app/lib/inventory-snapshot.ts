@@ -15,6 +15,15 @@ export const CONTROL_LOGIN_MESSAGE = "Inicia sesión en Control de ventas para c
 export async function loadInventory(force = false): Promise<InventorySnapshot> {
   if (!force && cache && Date.now() - cache.loadedAt < FRESH_MS) return cache;
   if (!controlSession.get()) throw new Error(CONTROL_LOGIN_MESSAGE);
+  // Varias pantallas pueden pedirlo a la vez: comparten la misma descarga.
+  if (!force && inflight) return inflight;
+  const pending = fetchInventory().finally(() => { if (inflight === pending) inflight = null; });
+  inflight = pending;
+  return pending;
+}
+let inflight: Promise<InventorySnapshot> | null = null;
+
+async function fetchInventory(): Promise<InventorySnapshot> {
   const [products, bundles, locations, details] = await Promise.all([
     controlRequest<QuickProduct[]>("/products/all"),
     controlRequest<QuickBundle[]>("/bundles"),

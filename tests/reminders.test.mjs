@@ -45,3 +45,22 @@ test('plantilla del recordatorio: variables propuestas, validación y vista prev
   assert.equal(payload.templateMappings[0].value, undefined); assert.equal(payload.templateMappings[3].value, '¡Gracias!');
   assert.deepEqual(reminderPayload({ ...ready, sendMode: 'manual' }).templateMappings, []);
 });
+
+test('agrega color y talla a productos guardados sin ellos, sin duplicar', async () => {
+  const { withProductDetails, productsChanged } = await import('../app/lib/reminders.ts');
+  const products = [{ id: 5, color: 'Negro', size: '25–28' }, { id: 6, color: 'Blanco', size: '22–25' }];
+  const lines = [
+    { kind: 'product', id: 5, name: 'Essential High Quality', quantity: 12 },
+    { kind: 'product', id: 6, name: 'Essential High Quality · Blanco · Talla 22–25', quantity: 3 },
+    { kind: 'custom', name: 'Bolsa', quantity: 1 },
+    { kind: 'product', id: 99, name: 'Producto borrado', quantity: 1 },
+  ];
+  const result = withProductDetails(lines, products);
+  assert.equal(result[0].name, 'Essential High Quality · Negro · Talla 25–28');
+  assert.equal(result[1], lines[1]);
+  assert.equal(result[2], lines[2]);
+  assert.equal(result[3], lines[3]);
+  assert.equal(productsChanged(lines, result), true);
+  assert.equal(productsChanged(lines.slice(1), withProductDetails(lines.slice(1), products)), false);
+  assert.equal(withProductDetails([{ kind: 'product', id: 5, name: 'Tin NEGRO', quantity: 1 }], [{ id: 5, color: 'negro' }])[0].name, 'Tin NEGRO');
+});
