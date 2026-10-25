@@ -9110,3 +9110,17 @@ a.delivery-action { text-decoration: none; display: inline-flex; align-items: ce
 .loan-overdue-badge { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #fde2e2; color: #8a1f1f; font-size: 12px; font-weight: 800; }
 .loan-badge { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 999px; background: #fff1cc; color: #7a5a10; font-size: 11px; font-weight: 800; }
 @media (max-width: 560px) { .loan-fields { grid-template-columns: 1fr; } }
+/* Precios por categoría */
+.price-rule-mode { display: inline-flex; gap: 4px; padding: 4px; border-radius: 10px; background: var(--app-subtle, #f1f3f5); justify-self: start; }
+.price-rule-mode button { padding: 8px 14px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.price-rule-mode button.active { background: #fff; color: var(--ink); box-shadow: 0 1px 3px #0000001f; }
+.price-rule-category-status { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid #f3d9a4; border-radius: 10px; background: #fff8e6; color: #6b4e0f; font-size: 13px; }
+.price-rule-category-status.ok { border-color: #c9e5d9; background: var(--mint, #e6f4ec); color: #11573f; }
+.price-rule-categories { display: grid; gap: 8px; }
+.price-rule-categories > b { font-size: 13px; color: var(--deep, var(--ink)); }
+.price-rule-categories > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.price-rule-categories button { display: grid; gap: 2px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.price-rule-categories button span { font-size: 13px; font-weight: 700; }
+.price-rule-categories button small { color: #8a6412; font-size: 11px; font-weight: 700; }
+.price-rule-categories button.ok small { color: #11573f; }
+.price-rule-categories button:hover { border-color: var(--green); }
