@@ -11,7 +11,8 @@ function ImageSetCard({ item, onUpload, onSave, onDelete }: { item: Entrepreneur
   const chooseFiles = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []); event.target.value = "";
     if (!files.length) return;
-    if (files.some((file) => file.size > 5 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(file.type))) return window.alert("Todas las imágenes deben ser JPEG, PNG o WebP de hasta 5 MB.");
+    // Hasta 20 MB; el servidor reduce a 5 MB las que WhatsApp no acepta.
+    if (files.some((file) => file.size > 20 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(file.type))) return window.alert("Todas las imágenes deben ser JPEG, PNG o WebP de hasta 20 MB.");
     setUploading(true); setError(""); try { for (const file of files) await onUpload(item.id, file); } catch (uploadError) { setError(uploadError instanceof Error ? uploadError.message : "No fue posible subir las imágenes."); } finally { setUploading(false); }
   };
   const images = item.images || [];
