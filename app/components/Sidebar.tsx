@@ -3,13 +3,13 @@ import type { User } from "../lib/types";
 import styles from "./Sidebar.module.css";
 import { AppNavIcon, type AppNavIconName } from "./AppNavIcon";
 
-type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
+type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "ecommerce-categories" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./ControlPanel").ControlTab;
 type Item = { label: string; view: View; tab?: ControlTab; adminOnly?: boolean };
 const groups: { id: string; label: string; icon: AppNavIconName; items: Item[] }[] = [
   { id: "ecommerce", label: "E-commerce", icon: "store", items: [
     { label: "Pedidos", view: "ecommerce-orders" }, { label: "Bundles", view: "ecommerce-bundles" },
-    { label: "Productos", view: "ecommerce-products" }, { label: "Envíos", view: "shipping" },
+    { label: "Productos", view: "ecommerce-products" }, { label: "Categorías", view: "ecommerce-categories" }, { label: "Envíos", view: "shipping" },
     { label: "Testimonios", view: "ecommerce-testimonials" },
     { label: "Imagen de presentación", view: "ecommerce-presentation" },
   ] },

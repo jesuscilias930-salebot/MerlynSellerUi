@@ -18,6 +18,7 @@ import { LoginScreen } from "./components/LoginScreen";
 import { RemarketingPanel } from "./components/RemarketingPanel";
 import { Sidebar } from "./components/Sidebar";
 import { EcommerceCatalogPanel } from "./components/EcommerceCatalogPanel";
+import { StoreCategoriesPanel } from "./components/StoreCategoriesPanel";
 import { TestimonialsPanel } from "./components/TestimonialsPanel";
 import { PresentationPanel } from "./components/PresentationPanel";
 import { FeaturesPanel } from "./components/FeaturesPanel";
@@ -40,7 +41,7 @@ import { FinancesPanel } from "./components/FinancesPanel";
 import { ConversationAnalysisPanel } from "./components/ConversationAnalysisPanel";
 import type { PendingChatImage } from "./components/ConversationPanel";
 
-type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
+type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "ecommerce-categories" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./components/ControlPanel").ControlTab;
 type UploadResponse = { error?: string; mediaId?: string; filename?: string };
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -1181,6 +1182,8 @@ export default function Home() {
         <PresentationPanel />
       ) : view === "ecommerce-testimonials" ? (
         <TestimonialsPanel />
+      ) : view === "ecommerce-categories" ? (
+        <StoreCategoriesPanel />
       ) : view === "ecommerce-bundles" || view === "ecommerce-products" ? (
         <EcommerceCatalogPanel key={view} kind={view === "ecommerce-bundles" ? "bundles" : "products"} />
       ) : view === "scenarios" ? (
