@@ -351,8 +351,8 @@ function FlowBuilder({
         const prefix = `Paso ${index + 1}`;
         if (step.type === "send_text" && !step.body?.trim())
           return [`${prefix}: falta el mensaje.`];
-        if (step.type === "send_media" && !(step.items || []).length)
-          return [`${prefix}: agrega al menos un archivo.`];
+        if (step.type === "send_media" && !(step.items || []).length && !(step.packageIds || []).length)
+          return [`${prefix}: agrega al menos un archivo o conjunto.`];
         if (step.type === "wait_reply" && !(step.branches || []).length)
           return [`${prefix}: agrega una respuesta posible.`];
         if (step.type === "send_options") {
@@ -1441,7 +1441,7 @@ function FlowBuilder({
               step.type === "send_text"
                 ? truncate(step.body, 60)
                 : step.type === "send_media"
-                  ? `${(step.items || []).length} archivo${(step.items || []).length === 1 ? "" : "s"}`
+                  ? [(step.items || []).length && `${(step.items || []).length} archivo${(step.items || []).length === 1 ? "" : "s"}`, (step.packageIds || []).length && `${(step.packageIds || []).length} conjunto${(step.packageIds || []).length === 1 ? "" : "s"}`].filter(Boolean).join(" · ") || "Sin archivos"
                   : step.type === "wait_reply"
                     ? "Espera lo que escribe el cliente"
                     : step.type === "send_options"
@@ -1760,9 +1760,45 @@ function FlowBuilder({
                           </option>
                         ))}
                     </select>
+                    <select
+                      aria-label="Agregar conjunto reutilizable"
+                      defaultValue=""
+                      onChange={(event) => {
+                        const id = event.target.value;
+                        event.target.value = "";
+                        if (id && !(selectedStep.packageIds || []).includes(id))
+                          updateStep(selectedStep.id, { packageIds: [...(selectedStep.packageIds || []), id] });
+                      }}
+                      disabled={!entrepreneurPackages.some((item) => item.images.length > 0 && !(selectedStep.packageIds || []).includes(item.id))}
+                    >
+                      <option value="">Enviar conjunto reutilizable…</option>
+                      {entrepreneurPackages
+                        .filter((item) => item.images.length > 0 && !(selectedStep.packageIds || []).includes(item.id))
+                        .map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name} · {item.images.length} foto{item.images.length === 1 ? "" : "s"}{item.imageCategory ? ` · ${item.imageCategory}` : ""}
+                          </option>
+                        ))}
+                    </select>
                   </div>
-                  {(selectedStep.items || []).length === 0 ? (
-                    <small>Aún no hay archivos para enviar.</small>
+                  {(selectedStep.packageIds || []).map((id) => {
+                    const set = entrepreneurPackages.find((item) => item.id === id);
+                    return (
+                      <article key={`set-${id}`}>
+                        <span>CONJ</span>
+                        <strong>{set ? `${set.name} · ${set.images.length} foto${set.images.length === 1 ? "" : "s"}` : "Conjunto eliminado"}</strong>
+                        <button
+                          type="button"
+                          className="danger-link"
+                          onClick={() => updateStep(selectedStep.id, { packageIds: (selectedStep.packageIds || []).filter((current) => current !== id) })}
+                        >
+                          Quitar
+                        </button>
+                      </article>
+                    );
+                  })}
+                  {(selectedStep.items || []).length === 0 && (selectedStep.packageIds || []).length === 0 ? (
+                    <small>Aún no hay archivos ni conjuntos para enviar. Los conjuntos envían sus fotos actuales de Documentos → Conjuntos reutilizables.</small>
                   ) : (
                     selectedStep.items?.map((item) => (
                       <article key={item.mediaId}>

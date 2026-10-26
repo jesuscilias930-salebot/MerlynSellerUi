@@ -9124,3 +9124,8 @@ a.delivery-action { text-decoration: none; display: inline-flex; align-items: ce
 .price-rule-categories button small { color: #8a6412; font-size: 11px; font-weight: 700; }
 .price-rule-categories button.ok small { color: #11573f; }
 .price-rule-categories button:hover { border-color: var(--green); }
+/* Conjuntos reutilizables: el título abre o cierra las imágenes */
+.image-set-title { display: grid; justify-items: start; gap: 2px; min-width: 0; padding: 0; border: 0; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.image-set-title strong { font-size: 15px; }
+.image-set-title small { color: var(--muted); font-size: 12px; font-weight: 700; }
+.image-set-title:hover small { color: var(--green); }
