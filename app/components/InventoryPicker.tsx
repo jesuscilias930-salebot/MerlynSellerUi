@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { cachedInventory, loadInventory, type InventorySnapshot } from "../lib/inventory-snapshot";
 import { searchInventory } from "../lib/quick-inventory";
 import type { DeliveryLine } from "../lib/deliveries";
+import { withProductDetails } from "../lib/reminders";
+import { useInventoryProducts } from "../lib/use-inventory-products";
 
 /** Busca en el inventario y agrega productos o bundles; opcionalmente texto libre. */
 export function InventoryPicker({ onPick, allowCustom = false, placeholder = "Buscar producto o bundle…" }: { onPick: (line: DeliveryLine) => void; allowCustom?: boolean; placeholder?: string }) {
@@ -42,9 +44,12 @@ export function InventoryPicker({ onPick, allowCustom = false, placeholder = "Bu
 
 /** Lista editable de productos con cantidad. */
 export function DeliveryLinesEditor({ lines, onChange }: { lines: DeliveryLine[]; onChange: (lines: DeliveryLine[]) => void }) {
+  // Producto · color · talla aunque la línea se haya guardado solo con el nombre.
+  const inventory = useInventoryProducts();
+  const shown = useMemo(() => withProductDetails(lines, inventory), [lines, inventory]);
   if (!lines.length) return null;
   return <ul className="delivery-lines">
-    {lines.map((line, index) => <li key={`${line.kind}-${line.id ?? line.name}-${index}`}>
+    {shown.map((line, index) => <li key={`${line.kind}-${line.id ?? line.name}-${index}`}>
       <span>{line.kind === "bundle" ? "🎁" : line.kind === "product" ? "🧦" : "✎"} {line.name}</span>
       <input type="number" min={1} aria-label={`Cantidad de ${line.name}`} value={line.quantity} onChange={event => onChange(lines.map((item, position) => position === index ? { ...item, quantity: Math.max(1, Number(event.target.value) || 1) } : item))} />
       <button type="button" aria-label={`Quitar ${line.name}`} onClick={() => onChange(lines.filter((_, position) => position !== index))}>✕</button>

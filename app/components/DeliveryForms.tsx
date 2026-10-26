@@ -10,6 +10,8 @@ import {
 } from "../lib/deliveries";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { addLine, DeliveryLinesEditor, InventoryPicker } from "./InventoryPicker";
+import { withProductDetails } from "../lib/reminders";
+import { useInventoryProducts } from "../lib/use-inventory-products";
 
 function Modal({ title, kicker, onClose, children }: { title: string; kicker: string; onClose: () => void; children: ReactNode }) {
   return <div className="delivery-modal" role="dialog" aria-modal="true" aria-label={title} onKeyDown={event => { if (event.key === "Escape") onClose(); }}>
@@ -70,7 +72,10 @@ export function DeliveryForm({ delivery, prefill, onClose, onSaved }: { delivery
  * paso, el reintento solo liga la venta (no descuenta otra vez).
  */
 export function DeliverySaleForm({ delivery, onClose, onSaved }: { delivery: Delivery; onClose: () => void; onSaved: (delivery: Delivery) => void }) {
-  const [items, setItems] = useState<DeliveryLine[]>(() => (delivery.products || []).filter(line => line.kind !== "custom"));
+  const [rawItems, setItems] = useState<DeliveryLine[]>(() => (delivery.products || []).filter(line => line.kind !== "custom"));
+  // Nombre con color y talla en pantalla y en lo que se guarda con la venta.
+  const inventory = useInventoryProducts();
+  const items = useMemo(() => withProductDetails(rawItems, inventory), [rawItems, inventory]);
   const bundlePrices = useMemo(() => new Map((cachedInventory()?.bundles || []).map(bundle => [bundle.id, Number(bundle.fixedPrice)] as [number, number]).filter(([, price]) => price > 0)), []);
   const suggested = suggestedAmount(items, bundlePrices);
   const [amount, setAmount] = useState(suggested ? String(suggested) : "");
