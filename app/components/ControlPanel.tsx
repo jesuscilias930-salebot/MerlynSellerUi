@@ -245,11 +245,13 @@ export function ControlPanel({
     try {
       await controlRequest<Customer>("/customers", {
         method: "POST",
-        body: JSON.stringify(customerDraft),
+        // Sin vínculo se envía null: un texto vacío chocaba con otros clientes sin vínculo.
+        body: JSON.stringify({ name: customerDraft.name.trim(), phone: customerDraft.phone.trim() || null, externalId: customerDraft.externalId || null }),
       });
+      const linked = Boolean(customerDraft.externalId);
       setCustomerDraft({ name: "", phone: "", externalId: "" });
       await load();
-      setNotice("Cliente creado y vinculado.");
+      setNotice(linked ? "Cliente creado y vinculado a Merlyn Seller." : "Cliente creado.");
     } catch (error) {
       setNotice(
         error instanceof Error
