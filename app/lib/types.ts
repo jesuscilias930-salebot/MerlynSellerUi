@@ -5,6 +5,8 @@ export type Chat = {
   name: string | null;
   last_message: string | null;
   updated_at: string;
+  /** Hora del último mensaje enviado o recibido. */
+  lastMessageAt?: string | null;
   unreadCount: number;
   leadColumnId?: string;
   lastDirection?: "inbound" | "outbound" | null;

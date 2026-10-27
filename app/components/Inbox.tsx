@@ -217,7 +217,7 @@ export function Inbox({
             >
               <b>{initials(item.name || item.phone_number)}</b>
               <span className="inbox-contact-copy"><strong>{item.name || item.phone_number}</strong><small>{item.lastDirection === "outbound" && <span aria-label="Tu último mensaje">Tú: </span>}{item.last_message || "Sin mensajes aún"}</small></span>
-              <span className="inbox-row-meta"><time dateTime={item.updated_at}>{inboxTimestamp(item.updated_at)}</time>
+              <span className="inbox-row-meta"><time dateTime={item.lastMessageAt || item.updated_at}>{inboxTimestamp(item.lastMessageAt || item.updated_at)}</time>
               {item.unreadCount > 0 && (
                 <b
                   className="unread-badge"
