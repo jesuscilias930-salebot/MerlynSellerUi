@@ -54,6 +54,9 @@ export function Autocomplete({ options, value, onChange, placeholder = "Escribe 
       onChange={event => { setQuery(event.target.value); setOpen(true); setActive(0); if (value && !event.target.value) onChange(""); }}
       onKeyDown={keyDown}
     />
+    {/* Flecha para abrir la lista completa, como un menú desplegable. */}
+    <button type="button" className={styles.toggle} tabIndex={-1} aria-label={open ? "Cerrar lista" : "Ver todas las opciones"} disabled={disabled}
+      onMouseDown={event => { event.preventDefault(); if (open) { setOpen(false); setQuery(""); } else { setOpen(true); setActive(0); input.current?.focus(); } }}>▾</button>
     {selected && !open && <small className={styles.detail}>{selected.detail}</small>}
     {open && <ul id={`${id}-list`} role="listbox" className={styles.list}>
       {results.length ? results.map((option, index) => <li

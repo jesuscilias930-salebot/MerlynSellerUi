@@ -82,7 +82,7 @@ function RegisterSale({ onRegistered }: { onRegistered: (date: string) => void }
   type Product = SaleProduct & { id: number; currentStock: number; size?: string | null };
   type Bundle = { id: number; name: string; items?: { assorted?: boolean }[] };
   type Line = { key: number; kind: "product" | "bundle"; itemId: string; quantity: string };
-  const [catalog, setCatalog] = useState<{ customers: { id: number; name: string }[]; products: Product[]; bundles: Bundle[] } | null>(null);
+  const [catalog, setCatalog] = useState<{ customers: { id: number; name: string; phone?: string | null }[]; products: Product[]; bundles: Bundle[] } | null>(null);
   const [lines, setLines] = useState<Line[]>([{ key: 0, kind: "product", itemId: "", quantity: "" }]);
   const [customer, setCustomer] = useState(""); const [date, setDate] = useState(salesToday());
   const [error, setError] = useState(""); const [saving, setSaving] = useState(false); const [saved, setSaved] = useState<Sale | null>(null);
@@ -90,7 +90,7 @@ function RegisterSale({ onRegistered }: { onRegistered: (date: string) => void }
   useEffect(() => {
     const controller = new AbortController();
     queueMicrotask(() => { if (!controller.signal.aborted) setError(""); });
-    Promise.all([controlRequest<{ id: number; name: string }[]>("/customers", { signal: controller.signal }), controlRequest<Product[]>("/products/all", { signal: controller.signal }), controlRequest<Bundle[]>("/bundles", { signal: controller.signal })]).then(([customers, products, bundles]) => { if (!controller.signal.aborted) setCatalog({ customers, products, bundles }); }).catch(err => { if (!controller.signal.aborted) setError(message(err)); });
+    Promise.all([controlRequest<{ id: number; name: string; phone?: string | null }[]>("/customers", { signal: controller.signal }), controlRequest<Product[]>("/products/all", { signal: controller.signal }), controlRequest<Bundle[]>("/bundles", { signal: controller.signal })]).then(([customers, products, bundles]) => { if (!controller.signal.aborted) setCatalog({ customers, products, bundles }); }).catch(err => { if (!controller.signal.aborted) setError(message(err)); });
     return () => controller.abort();
   }, [revision]);
   // Color desde MerlynSeller (opcional) para buscar y mostrar «producto · color · talla».
@@ -108,6 +108,9 @@ function RegisterSale({ onRegistered }: { onRegistered: (date: string) => void }
     detail: `${product.currentStock} disponibles · #${product.id}`,
     keywords: String(product.id),
   })), [catalog, colors]);
+  const customerOptions = useMemo<AutocompleteOption[]>(() => [...(catalog?.customers || [])].sort((a, b) => a.name.localeCompare(b.name, "es")).map(c => ({
+    value: String(c.id), label: c.name, detail: c.phone ? `☎ ${c.phone}` : "Sin teléfono", keywords: `${c.phone || ""} ${(c.phone || "").replace(/\D/g, "")}`,
+  })), [catalog]);
   const bundleOptions = useMemo<AutocompleteOption[]>(() => (catalog?.bundles || []).filter(b => !b.items?.some(i => i.assorted)).map(bundle => ({ value: String(bundle.id), label: bundle.name, detail: `Paquete #${bundle.id}` })), [catalog]);
   const update = (key: number, change: Partial<Line>) => setLines(current => current.map(line => line.key === key ? { ...line, ...change } : line));
   const save = async (event: FormEvent) => {
@@ -122,7 +125,7 @@ function RegisterSale({ onRegistered }: { onRegistered: (date: string) => void }
   if (saved) return <div className={styles.section} role="status"><h3>Venta #{saved.id} registrada</h3><p>Inventario actualizado. Total mercancía: <strong>{money(saved.subtotal)}</strong></p><button type="button" onClick={() => onRegistered(date)}>Ver ventas</button></div>;
   return <form className={styles.section} onSubmit={save}><h3>Registrar venta manual</h3><p>Registra únicamente ventas confirmadas. Al guardar se descuentan las existencias y se aplican tus reglas de precio.</p>
     {error && <p className={styles.error} role="alert">{error} {!catalog && <button type="button" onClick={() => setRevision(r => r + 1)}>Reintentar carga</button>}</p>}
-    {!catalog ? <p>Cargando clientes y catálogo…</p> : <><div className={styles.filters}><label>Cliente<select required value={customer} disabled={saving} onChange={e => setCustomer(e.target.value)}><option value="">Selecciona cliente</option>{catalog.customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Fecha de venta<input type="date" required max={salesToday()} value={date} disabled={saving} onChange={e => setDate(e.target.value)} /></label></div>
+    {!catalog ? <p>Cargando clientes y catálogo…</p> : <><div className={styles.filters}><label>Cliente<Autocomplete required disabled={saving} ariaLabel="Cliente" value={customer} onChange={setCustomer} options={customerOptions} placeholder="Escribe nombre o teléfono…" emptyText="Ningún cliente coincide" /></label><label>Fecha de venta<input type="date" required max={salesToday()} value={date} disabled={saving} onChange={e => setDate(e.target.value)} /></label></div>
       {!catalog.customers.length && <p>Primero registra un cliente en Control de ventas → Clientes.</p>}
       <div className={styles.manualLines}>{lines.map((line, index) => <div className={styles.manualLine} key={line.key}><label>Artículo {index + 1}<select disabled={saving} value={line.kind} onChange={e => update(line.key, { kind: e.target.value as Line["kind"], itemId: "" })}><option value="product">Producto individual</option><option value="bundle">Paquete</option></select></label><label>{line.kind === "bundle" ? "Paquete" : "Producto"}<Autocomplete required disabled={saving} ariaLabel={`${line.kind === "bundle" ? "Paquete" : "Producto"} del artículo ${index + 1}`} value={line.itemId} onChange={itemId => update(line.key, { itemId })} options={line.kind === "product" ? productOptions : bundleOptions} placeholder={line.kind === "product" ? "Escribe nombre, color o talla…" : "Escribe el nombre del paquete…"} emptyText={line.kind === "product" ? "Ningún producto coincide" : "Ningún paquete coincide"} /></label><label>{line.kind === "bundle" ? "Cajas" : "Unidades / pares"}<input type="number" required min="1" step="1" inputMode="numeric" disabled={saving} value={line.quantity} onChange={e => update(line.key, { quantity: e.target.value })} /></label><button type="button" disabled={saving || lines.length === 1} onClick={() => setLines(current => current.filter(l => l.key !== line.key))} aria-label={`Quitar artículo ${index + 1}`}>Quitar</button></div>)}</div>
       <button className={styles.secondary} type="button" disabled={saving} onClick={() => setLines(current => [...current, { key: Math.max(...current.map(l => l.key)) + 1, kind: "product", itemId: "", quantity: "" }])}>＋ Agregar artículo</button><p className={styles.caption}>Los paquetes con surtido se confirman desde Pedidos de E-commerce para asignar sus variantes. Cantidades de calcetines en pares, no en tripares.</p><button type="submit" disabled={saving || !catalog.customers.length}>{saving ? "Registrando…" : "Confirmar y registrar venta"}</button></>}
