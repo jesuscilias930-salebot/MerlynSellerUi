@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { controlRequest } from "../lib/control-api";
 import { salesToday, salesRange, validSalesRange, saleProductName, saleSource, type SalesPeriod, type SalesRange, type SaleProduct } from "../lib/sales-workspace";
 import { StoreOrdersPanel } from "./StoreOrdersPanel";
+import { Autocomplete } from "./Autocomplete";
+import { request } from "../lib/api";
+import type { AutocompleteOption } from "../lib/autocomplete";
 import styles from "./SalesWorkspace.module.css";
 
 type Sale = { id: number; saleDate?: string; source?: string; storeOrderId?: string; subtotal: number; customer?: { name?: string; phone?: string }; saleItemDtoList?: { id: number; quantity: number; unitPriceAtSale: number | null; unitCostAtSale?: number | null; product?: SaleProduct; bundle?: { name?: string } }[] };
@@ -76,7 +79,7 @@ function SalesList({ initialDate }: { initialDate: string }) {
 }
 
 function RegisterSale({ onRegistered }: { onRegistered: (date: string) => void }) {
-  type Product = SaleProduct & { id: number; currentStock: number };
+  type Product = SaleProduct & { id: number; currentStock: number; size?: string | null };
   type Bundle = { id: number; name: string; items?: { assorted?: boolean }[] };
   type Line = { key: number; kind: "product" | "bundle"; itemId: string; quantity: string };
   const [catalog, setCatalog] = useState<{ customers: { id: number; name: string }[]; products: Product[]; bundles: Bundle[] } | null>(null);
@@ -90,6 +93,22 @@ function RegisterSale({ onRegistered }: { onRegistered: (date: string) => void }
     Promise.all([controlRequest<{ id: number; name: string }[]>("/customers", { signal: controller.signal }), controlRequest<Product[]>("/products/all", { signal: controller.signal }), controlRequest<Bundle[]>("/bundles", { signal: controller.signal })]).then(([customers, products, bundles]) => { if (!controller.signal.aborted) setCatalog({ customers, products, bundles }); }).catch(err => { if (!controller.signal.aborted) setError(message(err)); });
     return () => controller.abort();
   }, [revision]);
+  // Color desde MerlynSeller (opcional) para buscar y mostrar «producto · color · talla».
+  const [colors, setColors] = useState<Map<number, string>>(() => new Map());
+  useEffect(() => {
+    let active = true;
+    request<{ productId: number; color?: string | null }[]>("/product-details")
+      .then(rows => { if (active) setColors(new Map((Array.isArray(rows) ? rows : []).filter(row => row?.color).map(row => [row.productId, row.color as string]))); })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+  const productOptions = useMemo<AutocompleteOption[]>(() => (catalog?.products || []).map(product => ({
+    value: String(product.id),
+    label: [saleProductName(product), colors.get(product.id), product.size && `Talla ${product.size}`].filter(Boolean).join(" · "),
+    detail: `${product.currentStock} disponibles · #${product.id}`,
+    keywords: String(product.id),
+  })), [catalog, colors]);
+  const bundleOptions = useMemo<AutocompleteOption[]>(() => (catalog?.bundles || []).filter(b => !b.items?.some(i => i.assorted)).map(bundle => ({ value: String(bundle.id), label: bundle.name, detail: `Paquete #${bundle.id}` })), [catalog]);
   const update = (key: number, change: Partial<Line>) => setLines(current => current.map(line => line.key === key ? { ...line, ...change } : line));
   const save = async (event: FormEvent) => {
     event.preventDefault(); if (saving || saved) return;
@@ -105,7 +124,7 @@ function RegisterSale({ onRegistered }: { onRegistered: (date: string) => void }
     {error && <p className={styles.error} role="alert">{error} {!catalog && <button type="button" onClick={() => setRevision(r => r + 1)}>Reintentar carga</button>}</p>}
     {!catalog ? <p>Cargando clientes y catálogo…</p> : <><div className={styles.filters}><label>Cliente<select required value={customer} disabled={saving} onChange={e => setCustomer(e.target.value)}><option value="">Selecciona cliente</option>{catalog.customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Fecha de venta<input type="date" required max={salesToday()} value={date} disabled={saving} onChange={e => setDate(e.target.value)} /></label></div>
       {!catalog.customers.length && <p>Primero registra un cliente en Control de ventas → Clientes.</p>}
-      <div className={styles.manualLines}>{lines.map((line, index) => <div className={styles.manualLine} key={line.key}><label>Artículo {index + 1}<select disabled={saving} value={line.kind} onChange={e => update(line.key, { kind: e.target.value as Line["kind"], itemId: "" })}><option value="product">Producto individual</option><option value="bundle">Paquete</option></select></label><label>{line.kind === "bundle" ? "Paquete" : "Producto"}<select required disabled={saving} value={line.itemId} onChange={e => update(line.key, { itemId: e.target.value })}><option value="">Selecciona</option>{line.kind === "product" ? catalog.products.map(p => <option value={p.id} key={p.id}>{saleProductName(p)} · {p.currentStock} disponibles</option>) : catalog.bundles.filter(b => !b.items?.some(i => i.assorted)).map(b => <option value={b.id} key={b.id}>{b.name}</option>)}</select></label><label>{line.kind === "bundle" ? "Cajas" : "Unidades / pares"}<input type="number" required min="1" step="1" inputMode="numeric" disabled={saving} value={line.quantity} onChange={e => update(line.key, { quantity: e.target.value })} /></label><button type="button" disabled={saving || lines.length === 1} onClick={() => setLines(current => current.filter(l => l.key !== line.key))} aria-label={`Quitar artículo ${index + 1}`}>Quitar</button></div>)}</div>
+      <div className={styles.manualLines}>{lines.map((line, index) => <div className={styles.manualLine} key={line.key}><label>Artículo {index + 1}<select disabled={saving} value={line.kind} onChange={e => update(line.key, { kind: e.target.value as Line["kind"], itemId: "" })}><option value="product">Producto individual</option><option value="bundle">Paquete</option></select></label><label>{line.kind === "bundle" ? "Paquete" : "Producto"}<Autocomplete required disabled={saving} ariaLabel={`${line.kind === "bundle" ? "Paquete" : "Producto"} del artículo ${index + 1}`} value={line.itemId} onChange={itemId => update(line.key, { itemId })} options={line.kind === "product" ? productOptions : bundleOptions} placeholder={line.kind === "product" ? "Escribe nombre, color o talla…" : "Escribe el nombre del paquete…"} emptyText={line.kind === "product" ? "Ningún producto coincide" : "Ningún paquete coincide"} /></label><label>{line.kind === "bundle" ? "Cajas" : "Unidades / pares"}<input type="number" required min="1" step="1" inputMode="numeric" disabled={saving} value={line.quantity} onChange={e => update(line.key, { quantity: e.target.value })} /></label><button type="button" disabled={saving || lines.length === 1} onClick={() => setLines(current => current.filter(l => l.key !== line.key))} aria-label={`Quitar artículo ${index + 1}`}>Quitar</button></div>)}</div>
       <button className={styles.secondary} type="button" disabled={saving} onClick={() => setLines(current => [...current, { key: Math.max(...current.map(l => l.key)) + 1, kind: "product", itemId: "", quantity: "" }])}>＋ Agregar artículo</button><p className={styles.caption}>Los paquetes con surtido se confirman desde Pedidos de E-commerce para asignar sus variantes. Cantidades de calcetines en pares, no en tripares.</p><button type="submit" disabled={saving || !catalog.customers.length}>{saving ? "Registrando…" : "Confirmar y registrar venta"}</button></>}
   </form>;
 }
