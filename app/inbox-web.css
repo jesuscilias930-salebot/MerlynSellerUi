@@ -128,6 +128,8 @@
 .inbox-shell .chat-tools-tabs button { flex: 1; padding: 10px 5px; border: 0; border-radius: 6px; background: transparent; color: #718074; text-align: center; font-size: 11px; }
 .inbox-shell .chat-tools-tabs button.selected { background: #e6f3eb; color: #008069; }
 .inbox-shell .chat-tools-body { padding: 14px; overflow-y: auto; min-height: 0; max-height: none; }
+/* Con altura fija, la cuadrícula aplastaba las tarjetas (overflow: hidden) y se veían colapsadas: cada fila mide su contenido y el panel hace scroll. */
+.chat-tools-body { grid-auto-rows: max-content; align-content: start; }
 .inbox-shell .tool-accordion { margin: 0 0 12px; box-shadow: none; }
 .inbox-shell .section-data-status { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 80; max-width: calc(100vw - 24px); }
 
