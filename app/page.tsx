@@ -1163,7 +1163,7 @@ export default function Home() {
       ) : view === "documents" ? (
         <div className="automation-workspace"><DocumentTemplatesPanel templates={documentTemplates} onUpload={uploadDocumentTemplate} onSave={saveDocumentTemplate} onDelete={deleteDocumentTemplate} /></div>
       ) : view === "collections" ? (
-        <div className="automation-workspace"><EntrepreneurPackagesPanel packages={entrepreneurPackages} onCreate={createEntrepreneurPackage} onUpload={uploadEntrepreneurPackage} onSave={saveEntrepreneurPackage} onDelete={deleteEntrepreneurPackage} /></div>
+        <div className="automation-workspace"><EntrepreneurPackagesPanel packages={entrepreneurPackages} onCreate={createEntrepreneurPackage} onUpload={uploadEntrepreneurPackage} onSave={saveEntrepreneurPackage} onDelete={deleteEntrepreneurPackage} onChanged={loadEntrepreneurPackages} /></div>
       ) : view === "cta-buttons" ? (
         <div className="automation-workspace"><CtaUrlTemplatesPanel templates={ctaUrlTemplates} onSave={saveCtaUrlTemplate} onDelete={deleteCtaUrlTemplate} /></div>
       ) : view === "deliveries" ? (

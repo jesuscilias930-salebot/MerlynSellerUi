@@ -9129,3 +9129,16 @@ a.delivery-action { text-decoration: none; display: inline-flex; align-items: ce
 .image-set-title strong { font-size: 15px; }
 .image-set-title small { color: var(--muted); font-size: 12px; font-weight: 700; }
 .image-set-title:hover small { color: var(--green); }
+/* Conjuntos reutilizables: orden de envío y quitar imágenes */
+.image-set-gallery { display: grid; gap: 6px; }
+.image-set-hint { color: var(--muted); font-size: 12px; }
+.image-set-preview.ordered { margin: 0; padding: 0 0 4px; list-style: none; }
+.image-set-preview.ordered li { position: relative; display: grid; gap: 4px; flex: 0 0 auto; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: #fff; cursor: grab; }
+.image-set-preview.ordered li.dragging { opacity: .45; border-style: dashed; }
+.image-set-preview.ordered li[draggable="false"] { cursor: default; }
+.image-set-preview.ordered img { width: 88px; height: 88px; }
+.image-set-order { position: absolute; top: 8px; left: 8px; min-width: 20px; padding: 1px 6px; border-radius: 999px; background: #1f2933cc; color: #fff; font-size: 11px; font-weight: 800; text-align: center; }
+.image-set-tile-actions { display: flex; justify-content: space-between; gap: 2px; }
+.image-set-tile-actions button { flex: 1; padding: 3px 0; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); font-size: 11px; cursor: pointer; }
+.image-set-tile-actions button.danger { color: var(--app-danger, #b42318); }
+.image-set-tile-actions button:disabled { opacity: .4; cursor: default; }
