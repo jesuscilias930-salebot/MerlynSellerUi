@@ -9191,3 +9191,24 @@ a.ad-referral:hover { background: #00000014; }
 .channel-dot { position: absolute; right: -2px; bottom: -2px; width: 15px; height: 15px; border: 2px solid #fff; border-radius: 50%; }
 .channel-dot.messenger { background: radial-gradient(circle at 30% 110%, #0099ff 0%, #a033ff 60%, #ff5280 100%); }
 .channel-dot.instagram { background: radial-gradient(circle at 30% 110%, #fdf497 0%, #fd5949 45%, #d6249f 60%, #285aeb 90%); }
+/* Remarketing con plantilla oficial */
+.remarketing-tabs { display: grid; gap: 14px; align-content: start; }
+.remarketing-tabs > nav { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 2px; }
+.remarketing-tabs > nav button { display: grid; gap: 1px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; font-size: 13px; font-weight: 800; text-align: left; cursor: pointer; }
+.remarketing-tabs > nav button small { color: var(--muted); font-size: 11px; font-weight: 600; }
+.remarketing-tabs > nav button.selected { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+.template-campaign-form { display: grid; gap: 12px; max-width: 640px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.template-campaign-form label { display: grid; gap: 5px; font-size: 12px; font-weight: 800; color: var(--deep, var(--ink)); }
+.template-campaign-form label small { color: var(--muted); font-weight: 500; }
+.template-campaign-form select, .template-campaign-form input { width: 100%; box-sizing: border-box; padding: 9px 10px; border: 1px solid var(--app-border-strong, #d0d5dd); border-radius: 8px; font: inherit; font-size: 14px; font-weight: 500; background: #fff; }
+.template-campaign-preview { padding: 12px 14px; border-radius: 10px; background: #e7f6e1; }
+.template-campaign-preview small { color: #11573f; font-size: 11px; font-weight: 800; }
+.template-campaign-preview p { margin: 4px 0 0; white-space: pre-wrap; font-size: 14px; line-height: 1.5; }
+.template-campaign-audience { display: grid; gap: 3px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--app-subtle, #f7f8fa); font-size: 13px; }
+.template-campaign-audience span { color: var(--muted); font-size: 12px; }
+.template-campaign-error { margin: 0; color: var(--app-danger, #b42318); font-size: 13px; }
+.template-campaign-result { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--mint, #e6f4ec); color: #11573f; font-size: 13px; font-weight: 600; }
+.template-campaign-hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.template-campaign-form > .primary-action { justify-self: start; }
+.template-campaign-buttons { display: grid; gap: 6px; margin-top: 10px; }
+.template-campaign-buttons span { padding: 7px 10px; border-radius: 8px; background: #fff; color: #027eb5; font-size: 13px; font-weight: 600; text-align: center; }

@@ -21,6 +21,7 @@ import { EcommerceCatalogPanel } from "./components/EcommerceCatalogPanel";
 import { StoreCategoriesPanel } from "./components/StoreCategoriesPanel";
 import { contactName } from "./lib/channels";
 import { ColumnRulesPanel } from "./components/ColumnRulesPanel";
+import { RemarketingTabs } from "./components/TemplateCampaignPanel";
 import { TestimonialsPanel } from "./components/TestimonialsPanel";
 import { PresentationPanel } from "./components/PresentationPanel";
 import { FeaturesPanel } from "./components/FeaturesPanel";
@@ -1139,7 +1140,7 @@ export default function Home() {
           onColumnDrop={dropColumn}
         />
       ) : view === "remarketing" ? (
-        <RemarketingPanel
+        <RemarketingTabs columns={pipeline}><RemarketingPanel
           columns={pipeline}
           selectedColumnId={remarketingColumnId}
           body={remarketingBody}
@@ -1156,7 +1157,7 @@ export default function Home() {
           onDeletePreset={deletePreset}
           onSavePreset={savePreset}
           onSend={sendRemarketing}
-        />
+        /></RemarketingTabs>
       ) : view === "automations" ? (
         <div className="automation-workspace"><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
       ) : view === "quick-replies" ? (
