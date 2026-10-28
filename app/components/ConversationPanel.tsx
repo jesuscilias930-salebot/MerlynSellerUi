@@ -6,6 +6,7 @@ import { VIDEO_ACCEPT } from "../lib/video-upload";
 import { initials } from "../lib/format";
 import { deliveryLabel, messageDayKey, messageDayLabel, messageTime } from "../lib/inbox-presentation";
 import { ChatIcon } from "./ChatIcon";
+import { AdReferralCard } from "./AdReferralCard";
 import type { AutomationIntent, Chat, CtaUrlMessage, InteractiveOptionsMessage, DocumentOption, EntrepreneurPackage, LeadColumn, Message, QuickReply, SavedSticker } from "../lib/types";
 import { MobileChatSheet } from "./MobileChatSheet";
 import { AudioRecorder } from "./AudioRecorder";
@@ -174,6 +175,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
         {messages.map((message, index) => <Fragment key={message.id}>
           {(index === 0 || messageDayKey(message.created_at) !== messageDayKey(messages[index - 1].created_at)) && <div className="inbox-day-separator"><span>{messageDayLabel(message.created_at)}</span></div>}
           <article className={message.direction}>
+            {message.direction === "inbound" && <AdReferralCard referral={message.referral} />}
             {message.replyToMessageId && <div className="quoted-message"><b>{message.replyToDirection === "inbound" ? chat?.name || "Cliente" : "Tú"}</b><span>{message.replyToBody || `[${message.replyToType || "mensaje"}]`}</span></div>}
             {renderContent(message)}
             {message.reactions?.length ? <div className="message-reactions">{message.reactions.map(reaction => <span key={`${reaction.actorDirection}-${reaction.emoji}`}>{reaction.emoji}</span>)}</div> : null}

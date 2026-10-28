@@ -9142,3 +9142,16 @@ a.delivery-action { text-decoration: none; display: inline-flex; align-items: ce
 .image-set-tile-actions button { flex: 1; padding: 3px 0; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); font-size: 11px; cursor: pointer; }
 .image-set-tile-actions button.danger { color: var(--app-danger, #b42318); }
 .image-set-tile-actions button:disabled { opacity: .4; cursor: default; }
+/* Mensaje que llegó desde un anuncio (Click to WhatsApp) */
+.ad-referral { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; margin: -2px -2px 8px; padding: 8px; border-radius: 8px; background: #0000000d; border-left: 3px solid #1877f2; color: inherit; text-decoration: none; max-width: 340px; }
+a.ad-referral:hover { background: #00000014; }
+.ad-referral-media { position: relative; display: block; width: 64px; height: 64px; border-radius: 6px; overflow: hidden; background: #0000001a; }
+.ad-referral-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ad-referral-media i { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 18px; text-shadow: 0 1px 4px #0008; }
+.ad-referral-copy { display: grid; gap: 2px; min-width: 0; font-size: 12.5px; line-height: 1.35; }
+.ad-referral-copy small { color: #1877f2; font-size: 11px; font-weight: 700; }
+.ad-referral-copy b { font-size: 13px; overflow-wrap: anywhere; }
+.ad-referral-body { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; color: var(--muted); overflow-wrap: anywhere; }
+.ad-referral-copy em { color: #1877f2; font-style: normal; font-size: 11.5px; font-weight: 700; }
+.ad-referral:not(:has(.ad-referral-media)) { grid-template-columns: minmax(0, 1fr); }
+.thread .ad-referral-copy small { justify-self: start; text-align: left; color: #1877f2; font-size: 11px; font-weight: 700; }
