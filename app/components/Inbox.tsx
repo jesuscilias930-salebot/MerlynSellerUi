@@ -1,5 +1,6 @@
 import { ChangeEvent, FormEvent, useEffect, useId, useRef, useState } from "react";
 import { initials } from "../lib/format";
+import { channelOf, contactName } from "../lib/channels";
 import { filterInboxContacts, inboxTimestamp } from "../lib/inbox-presentation";
 import { ChatIcon } from "./ChatIcon";
 import type {
@@ -175,6 +176,9 @@ export function Inbox({
             <option value="all">Todos</option>
             <option value="unread">No leídos</option>
             <option value="needs-response">Pendientes de respuesta</option>
+            <option value="channel:whatsapp">Canal: WhatsApp</option>
+            <option value="channel:messenger">Canal: Messenger</option>
+            <option value="channel:instagram">Canal: Instagram</option>
             {columns.map((column) => (
               <option key={column.id} value={`column:${column.id}`}>
                 Columna: {column.name}
@@ -215,8 +219,8 @@ export function Inbox({
               className={`${!internalOpen && item.id === chat?.id ? "row active" : "row"}${item.unreadCount > 0 ? " has-unread" : ""}`}
               key={item.id}
             >
-              <b>{initials(item.name || item.phone_number)}</b>
-              <span className="inbox-contact-copy"><strong>{item.name || item.phone_number}</strong><small>{item.lastDirection === "outbound" && <span aria-label="Tu último mensaje">Tú: </span>}{item.last_message || "Sin mensajes aún"}</small></span>
+              <b>{initials(contactName(item))}{channelOf(item) !== "whatsapp" && <i className={`channel-dot ${channelOf(item)}`} aria-label={channelOf(item) === "instagram" ? "Instagram" : "Messenger"} />}</b>
+              <span className="inbox-contact-copy"><strong>{contactName(item)}</strong><small>{item.lastDirection === "outbound" && <span aria-label="Tu último mensaje">Tú: </span>}{item.last_message || "Sin mensajes aún"}</small></span>
               <span className="inbox-row-meta"><time dateTime={item.lastMessageAt || item.updated_at}>{inboxTimestamp(item.lastMessageAt || item.updated_at)}</time>
               {item.unreadCount > 0 && (
                 <b

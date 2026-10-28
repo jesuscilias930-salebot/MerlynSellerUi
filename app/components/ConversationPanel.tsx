@@ -4,6 +4,7 @@ import { ChangeEvent, FormEvent, Fragment, type ReactNode, useEffect, useId, use
 import { api } from "../lib/api";
 import { VIDEO_ACCEPT } from "../lib/video-upload";
 import { initials } from "../lib/format";
+import { contactDetail, contactName, contactPhone, isWhatsApp } from "../lib/channels";
 import { deliveryLabel, messageDayKey, messageDayLabel, messageTime } from "../lib/inbox-presentation";
 import { ChatIcon } from "./ChatIcon";
 import { AdReferralCard } from "./AdReferralCard";
@@ -116,7 +117,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
       </ToolAccordion>
       <CtaUrlCard disabled={!chat} packages={entrepreneurPackages} onSend={onSendCtaUrl} />
       <InteractiveOptionsCard conversationId={chat?.id} disabled={!chat} />
-      <>{chat && <StoreOrders key={chat.id} conversationId={chat.id}/>}</><WhatsAppTemplateCard conversationId={chat?.id} disabled={!chat} />
+      <>{chat && <StoreOrders key={chat.id} conversationId={chat.id}/>}</>{isWhatsApp(chat) ? <WhatsAppTemplateCard conversationId={chat?.id} disabled={!chat} /> : <p className="tool-notice">Las plantillas oficiales son solo para WhatsApp. En {contactDetail(chat!).split(" · ")[0]} puedes responder hasta 24 h después del último mensaje del cliente (7 días si vino de un anuncio o respondes como persona del equipo).</p>}
       <ToolAccordion icon="＋" title="Adjuntar archivos" description="Las imágenes se muestran antes de enviarse.">{attachTools}</ToolAccordion>
       <ToolAccordion icon="▦" title="Imágenes guardadas" description="Selecciona una o varias imágenes y envíalas juntas.">
         {selectedSavedImageIds.length > 0 && <div className="saved-image-selection-actions"><span>{selectedSavedImageIds.length} seleccionada{selectedSavedImageIds.length === 1 ? "" : "s"}</span><button className="tool-primary-button" type="button" disabled={!chat} onClick={() => void submitImages(selectedSavedImageIds)}>Enviar selección</button><button className="plain-button" type="button" onClick={() => setSelectedSavedImageIds([])}>Limpiar</button></div>}
@@ -128,7 +129,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
   const saleTools = (
     <>
       <ToolAccordion defaultOpen icon="✓" title="Registrar venta" description="Descuenta inventario y vincula la conversión al chat."><button className="tool-primary-button" type="button" disabled={!chat} onClick={() => setSaleModalOpen(true)}>Registrar orden</button></ToolAccordion>
-      <ChatDeliveriesCard conversationId={chat?.id} prefill={{ customerName: chat?.name || chat?.phone_number || "", customerPhone: chat?.phone_number || "" }} />
+      <ChatDeliveriesCard conversationId={chat?.id} prefill={{ customerName: chat ? contactName(chat) : "", customerPhone: chat ? contactPhone(chat) : "" }} />
       <ToolAccordion icon="▣" title="Generar envío" description="Captura los datos y cotiza sin salir del chat."><button className="tool-secondary-button" type="button" disabled={!chat} onClick={() => setShippingOpen(true)}>Capturar datos de envío</button></ToolAccordion>
       <ToolAccordion icon="🎁" title="Paquetes y promociones" description="Envía fotografías de un bundle."><button className="tool-secondary-button" type="button" disabled={!chat} onClick={() => setBundlePickerOpen(true)}>Enviar bundle</button></ToolAccordion>
       <ToolAccordion icon="🧾" title="Nota final" description="Genera un resumen de la venta."><QuoteNoteGenerator disabled={!chat} onUseNote={onDraftChange} /></ToolAccordion>
@@ -150,8 +151,8 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
     <section className="panel compact-chat-panel">
       <header className="chat-header">
         {(onMobileBack || onClose) && <button className="mobile-chat-control" type="button" aria-label="Volver a conversaciones" onClick={onMobileBack || onClose}><ChatIcon name="back" /></button>}
-        <b className="avatar">{chat ? initials(chat.name || chat.phone_number) : "M"}</b>
-        <div className="chat-title"><h2>{chat ? chat.name || chat.phone_number : "Merlyn Seller"}</h2><small>{chat?.phone_number || "Tu espacio de atención al cliente"}</small></div>
+        <b className="avatar">{chat ? initials(contactName(chat)) : "M"}</b>
+        <div className="chat-title"><h2>{chat ? contactName(chat) : "Merlyn Seller"}</h2><small>{chat ? contactDetail(chat) : "Tu espacio de atención al cliente"}</small></div>
         {chat && <div className="inbox-chat-header-actions">
           <div className="inbox-options-anchor" ref={inventoryRef}>
             <button className="inbox-icon-button inbox-inventory-trigger" type="button" title="Buscar disponibilidad en inventario" aria-label="Buscar disponibilidad en inventario" aria-expanded={inventoryOpen} onClick={() => setInventoryOpen(value => !value)}><ChatIcon name="inventory" /><span>Inventario</span></button>

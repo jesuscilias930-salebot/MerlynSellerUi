@@ -1,4 +1,5 @@
 import { ChangeEvent, FormEvent } from "react";
+import { contactName } from "../lib/channels";
 import type { AutomationIntent, Chat, CtaUrlMessage, DocumentOption, EntrepreneurPackage, LeadColumn, Message, QuickReply, SavedSticker } from "../lib/types";
 import { ConversationPanel, type PendingChatImage } from "./ConversationPanel";
 
@@ -27,7 +28,7 @@ type Props = {
 export function ConversationModal(props: Props) {
   const { chat, onClose, ...panelProps } = props;
   if (!chat) return null;
-  return <div className="conversation-modal" role="dialog" aria-modal="true" aria-label={`Conversación con ${chat.name || chat.phone_number}`}>
+  return <div className="conversation-modal" role="dialog" aria-modal="true" aria-label={`Conversación con ${contactName(chat)}`}>
     <div className="modal-backdrop" onClick={onClose} />
     <div className="modal-content"><ConversationPanel chat={chat} {...panelProps} onClose={onClose} /></div>
   </div>;

@@ -1,5 +1,6 @@
 "use client";
 
+import { contactName, contactPhone } from "../lib/channels";
 import { FormEvent, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { controlResources, type ControlResource } from "../lib/section-data";
 import { controlApi, controlRequest, controlSession, loginControl } from "../lib/control-api";
@@ -617,7 +618,7 @@ export function ControlPanel({
                 );
                 setCustomerDraft({
                   name: customerDraft.name || selected?.name || "",
-                  phone: customerDraft.phone || selected?.phone_number || "",
+                  phone: customerDraft.phone || (selected ? contactPhone(selected) : ""),
                   externalId: event.target.value,
                 });
               }}
@@ -625,7 +626,7 @@ export function ControlPanel({
               <option value="">Sin vínculo con Merlyn Seller</option>
               {chats.map((chat) => (
                 <option key={chat.id} value={chat.contactId || chat.id}>
-                  {chat.name || chat.phone_number}
+                  {contactName(chat)}
                 </option>
               ))}
             </select>

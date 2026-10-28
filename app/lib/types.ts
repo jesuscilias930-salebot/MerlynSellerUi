@@ -3,6 +3,9 @@ export type Chat = {
   contactId?: string;
   phone_number: string;
   name: string | null;
+  /** WhatsApp, Messenger o Instagram. En Messenger/Instagram phone_number es «fb:…»/«ig:…». */
+  channel?: "whatsapp" | "messenger" | "instagram";
+  username?: string | null;
   last_message: string | null;
   updated_at: string;
   /** Hora del último mensaje enviado o recibido. */
@@ -103,7 +106,7 @@ export type EntrepreneurPackageImage = { id: string; mediaId: string; filename: 
 export type EntrepreneurPackage = { id: string; name: string; mediaId: string | null; filename: string | null; caption: string | null; bundleType?: string | null; imageCategory?: string | null; controlBundleId?: number | null; position: number; created_at: string; updated_at: string; images: EntrepreneurPackageImage[] };
 export type QuickReply = { id: string; shortcut: string; name: string; body: string; kind: "text" | "cta_url"; ctaUrlTemplateId?: string | null; created_at: string; updated_at: string };
 export type SavedSticker = { id: string; name: string; mediaId: string; filename: string | null; position: number; created_at: string };
-export type ConversationFilter = "all" | "unread" | "needs-response" | `column:${string}`;
+export type ConversationFilter = "all" | "unread" | "needs-response" | `column:${string}` | "channel:whatsapp" | "channel:messenger" | "channel:instagram";
 export type ScenarioBranch = { id: string; name: string; aiDescription?: string; examples: string[]; nextStepId: string };
 export type ScenarioMedia = { mediaId: string; filename?: string; caption?: string; type?: "image" | "document" };
 export type ScenarioBudgetOption = { id: string; label: string; min?: number; max?: number; examples?: string[]; packageIds: string[]; items?: ScenarioMedia[]; recommendationBody: string };

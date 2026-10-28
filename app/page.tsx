@@ -19,6 +19,7 @@ import { RemarketingPanel } from "./components/RemarketingPanel";
 import { Sidebar } from "./components/Sidebar";
 import { EcommerceCatalogPanel } from "./components/EcommerceCatalogPanel";
 import { StoreCategoriesPanel } from "./components/StoreCategoriesPanel";
+import { contactName } from "./lib/channels";
 import { ColumnRulesPanel } from "./components/ColumnRulesPanel";
 import { TestimonialsPanel } from "./components/TestimonialsPanel";
 import { PresentationPanel } from "./components/PresentationPanel";
@@ -209,7 +210,7 @@ export default function Home() {
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible actualizar los escenarios."); }
   };
   const deleteConversation = async (target: Chat | null) => {
-    if (!target || !window.confirm(`¿Borrar la conversación de ${target.name || target.phone_number}? Esta acción elimina sus mensajes y el progreso de escenarios para poder hacer pruebas.`)) return;
+    if (!target || !window.confirm(`¿Borrar la conversación de ${contactName(target)}? Esta acción elimina sus mensajes y el progreso de escenarios para poder hacer pruebas.`)) return;
     try {
       await request(`/conversations/${target.id}`, { method: "DELETE" });
       if (chat?.id === target.id) { setChat(null); setMessages([]); setDraft(""); }
@@ -222,6 +223,7 @@ export default function Home() {
     if (filter === "unread") return item.unreadCount > 0;
     if (filter === "needs-response") return item.needsResponse === true;
     if (filter.startsWith("column:")) return item.leadColumnId === filter.slice("column:".length);
+    if (filter.startsWith("channel:")) return (item.channel || "whatsapp") === filter.slice("channel:".length);
     return true;
   };
   const filteredChats = chats.filter((item) => matchesFilter(item, inboxFilter));

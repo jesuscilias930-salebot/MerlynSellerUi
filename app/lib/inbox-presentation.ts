@@ -1,4 +1,4 @@
-type InboxContact = { name: string | null; phone_number: string };
+type InboxContact = { name: string | null; phone_number: string; username?: string | null; channel?: string };
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 const dateOf = (value: string) => { const date = new Date(value); return Number.isNaN(date.getTime()) ? null : date; };
 const zone = "America/Mexico_City";
@@ -11,7 +11,7 @@ export function filterInboxContacts<T extends InboxContact>(chats: T[], search: 
   const query = normalize(search);
   const digits = query.replace(/[^0-9]/g, "");
   if (!query) return chats;
-  return chats.filter(chat => normalize(`${chat.name || ""} ${chat.phone_number}`).includes(query)
+  return chats.filter(chat => normalize(`${chat.name || ""} ${chat.phone_number} ${chat.username || ""} ${chat.channel || ""}`).includes(query)
     || (/^[+\d\s()-]+$/.test(query) && digits.length > 0 && chat.phone_number.replace(/\D/g, "").includes(digits)));
 }
 

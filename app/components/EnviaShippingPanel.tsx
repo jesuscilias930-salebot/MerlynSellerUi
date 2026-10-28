@@ -1,5 +1,6 @@
 "use client";
 
+import { contactPhone } from "../lib/channels";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { request } from "../lib/api";
 import { controlRequest, controlSession } from "../lib/control-api";
@@ -40,7 +41,7 @@ export function EnviaShippingPanel({chat,onBusyChange}:{chat?:Chat;onBusyChange?
   const [settings, setSettings] = useState<Settings | null>(null);
   const [quotedEnvironment, setQuotedEnvironment] = useState<Settings["environment"] | null>(null);
   const [origin, setOrigin] = useState<Address>(()=>asAddress(savedChatDraft?.origin));
-  const [destination, setDestination] = useState<Address>(()=>asAddress(savedChatDraft?.destination || (chat?{name:chat.name||"",phone:chat.phone_number,country:"MX",number:"SN"}:undefined)));
+  const [destination, setDestination] = useState<Address>(()=>asAddress(savedChatDraft?.destination || (chat?{name:chat.name||"",phone:contactPhone(chat),country:"MX",number:"SN"}:undefined)));
   const [parcel, setParcel] = useState<Parcel>(()=>savedChatDraft?.parcel || emptyParcel());
   const [rates, setRates] = useState<Rate[]>([]);
   const [quotedFingerprint,setQuotedFingerprint]=useState("");
@@ -86,7 +87,7 @@ export function EnviaShippingPanel({chat,onBusyChange}:{chat?:Chat;onBusyChange?
     let active = true;
     let draft: ShippingDraft | null = null;
     let raw: string | null = null;
-    if(chat)draft={conversationId:chat.id,destination:{name:chat.name||"",phone:chat.phone_number,country:"MX",number:"SN"}};
+    if(chat)draft={conversationId:chat.id,destination:{name:chat.name||"",phone:contactPhone(chat),country:"MX",number:"SN"}};
     else try { raw = sessionStorage.getItem(shippingDraftKey); draft = raw ? JSON.parse(raw) : null; } catch { /* Ignore malformed draft. */ }
     const load = async () => {
       try {
