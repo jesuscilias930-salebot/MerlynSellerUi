@@ -7,6 +7,9 @@ export type Chat = {
   updated_at: string;
   /** Hora del último mensaje enviado o recibido. */
   lastMessageAt?: string | null;
+  /** Fijado en su columna por una regla «si llega este mensaje»; se libera al moverlo a mano. */
+  columnPinnedAt?: string | null;
+  columnPinnedRule?: string | null;
   unreadCount: number;
   leadColumnId?: string;
   lastDirection?: "inbound" | "outbound" | null;

@@ -3,7 +3,7 @@ export type CrmResource = "chats" | "pipeline" | "presets" | "automations" | "qu
 export function crmResources(view: string, controlTab: string, conversationOpen = false): CrmResource[] {
   const resources = new Set<CrmResource>();
   if (view === "inbox") { resources.add("chats"); resources.add("pipeline"); }
-  if (view === "pipeline" || view === "remarketing" || view === "scenarios") resources.add("pipeline");
+  if (view === "pipeline" || view === "remarketing" || view === "scenarios" || view === "column-rules") resources.add("pipeline");
   if (view === "remarketing") resources.add("presets");
   if (view === "automations") resources.add("automations");
   if (view === "quick-replies") { resources.add("quickReplies"); resources.add("ctaTemplates"); }

@@ -9155,3 +9155,34 @@ a.ad-referral:hover { background: #00000014; }
 .ad-referral-copy em { color: #1877f2; font-style: normal; font-size: 11.5px; font-weight: 700; }
 .ad-referral:not(:has(.ad-referral-media)) { grid-template-columns: minmax(0, 1fr); }
 .thread .ad-referral-copy small { justify-self: start; text-align: left; color: #1877f2; font-size: 11px; font-weight: 700; }
+/* WhatsApp → Mover a columna por mensaje */
+.column-rules { display: grid; gap: 16px; align-content: start; max-width: 920px; }
+.column-rules-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.column-rules-header p { margin: 0; color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: .08em; }
+.column-rules-header h1 { margin: 6px 0; }
+.column-rules-header span { display: block; max-width: 640px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.column-rules-error { margin: 0; color: var(--app-danger, #b42318); font-size: 13px; }
+.column-rule-form { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.column-rule-form label { display: grid; gap: 5px; color: var(--deep, var(--ink)); font-size: 12px; font-weight: 800; }
+.column-rule-form label small { color: var(--muted); font-weight: 500; }
+.column-rule-form input, .column-rule-form textarea, .column-rule-form select, .column-rule-tester input { width: 100%; box-sizing: border-box; padding: 9px 10px; border: 1px solid var(--app-border-strong, #d0d5dd); border-radius: 8px; font: inherit; font-size: 14px; font-weight: 500; background: #fff; }
+.column-rule-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; }
+.column-rule-form .column-rule-check { display: flex; align-items: center; gap: 6px; padding-bottom: 10px; }
+.column-rule-form .column-rule-check input { width: auto; }
+.column-rule-hint { color: var(--muted); font-size: 12px; }
+.column-rule-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.column-rule-actions button, .column-rule-buttons button { padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.column-rule-buttons button.danger { color: var(--app-danger, #b42318); }
+.column-rule-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.column-rule-list li { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.column-rule-list li.inactive { opacity: .65; }
+.column-rule-list p { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.column-rule-list q { display: inline-block; margin: 0 3px; padding: 0 7px; border-radius: 999px; background: var(--app-subtle, #f2f4f7); color: var(--ink); font-size: 12px; }
+.column-rule-list q::before, .column-rule-list q::after { content: ""; }
+.column-rule-badge { margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: #fef0c7; color: #93370d; font-size: 11px; font-weight: 800; }
+.column-rule-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+.column-rule-tester { display: grid; gap: 6px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 12px; font-size: 12px; font-weight: 800; }
+.column-rule-tester small { font-weight: 500; font-size: 13px; }
+.column-rules-empty { display: grid; gap: 4px; padding: 24px; border: 1px dashed var(--line); border-radius: 12px; text-align: center; color: var(--muted); }
+.lead-pinned { display: block; margin-top: 4px; color: #93370d; font-size: 11px; font-style: normal; font-weight: 700; }
+@media (max-width: 640px) { .column-rule-row { grid-template-columns: 1fr; } }

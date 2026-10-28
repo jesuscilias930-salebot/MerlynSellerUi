@@ -19,6 +19,7 @@ import { RemarketingPanel } from "./components/RemarketingPanel";
 import { Sidebar } from "./components/Sidebar";
 import { EcommerceCatalogPanel } from "./components/EcommerceCatalogPanel";
 import { StoreCategoriesPanel } from "./components/StoreCategoriesPanel";
+import { ColumnRulesPanel } from "./components/ColumnRulesPanel";
 import { TestimonialsPanel } from "./components/TestimonialsPanel";
 import { PresentationPanel } from "./components/PresentationPanel";
 import { FeaturesPanel } from "./components/FeaturesPanel";
@@ -41,7 +42,7 @@ import { FinancesPanel } from "./components/FinancesPanel";
 import { ConversationAnalysisPanel } from "./components/ConversationAnalysisPanel";
 import type { PendingChatImage } from "./components/ConversationPanel";
 
-type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "ecommerce-categories" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
+type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "column-rules" | "ecommerce-categories" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./components/ControlPanel").ControlTab;
 type UploadResponse = { error?: string; mediaId?: string; filename?: string };
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -1172,6 +1173,8 @@ export default function Home() {
         <div className="automation-workspace"><RemindersPanel /></div>
       ) : view === "business-hours" ? (
         <div className="automation-workspace"><BusinessHoursPanel /></div>
+      ) : view === "column-rules" ? (
+        <div className="automation-workspace"><ColumnRulesPanel columns={pipeline} /></div>
       ) : view === "option-messages" ? (
         <div className="automation-workspace"><InteractiveOptionsPanel /></div>
       ) : view === "templates" ? (

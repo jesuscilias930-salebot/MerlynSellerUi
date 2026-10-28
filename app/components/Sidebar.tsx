@@ -3,7 +3,7 @@ import type { User } from "../lib/types";
 import styles from "./Sidebar.module.css";
 import { AppNavIcon, type AppNavIconName } from "./AppNavIcon";
 
-type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "ecommerce-categories" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
+type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "column-rules" | "ecommerce-categories" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./ControlPanel").ControlTab;
 type Item = { label: string; view: View; tab?: ControlTab; adminOnly?: boolean };
 const groups: { id: string; label: string; icon: AppNavIconName; items: Item[] }[] = [
@@ -15,6 +15,7 @@ const groups: { id: string; label: string; icon: AppNavIconName; items: Item[] }
   ] },
   { id: "whatsapp", label: "WhatsApp", icon: "whatsapp", items: [
     { label: "Remarketing", view: "remarketing" }, { label: "Respuestas automáticas", view: "automations" },
+    { label: "Mover a columna por mensaje", view: "column-rules" },
     { label: "Respuestas rápidas", view: "quick-replies" }, { label: "Plantillas oficiales", view: "templates" }, { label: "Stickers", view: "stickers" },
     { label: "Invitaciones con botón", view: "cta-buttons" },
     { label: "Mensajes con opciones", view: "option-messages" },
