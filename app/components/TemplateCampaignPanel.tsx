@@ -90,41 +90,51 @@ export function TemplateCampaignPanel({ columns }: { columns: Pick<LeadColumn, "
   </div>;
 }
 
-type PendingReplies = { hours: number; pending: number; ready: number; botPaused: number; scenariosPaused: number };
-type ReprocessResult = { processed: number; answered: number; unanswered: number };
+type PendingReplies = { hours: number; pending: number; ready: number; botPaused: number; scenariosPaused: number; bothPaused?: number };
+type ReprocessResult = { processed: number; answered: number; unanswered: number; scenariosEnabled?: number; botEnabled?: number; skipped?: number };
 
-/** Respuestas a plantillas (p. ej. «Sí, quiero ver el catálogo») que el bot no atendió: permite atenderlas de nuevo. */
+/** Respuestas a plantillas (p. ej. «Sí, quiero ver el catálogo») que el bot no atendió: permite atenderlas de nuevo,
+ *  encendiendo antes escenarios y/o bot solo en esos chats si se elige. */
 export function TemplateRepliesPanel() {
+  const [hours, setHours] = useState(72);
   const [data, setData] = useState<PendingReplies | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ReprocessResult | null>(null);
   const [reload, setReload] = useState(0);
+  const [enableScenarios, setEnableScenarios] = useState(true);
+  const [enableBot, setEnableBot] = useState(false);
   useEffect(() => {
     let active = true;
-    request<PendingReplies>("/remarketing/template-replies/pending")
+    request<PendingReplies>(`/remarketing/template-replies/pending?hours=${hours}`)
       .then(value => { if (active) { setData(value); setError(""); } })
       .catch(reason => { if (active) setError(reason instanceof Error ? reason.message : "No se pudieron revisar las respuestas."); });
     return () => { active = false; };
-  }, [reload]);
+  }, [reload, hours]);
   const run = async () => {
     setBusy(true); setError(""); setResult(null);
-    try { setResult(await request<ReprocessResult>("/remarketing/template-replies/reprocess", { method: "POST", body: JSON.stringify({}) })); setReload(value => value + 1); }
+    try { setResult(await request<ReprocessResult>("/remarketing/template-replies/reprocess", { method: "POST", body: JSON.stringify({ hours, enableScenarios, enableBot }) })); setReload(value => value + 1); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "No se pudieron atender las respuestas."); }
     finally { setBusy(false); }
   };
   if (!data && !error) return null;
-  if (data && !data.pending && !result) return null;
+  // Cuántos se atenderán con las casillas actuales: los listos + los que se desbloquean.
+  const both = data?.bothPaused || 0;
+  const scenariosCount = data ? data.scenariosPaused + both : 0;
+  const botCount = data ? data.botPaused + both : 0;
+  const willProcess = data ? data.ready + (enableScenarios ? data.scenariosPaused : 0) + (enableBot ? data.botPaused : 0) + (enableScenarios && enableBot ? both : 0) : 0;
   return <div className="template-replies" aria-live="polite">
     <div>
-      <b>Respuestas a plantillas sin atender</b>
-      {data && <span>{data.pending} {data.pending === 1 ? "lead respondió" : "leads respondieron"} con un botón en las últimas {data.hours} h y el bot no les contestó.</span>}
-      {data && data.botPaused > 0 && <span>{data.botPaused} {data.botPaused === 1 ? "tiene" : "tienen"} el bot pausado en su chat: actívalo ahí para que reciban el catálogo.</span>}
-      {data && data.scenariosPaused > 0 && <span>{data.scenariosPaused} no pueden atenderse porque los escenarios están pausados: actívalos en WhatsApp → Escenarios.</span>}
-      {result && <span className="template-replies-result">✓ {result.answered} {result.answered === 1 ? "atendida" : "atendidas"}{result.unanswered > 0 ? ` · ${result.unanswered} sin respuesta (revisa que el botón coincida con un escenario)` : ""}.</span>}
+      <b>Respuestas a plantillas sin atender
+        <select aria-label="Periodo" value={hours} onChange={event => { setHours(Number(event.target.value)); setResult(null); }}><option value={72}>últimos 3 días</option><option value={168}>últimos 7 días</option></select>
+      </b>
+      {data && <span>{data.pending ? `${data.pending} ${data.pending === 1 ? "lead tocó" : "leads tocaron"} un botón de tu plantilla y no ${data.pending === 1 ? "recibió" : "recibieron"} respuesta.` : "No hay respuestas pendientes en este periodo."}</span>}
+      {scenariosCount > 0 && <label className="template-replies-check"><input type="checkbox" checked={enableScenarios} onChange={event => setEnableScenarios(event.target.checked)} /> Encender escenarios en {scenariosCount === 1 ? "el chat que los tiene" : `los ${scenariosCount} chats que los tienen`} pausados</label>}
+      {botCount > 0 && <label className="template-replies-check"><input type="checkbox" checked={enableBot} onChange={event => setEnableBot(event.target.checked)} /> Encender el bot en {botCount === 1 ? "el chat que lo tiene" : `los ${botCount} chats que lo tienen`} pausado <small>(después contestará sus mensajes)</small></label>}
+      {result && <span className="template-replies-result">✓ {result.answered} {result.answered === 1 ? "atendida" : "atendidas"}{result.scenariosEnabled ? ` · escenarios encendidos en ${result.scenariosEnabled}` : ""}{result.botEnabled ? ` · bot encendido en ${result.botEnabled}` : ""}{result.unanswered > 0 ? ` · ${result.unanswered} sin respuesta (revisa que el botón coincida con las frases de un escenario)` : ""}{result.skipped ? ` · ${result.skipped} omitidas por tener el bot o los escenarios pausados` : ""}.</span>}
       {error && <span className="template-campaign-error" role="alert">{error}</span>}
     </div>
-    {data && data.ready > 0 && <button type="button" className="primary-action" disabled={busy} onClick={() => void run()}>{busy ? "Atendiendo…" : `Atender ${data.ready} ahora`}</button>}
+    {data && data.pending > 0 && <button type="button" className="primary-action" disabled={busy || willProcess === 0} onClick={() => void run()}>{busy ? "Atendiendo…" : `Enviar respuesta a ${willProcess}`}</button>}
   </div>;
 }
 
