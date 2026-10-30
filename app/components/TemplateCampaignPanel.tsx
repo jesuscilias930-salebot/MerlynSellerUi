@@ -5,6 +5,7 @@ import { request } from "../lib/api";
 import { templateCampaignIssues, templateCampaignPreview } from "../lib/template-campaign";
 import type { LeadColumn, WhatsAppTemplate } from "../lib/types";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { RemarketingMovesPanel, type MoveRule } from "./RemarketingMovesPanel";
 
 type Preview = { total: number; scenariosPaused?: number; eligible: number; otherChannel: number; recent: number; overLimit: number; max: number };
 type Result = { queued: number; scenariosEnabled?: number; skipped: { otherChannel: number; recent: number; overLimit: number; missingData: number }; warning?: string };
@@ -30,6 +31,12 @@ export function TemplateCampaignPanel({ columns }: { columns: Pick<LeadColumn, "
   const [result, setResult] = useState<Result | null>(null);
   const [reload, setReload] = useState(0);
   const [enableScenarios, setEnableScenarios] = useState(false);
+  const [moveRules, setMoveRules] = useState<MoveRule[]>([]);
+  useEffect(() => {
+    let active = true;
+    request<MoveRule[]>("/remarketing/move-rules").then(rows => { if (active) setMoveRules(rows); }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
   useEffect(() => {
     let active = true;
     request<WhatsAppTemplate[]>("/whatsapp-templates").then(rows => { if (active) setTemplates(rows.filter(row => row.status === "APPROVED")); }).catch(reason => { if (active) { setTemplates([]); setError(reason instanceof Error ? reason.message : "No se pudieron cargar las plantillas."); } });
@@ -49,6 +56,8 @@ export function TemplateCampaignPanel({ columns }: { columns: Pick<LeadColumn, "
   const text = template ? templateCampaignPreview(template, values) : "";
   const buttons = (template?.components || []).flatMap(component => String(component.type).toUpperCase() === "BUTTONS" ? ((component as { buttons?: { text?: string }[] }).buttons || []).map(button => button.text || "").filter(Boolean) : []);
   const current = preview?.columnId === columnId ? preview : null;
+  const moveRule = moveRules.find(rule => rule.templateId === templateId);
+  const columnLabel = (id: string | null) => columns.find(column => column.id === id)?.name || "";
   const column = columns.find(item => item.id === columnId);
   const send = async () => {
     setConfirm(false); setSending(true); setError(""); setResult(null);
@@ -69,6 +78,7 @@ export function TemplateCampaignPanel({ columns }: { columns: Pick<LeadColumn, "
         <ScenariosCheckbox checked={enableScenarios} paused={current?.data?.scenariosPaused} onChange={setEnableScenarios} />
       </div>
       {manual.map(mapping => { const key = `${mapping.component}:${mapping.position}`; return <label key={key}>{mapping.label || `Variable {{${mapping.position}}}`} <small>(igual para todos)</small><input value={values[key] || ""} maxLength={1024} onChange={event => setValues(current => ({ ...current, [key]: event.target.value }))} /></label>; })}
+      {template && <small className="template-campaign-moves">{moveRule?.afterSendColumnId ? `Al enviar → ${columnLabel(moveRule.afterSendColumnId)}` : "Al enviar no se mueve"} · {moveRule?.onReplyColumnId ? `Si responde → ${columnLabel(moveRule.onReplyColumnId)}` : "Si responde → R-HOT"} <span>(cámbialo en Configuración)</span></small>}
       {template && <div className="template-campaign-preview"><small>Así se verá</small><p>{text}</p>{buttons.length > 0 && <div className="template-campaign-buttons">{buttons.map(label => <span key={label}>↩ {label}</span>)}</div>}</div>}
       {columnId && <div className="template-campaign-audience" aria-live="polite">
         {!current ? "Calculando destinatarios…" : current.error ? current.error : <>
@@ -140,12 +150,13 @@ export function TemplateRepliesPanel() {
 
 /** Remarketing: plantilla oficial (masivo) o mensaje libre a conversaciones abiertas. */
 export function RemarketingTabs({ columns, children }: { columns: Pick<LeadColumn, "id" | "name">[]; children: React.ReactNode }) {
-  const [tab, setTab] = useState<"template" | "free">("template");
+  const [tab, setTab] = useState<"template" | "free" | "moves">("template");
   return <div className="remarketing-tabs">
     <nav role="tablist" aria-label="Tipo de remarketing">
       <button type="button" role="tab" aria-selected={tab === "template"} className={tab === "template" ? "selected" : ""} onClick={() => setTab("template")}>Plantilla oficial <small>a toda la columna</small></button>
       <button type="button" role="tab" aria-selected={tab === "free"} className={tab === "free" ? "selected" : ""} onClick={() => setTab("free")}>Mensaje libre <small>solo chats de las últimas 24 h</small></button>
+      <button type="button" role="tab" aria-selected={tab === "moves"} className={tab === "moves" ? "selected" : ""} onClick={() => setTab("moves")}>Configuración <small>mover a columna al enviar y al responder</small></button>
     </nav>
-    {tab === "template" ? <section className="remarketing"><header className="remarketing-header"><div><p>CAMPAÑAS</p><h1>Remarketing con plantilla oficial</h1><span>Envía una plantilla aprobada por Meta a todos los leads de WhatsApp de una columna, aunque no te hayan escrito en las últimas 24 horas. Sus respuestas (incluidos los botones) pasan por tus escenarios y reglas.</span></div></header><TemplateRepliesPanel /><TemplateCampaignPanel columns={columns} /></section> : children}
+    {tab === "template" ? <section className="remarketing"><header className="remarketing-header"><div><p>CAMPAÑAS</p><h1>Remarketing con plantilla oficial</h1><span>Envía una plantilla aprobada por Meta a todos los leads de WhatsApp de una columna, aunque no te hayan escrito en las últimas 24 horas. Sus respuestas (incluidos los botones) pasan por tus escenarios y reglas.</span></div></header><TemplateRepliesPanel /><TemplateCampaignPanel columns={columns} /></section> : tab === "moves" ? <section className="remarketing"><header className="remarketing-header"><div><p>CAMPAÑAS</p><h1>Configuración de remarketing</h1><span>Mueve automáticamente a los leads cuando les envías un remarketing y cuando responden.</span></div></header><RemarketingMovesPanel columns={columns} /></section> : children}
   </div>;
 }

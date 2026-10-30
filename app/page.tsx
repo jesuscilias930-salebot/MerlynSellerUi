@@ -842,6 +842,8 @@ export default function Home() {
           body: JSON.stringify({
             columnId: remarketingColumnId,
             enableScenarios: remarketingEnableScenarios,
+            // Si se usa un mensaje guardado sin cambios, su configuración de columnas aplica.
+            presetId: presets.find((preset) => preset.name === presetName.trim() && (preset.body || "") === remarketingBody.trim() && (preset.mediaId || null) === (remarketingImage?.mediaId || null))?.id,
             body: remarketingBody.trim() || undefined,
             mediaId: remarketingImage?.mediaId,
             filename: remarketingImage?.filename,
