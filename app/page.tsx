@@ -1156,6 +1156,7 @@ export default function Home() {
           columns={filteredPipeline}
           boards={boards}
           activeBoardId={activeBoardId}
+          onRemarketingSent={(message) => { setNotice(message); void refreshData(); }}
           filter={dashboardFilter}
           canEdit={canEditPipeline}
           columnName={columnName}
