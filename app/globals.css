@@ -9219,3 +9219,9 @@ a.ad-referral:hover { background: #00000014; }
 @media (max-width: 760px) { .remarketing-tabs { height: auto; overflow: visible; } }
 /* El botón de envío queda siempre a la vista al bajar por la plantilla. */
 .template-campaign-form > .primary-action { position: sticky; bottom: 12px; z-index: 2; box-shadow: 0 6px 18px #0f2a1d33; }
+/* Respuestas a plantillas que el bot no atendió */
+.remarketing > .template-campaign { width: min(760px, 100%); margin-inline: auto; }
+.template-replies { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; box-sizing: border-box; width: min(760px, 100%); margin: 0 auto 12px; padding: 12px 14px; border: 1px solid #f5c26b; border-radius: 12px; background: #fff8e8; font-size: 13px; }
+.template-replies > div { display: grid; gap: 3px; min-width: 0; flex: 1 1 280px; }
+.template-replies span { color: var(--ink); font-size: 12px; line-height: 1.45; }
+.template-replies .template-replies-result { color: #11573f; font-weight: 700; }

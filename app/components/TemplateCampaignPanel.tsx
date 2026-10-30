@@ -78,6 +78,44 @@ export function TemplateCampaignPanel({ columns }: { columns: Pick<LeadColumn, "
   </div>;
 }
 
+type PendingReplies = { hours: number; pending: number; ready: number; botPaused: number; scenariosPaused: number };
+type ReprocessResult = { processed: number; answered: number; unanswered: number };
+
+/** Respuestas a plantillas (p. ej. «Sí, quiero ver el catálogo») que el bot no atendió: permite atenderlas de nuevo. */
+export function TemplateRepliesPanel() {
+  const [data, setData] = useState<PendingReplies | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<ReprocessResult | null>(null);
+  const [reload, setReload] = useState(0);
+  useEffect(() => {
+    let active = true;
+    request<PendingReplies>("/remarketing/template-replies/pending")
+      .then(value => { if (active) { setData(value); setError(""); } })
+      .catch(reason => { if (active) setError(reason instanceof Error ? reason.message : "No se pudieron revisar las respuestas."); });
+    return () => { active = false; };
+  }, [reload]);
+  const run = async () => {
+    setBusy(true); setError(""); setResult(null);
+    try { setResult(await request<ReprocessResult>("/remarketing/template-replies/reprocess", { method: "POST", body: JSON.stringify({}) })); setReload(value => value + 1); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "No se pudieron atender las respuestas."); }
+    finally { setBusy(false); }
+  };
+  if (!data && !error) return null;
+  if (data && !data.pending && !result) return null;
+  return <div className="template-replies" aria-live="polite">
+    <div>
+      <b>Respuestas a plantillas sin atender</b>
+      {data && <span>{data.pending} {data.pending === 1 ? "lead respondió" : "leads respondieron"} con un botón en las últimas {data.hours} h y el bot no les contestó.</span>}
+      {data && data.botPaused > 0 && <span>{data.botPaused} {data.botPaused === 1 ? "tiene" : "tienen"} el bot pausado en su chat: actívalo ahí para que reciban el catálogo.</span>}
+      {data && data.scenariosPaused > 0 && <span>{data.scenariosPaused} no pueden atenderse porque los escenarios están pausados: actívalos en WhatsApp → Escenarios.</span>}
+      {result && <span className="template-replies-result">✓ {result.answered} {result.answered === 1 ? "atendida" : "atendidas"}{result.unanswered > 0 ? ` · ${result.unanswered} sin respuesta (revisa que el botón coincida con un escenario)` : ""}.</span>}
+      {error && <span className="template-campaign-error" role="alert">{error}</span>}
+    </div>
+    {data && data.ready > 0 && <button type="button" className="primary-action" disabled={busy} onClick={() => void run()}>{busy ? "Atendiendo…" : `Atender ${data.ready} ahora`}</button>}
+  </div>;
+}
+
 /** Remarketing: plantilla oficial (masivo) o mensaje libre a conversaciones abiertas. */
 export function RemarketingTabs({ columns, children }: { columns: Pick<LeadColumn, "id" | "name">[]; children: React.ReactNode }) {
   const [tab, setTab] = useState<"template" | "free">("template");
@@ -86,6 +124,6 @@ export function RemarketingTabs({ columns, children }: { columns: Pick<LeadColum
       <button type="button" role="tab" aria-selected={tab === "template"} className={tab === "template" ? "selected" : ""} onClick={() => setTab("template")}>Plantilla oficial <small>a toda la columna</small></button>
       <button type="button" role="tab" aria-selected={tab === "free"} className={tab === "free" ? "selected" : ""} onClick={() => setTab("free")}>Mensaje libre <small>solo chats de las últimas 24 h</small></button>
     </nav>
-    {tab === "template" ? <section className="remarketing"><header className="remarketing-header"><div><p>CAMPAÑAS</p><h1>Remarketing con plantilla oficial</h1><span>Envía una plantilla aprobada por Meta a todos los leads de WhatsApp de una columna, aunque no te hayan escrito en las últimas 24 horas. Sus respuestas (incluidos los botones) pasan por tus escenarios y reglas.</span></div></header><TemplateCampaignPanel columns={columns} /></section> : children}
+    {tab === "template" ? <section className="remarketing"><header className="remarketing-header"><div><p>CAMPAÑAS</p><h1>Remarketing con plantilla oficial</h1><span>Envía una plantilla aprobada por Meta a todos los leads de WhatsApp de una columna, aunque no te hayan escrito en las últimas 24 horas. Sus respuestas (incluidos los botones) pasan por tus escenarios y reglas.</span></div></header><TemplateRepliesPanel /><TemplateCampaignPanel columns={columns} /></section> : children}
   </div>;
 }
