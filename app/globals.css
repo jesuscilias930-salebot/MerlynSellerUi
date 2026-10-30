@@ -9268,3 +9268,4 @@ a.ad-referral:hover { background: #00000014; }
 .board-form small { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
 .board-form p, .board-error { grid-column: 1 / -1; margin: 0; color: var(--app-danger, #b42318); font-size: 13px; }
 @media (max-width: 640px) { .board-form { grid-template-columns: 1fr; } }
+.bulk-move-note { color: var(--muted); font-size: 11px; line-height: 1.4; }

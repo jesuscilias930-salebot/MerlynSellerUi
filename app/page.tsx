@@ -1152,6 +1152,8 @@ export default function Home() {
         <LeadBoard
           tabs={<BoardTabs boards={boards} activeBoardId={activeBoardId} canEdit={canEditPipeline} onSelect={selectBoard} onChanged={(selectId) => loadPipeline(undefined, selectId)} />}
           columns={filteredPipeline}
+          boards={boards}
+          activeBoardId={activeBoardId}
           filter={dashboardFilter}
           canEdit={canEditPipeline}
           columnName={columnName}
