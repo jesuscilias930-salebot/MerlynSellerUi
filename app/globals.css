@@ -9242,3 +9242,29 @@ a.ad-referral:hover { background: #00000014; }
 .template-replies-check { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
 .template-replies-check input { margin: 0; accent-color: var(--green, #0f8a5f); }
 .template-replies-check small { color: var(--muted); font-weight: 500; }
+/* Multi dashboard */
+/* Con tabs el tablero tiene 3 filas: encabezado, tabs y columnas. */
+.pipeline:has(> .board-tabs) { grid-template-rows: auto auto minmax(0, 1fr); }
+.board-tabs { display: grid; gap: 10px; align-content: start; padding: 14px 30px 0; min-width: 0; }
+.board-tabs > nav { display: flex; gap: 8px; align-items: center; overflow-x: auto; padding: 8px 8px 6px 2px; scrollbar-width: thin; }
+.pipeline:has(> .board-tabs) > .kanban { padding-top: 12px; }
+@media (max-width: 760px) { .board-tabs { padding: 12px 16px 0; } }
+.board-tabs > nav button { position: relative; display: flex; align-items: center; gap: 10px; flex: 0 0 auto; min-height: 44px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.board-tabs > nav button span { display: grid; gap: 1px; }
+.board-tabs > nav button b { font-size: 13px; font-weight: 800; white-space: nowrap; }
+.board-tabs > nav button small { color: var(--muted); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.board-tabs > nav button em { padding: 1px 7px; border-radius: 999px; background: var(--app-subtle, #f2f4f7); color: var(--muted); font-size: 11px; font-style: normal; font-weight: 800; }
+.board-tabs > nav button i { position: absolute; top: -6px; right: -6px; min-width: 18px; padding: 1px 5px; border-radius: 999px; background: var(--app-danger, #d92d20); color: #fff; font-size: 10px; font-style: normal; font-weight: 800; text-align: center; box-sizing: border-box; }
+.board-tabs > nav button.selected { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+.board-tabs > nav button.selected em { background: var(--mint, #e6f4ec); color: #11573f; }
+.board-tabs > nav .board-tab-add { color: var(--green); font-weight: 800; font-size: 13px; border-style: dashed; }
+.board-tabs > nav .board-tab-edit { justify-content: center; width: 44px; padding: 0; font-size: 16px; }
+.board-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.board-form label { display: grid; gap: 5px; font-size: 12px; font-weight: 800; color: var(--deep, var(--ink)); }
+.board-form input { width: 100%; box-sizing: border-box; padding: 9px 10px; border: 1px solid var(--app-border-strong, #d0d5dd); border-radius: 8px; font: inherit; font-size: 14px; font-weight: 500; }
+.board-form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
+.board-form-actions button:not(.primary-action) { padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.board-form-actions .danger { margin-right: auto; color: var(--app-danger, #b42318); }
+.board-form small { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+.board-form p, .board-error { grid-column: 1 / -1; margin: 0; color: var(--app-danger, #b42318); font-size: 13px; }
+@media (max-width: 640px) { .board-form { grid-template-columns: 1fr; } }

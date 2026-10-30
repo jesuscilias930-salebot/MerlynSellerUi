@@ -8,12 +8,14 @@ import { ChangeEvent, DragEvent, FormEvent, useEffect, useEffectEvent, useRef, u
 import { api, request } from "./lib/api";
 import { controlSession, loginControl } from "./lib/control-api";
 import { crmResources, type CrmResource } from "./lib/section-data";
-import type { AutomationIntent, AutomationScenario, Chat, ConversationFilter, CtaUrlMessage, CtaUrlTemplate, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, QuickReply, RemarketingPreset, SavedSticker, User, WhatsAppTemplate, WhatsAppTemplateMapping } from "./lib/types";
+import type { LeadBoardSummary, AutomationIntent, AutomationScenario, Chat, ConversationFilter, CtaUrlMessage, CtaUrlTemplate, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, QuickReply, RemarketingPreset, SavedSticker, User, WhatsAppTemplate, WhatsAppTemplateMapping } from "./lib/types";
 import { AutomationsPanel } from "./components/AutomationsPanel";
 import { DocumentTemplatesPanel } from "./components/DocumentTemplatesPanel";
 import { ConversationModal } from "./components/ConversationModal";
 import { Inbox } from "./components/Inbox";
 import { LeadBoard } from "./components/LeadBoard";
+import { BoardTabs } from "./components/BoardTabs";
+import { columnsFromBoards, readStoredBoard, resolveBoardId, storeBoard } from "./lib/lead-boards";
 import { LoginScreen } from "./components/LoginScreen";
 import { RemarketingPanel } from "./components/RemarketingPanel";
 import { Sidebar } from "./components/Sidebar";
@@ -69,6 +71,9 @@ export default function Home() {
   const [modalChat, setModalChat] = useState<Chat | null>(null);
   const [modalMessages, setModalMessages] = useState<Message[]>([]);
   const [pipeline, setPipeline] = useState<LeadColumn[]>([]);
+  // Multi dashboard: lista ligera de dashboards (con columnas y contadores) y el dashboard abierto.
+  const [boards, setBoards] = useState<LeadBoardSummary[]>([]);
+  const [activeBoardId, setActiveBoardId] = useState("");
   const [draft, setDraft] = useState("");
   const [modalDraft, setModalDraft] = useState("");
   const [number, setNumber] = useState("");
@@ -143,10 +148,11 @@ export default function Home() {
   const loadScenarios = async () => setAutomationScenarios(await request<AutomationScenario[]>("/scenarios"));
   const loadDocumentTemplates = async () => setDocumentTemplates(await request<DocumentTemplate[]>("/settings/document-templates"));
   const loadEntrepreneurPackages = async () => setEntrepreneurPackages(await request<EntrepreneurPackage[]>("/settings/entrepreneur-packages"));
-  const loadPipeline = async (signal?: AbortSignal) => {
-    const columns = await request<LeadColumn[]>("/leads/board", { signal });
-    if (signal?.aborted) return;
-    setPipeline(columns);
+  const applyBoards = (list: LeadBoardSummary[]) => {
+    setBoards(list);
+    const boardId = resolveBoardId(list, activeBoardId || readStoredBoard());
+    if (boardId !== activeBoardId) setActiveBoardId(boardId);
+    const columns = list.flatMap((board) => board.columns);
     setRemarketingColumnId((current) => {
       if (columns.some((column) => column.id === current)) return current;
       const remarketing = columns.find(
@@ -156,7 +162,25 @@ export default function Home() {
       );
       return remarketing?.id || columns[0]?.id || "";
     });
+    return boardId;
   };
+  /** Dashboards (ligero) y, solo en la vista del tablero, los leads del dashboard abierto. */
+  const loadPipeline = async (signal?: AbortSignal, selectBoardId?: string) => {
+    const list = await request<LeadBoardSummary[]>("/leads/boards", { signal });
+    if (signal?.aborted) return;
+    let boardId = applyBoards(list);
+    if (selectBoardId && list.some((board) => board.id === selectBoardId)) { boardId = selectBoardId; setActiveBoardId(boardId); storeBoard(boardId); }
+    if (view !== "pipeline" || !boardId) return;
+    const columns = await request<LeadColumn[]>(`/leads/board?boardId=${boardId}`, { signal });
+    if (!signal?.aborted) setPipeline(columns);
+  };
+  const selectBoard = (boardId: string) => {
+    if (boardId === activeBoardId) return;
+    setPipeline([]);
+    setActiveBoardId(boardId);
+    storeBoard(boardId);
+  };
+  const allColumns = columnsFromBoards(boards);
   const openInbox = async (item: Chat) => {
     setMessages([]);
     setChat(item);
@@ -260,6 +284,22 @@ export default function Home() {
       .catch(() => undefined);
   }, []);
 
+  const applyBoardsEvent = useEffectEvent((list: LeadBoardSummary[]) => { applyBoards(list); });
+  // Leads del dashboard abierto: solo en la vista del tablero y al cambiar de tab.
+  useEffect(() => {
+    if (!user || view !== "pipeline" || !activeBoardId) return;
+    const controller = new AbortController();
+    void Promise.resolve().then(async () => {
+      try {
+        const columns = await request<LeadColumn[]>(`/leads/board?boardId=${activeBoardId}`, { signal: controller.signal });
+        if (!controller.signal.aborted) setPipeline(columns);
+      } catch (error) {
+        if (!controller.signal.aborted && !(error instanceof Error && error.name === "AbortError")) setNotice(error instanceof Error ? error.message : "No se pudo cargar el dashboard.");
+      }
+    });
+    return () => controller.abort();
+  }, [user, view, activeBoardId]);
+
   useEffect(() => {
     if (!user) return;
     const controller = new AbortController();
@@ -270,11 +310,7 @@ export default function Home() {
     };
     const loaders: Record<CrmResource, () => Promise<void>> = {
       chats: () => get<Chat[]>("/conversations", setChats),
-      pipeline: () => get<LeadColumn[]>("/leads/board", columns => {
-        setPipeline(columns);
-        setRemarketingColumnId(current => columns.some(column => column.id === current) ? current :
-          (columns.find(column => column.name.toLocaleLowerCase("es-MX").replace(/[^a-z]/g, "") === "remarketing")?.id || columns[0]?.id || ""));
-      }),
+      pipeline: () => get<LeadBoardSummary[]>("/leads/boards", applyBoardsEvent),
       presets: () => get<RemarketingPreset[]>("/remarketing/presets", setPresets),
       automations: () => get<AutomationIntent[]>("/automations", setAutomationIntents),
       quickReplies: () => get<QuickReply[]>("/quick-replies", setQuickReplies),
@@ -655,7 +691,7 @@ export default function Home() {
     try {
       await request("/leads/columns", {
         method: "POST",
-        body: JSON.stringify({ name: columnName }),
+        body: JSON.stringify({ name: columnName, boardId: activeBoardId || undefined }),
       });
       setColumnName("");
       await loadPipeline();
@@ -1061,7 +1097,7 @@ export default function Home() {
       {view === "inbox" ? (
         <Inbox
           chats={filteredChats}
-          columns={pipeline}
+          columns={allColumns}
           filter={inboxFilter}
           chat={chat}
           messages={messages}
@@ -1114,6 +1150,7 @@ export default function Home() {
         />
       ) : view === "pipeline" ? (
         <LeadBoard
+          tabs={<BoardTabs boards={boards} activeBoardId={activeBoardId} canEdit={canEditPipeline} onSelect={selectBoard} onChanged={(selectId) => loadPipeline(undefined, selectId)} />}
           columns={filteredPipeline}
           filter={dashboardFilter}
           canEdit={canEditPipeline}
@@ -1142,8 +1179,8 @@ export default function Home() {
           onColumnDrop={dropColumn}
         />
       ) : view === "remarketing" ? (
-        <RemarketingTabs columns={pipeline}><RemarketingPanel
-          columns={pipeline}
+        <RemarketingTabs columns={allColumns}><RemarketingPanel
+          columns={allColumns}
           selectedColumnId={remarketingColumnId}
           body={remarketingBody}
           image={remarketingImage}
@@ -1181,7 +1218,7 @@ export default function Home() {
       ) : view === "business-hours" ? (
         <div className="automation-workspace"><BusinessHoursPanel /></div>
       ) : view === "column-rules" ? (
-        <div className="automation-workspace"><ColumnRulesPanel columns={pipeline} /></div>
+        <div className="automation-workspace"><ColumnRulesPanel columns={allColumns} /></div>
       ) : view === "option-messages" ? (
         <div className="automation-workspace"><InteractiveOptionsPanel /></div>
       ) : view === "templates" ? (
@@ -1197,7 +1234,7 @@ export default function Home() {
       ) : view === "ecommerce-bundles" || view === "ecommerce-products" ? (
         <EcommerceCatalogPanel key={view} kind={view === "ecommerce-bundles" ? "bundles" : "products"} />
       ) : view === "scenarios" ? (
-        <ScenariosPanel scenarios={automationScenarios} columns={pipeline} entrepreneurPackages={entrepreneurPackages} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} />
+        <ScenariosPanel scenarios={automationScenarios} columns={allColumns} entrepreneurPackages={entrepreneurPackages} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} />
       ) : view === "videos" ? (
         <VideosPanel />
       ) : view === "finances" && ["owner", "admin"].includes(user.role) ? (
@@ -1252,7 +1289,7 @@ export default function Home() {
         onLearnIntent={(messageId, intentId) => learnIntent(modalChat, messageId, intentId)}
         onReact={(messageId, emoji) => reactToMessage(modalChat, messageId, emoji)}
         onDeleteMessage={(messageId, scope) => deleteMessage(modalChat, messageId, scope)}
-        columns={pipeline}
+        columns={allColumns}
         onMoveLead={(columnId) => moveLeadToColumn(modalChat, columnId)}
         onOpenShipping={() => { setModalChat(null); setView("shipping"); }}
         onDeleteConversation={() => deleteConversation(modalChat)}
