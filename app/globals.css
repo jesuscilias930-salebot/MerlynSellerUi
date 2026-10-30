@@ -9233,3 +9233,8 @@ a.ad-referral:hover { background: #00000014; }
 .scenarios-checkbox span { display: grid; gap: 1px; }
 .remarketing-column-row .scenarios-checkbox small { color: var(--app-danger, #b42318); font-size: 11px; font-weight: 600; }
 .remarketing-form .remarketing-column-row > label:first-child { display: grid; gap: 8px; font-size: 13px; font-weight: 700; }
+/* Reglas de columna por lada */
+.column-rule-list q.area-code { background: #e0f2fe; color: #075985; font-weight: 700; }
+.column-rule-tester > label { font-size: 12px; font-weight: 800; }
+.column-rule-tester-row { display: grid; grid-template-columns: 1fr 220px; gap: 8px; }
+@media (max-width: 640px) { .column-rule-tester-row { grid-template-columns: 1fr; } }
