@@ -74,6 +74,7 @@ export default function Home() {
   const [number, setNumber] = useState("");
   const [columnName, setColumnName] = useState("");
   const [remarketingColumnId, setRemarketingColumnId] = useState("");
+  const [remarketingEnableScenarios, setRemarketingEnableScenarios] = useState(false);
   const [remarketingBody, setRemarketingBody] = useState("");
   const [remarketingImage, setRemarketingImage] = useState<{
     mediaId: string;
@@ -798,12 +799,13 @@ export default function Home() {
     if (!remarketingColumnId || (!remarketingBody.trim() && !remarketingImage))
       return;
     try {
-      const result = await request<{ queued: number; skipped: number }>(
+      const result = await request<{ queued: number; skipped: number; scenariosEnabled?: number }>(
         "/remarketing/campaigns",
         {
           method: "POST",
           body: JSON.stringify({
             columnId: remarketingColumnId,
+            enableScenarios: remarketingEnableScenarios,
             body: remarketingBody.trim() || undefined,
             mediaId: remarketingImage?.mediaId,
             filename: remarketingImage?.filename,
@@ -811,7 +813,7 @@ export default function Home() {
         },
       );
       setNotice(
-        `Campaña encolada para ${result.queued} leads.${result.skipped ? ` ${result.skipped} quedaron fuera de la ventana de 24 horas.` : ""}`,
+        `Campaña encolada para ${result.queued} leads.${result.skipped ? ` ${result.skipped} quedaron fuera de la ventana de 24 horas.` : ""}${result.scenariosEnabled ? ` Se encendieron los escenarios en ${result.scenariosEnabled} chats.` : ""}`,
       );
       setRemarketingBody("");
       setRemarketingImage(null);
@@ -1148,6 +1150,8 @@ export default function Home() {
           presets={presets}
           presetName={presetName}
           uploadingImage={uploadingImage}
+          enableScenarios={remarketingEnableScenarios}
+          onEnableScenariosChange={setRemarketingEnableScenarios}
           onColumnChange={setRemarketingColumnId}
           onBodyChange={setRemarketingBody}
           onPresetNameChange={setPresetName}

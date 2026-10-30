@@ -9225,3 +9225,11 @@ a.ad-referral:hover { background: #00000014; }
 .template-replies > div { display: grid; gap: 3px; min-width: 0; flex: 1 1 280px; }
 .template-replies span { color: var(--ink); font-size: 12px; line-height: 1.45; }
 .template-replies .template-replies-result { color: #11573f; font-weight: 700; }
+/* «Encender escenarios para todos» junto al selector de columna */
+.remarketing-column-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.remarketing-column-row > label:first-child { flex: 1 1 260px; min-width: 0; }
+.scenarios-checkbox { display: flex !important; grid-template-columns: none; align-items: center; gap: 8px; min-height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); font-size: 13px; font-weight: 700; cursor: pointer; }
+.scenarios-checkbox input { width: 16px !important; height: 16px; margin: 0; accent-color: var(--green, #0f8a5f); }
+.scenarios-checkbox span { display: grid; gap: 1px; }
+.remarketing-column-row .scenarios-checkbox small { color: var(--app-danger, #b42318); font-size: 11px; font-weight: 600; }
+.remarketing-form .remarketing-column-row > label:first-child { display: grid; gap: 8px; font-size: 13px; font-weight: 700; }

@@ -6,8 +6,16 @@ import { templateCampaignIssues, templateCampaignPreview } from "../lib/template
 import type { LeadColumn, WhatsAppTemplate } from "../lib/types";
 import { ConfirmDialog } from "./ConfirmDialog";
 
-type Preview = { total: number; eligible: number; otherChannel: number; recent: number; overLimit: number; max: number };
-type Result = { queued: number; skipped: { otherChannel: number; recent: number; overLimit: number; missingData: number }; warning?: string };
+type Preview = { total: number; scenariosPaused?: number; eligible: number; otherChannel: number; recent: number; overLimit: number; max: number };
+type Result = { queued: number; scenariosEnabled?: number; skipped: { otherChannel: number; recent: number; overLimit: number; missingData: number }; warning?: string };
+
+/** Casilla «Encender escenarios para todos» junto a la columna; el backend solo enciende los que estén pausados. */
+export function ScenariosCheckbox({ checked, paused, onChange }: { checked: boolean; paused?: number; onChange: (value: boolean) => void }) {
+  return <label className="scenarios-checkbox">
+    <input type="checkbox" checked={checked} onChange={event => onChange(event.target.checked)} />
+    <span>Encender escenarios para todos{paused ? <small>{paused} {paused === 1 ? "chat los tiene pausados" : "chats los tienen pausados"}</small> : null}</span>
+  </label>;
+}
 
 /** Remarketing masivo con una plantilla aprobada por Meta: llega aunque pasen las 24 h. */
 export function TemplateCampaignPanel({ columns }: { columns: Pick<LeadColumn, "id" | "name">[] }) {
@@ -21,6 +29,7 @@ export function TemplateCampaignPanel({ columns }: { columns: Pick<LeadColumn, "
   const [error, setError] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [reload, setReload] = useState(0);
+  const [enableScenarios, setEnableScenarios] = useState(false);
   useEffect(() => {
     let active = true;
     request<WhatsAppTemplate[]>("/whatsapp-templates").then(rows => { if (active) setTemplates(rows.filter(row => row.status === "APPROVED")); }).catch(reason => { if (active) { setTemplates([]); setError(reason instanceof Error ? reason.message : "No se pudieron cargar las plantillas."); } });
@@ -43,7 +52,7 @@ export function TemplateCampaignPanel({ columns }: { columns: Pick<LeadColumn, "
   const column = columns.find(item => item.id === columnId);
   const send = async () => {
     setConfirm(false); setSending(true); setError(""); setResult(null);
-    try { setResult(await request<Result>("/remarketing/template-campaigns", { method: "POST", body: JSON.stringify({ columnId, templateId, manualValues: values }) })); setReload(value => value + 1); }
+    try { setResult(await request<Result>("/remarketing/template-campaigns", { method: "POST", body: JSON.stringify({ columnId, templateId, manualValues: values, enableScenarios }) })); setReload(value => value + 1); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "No se pudo enviar."); }
     finally { setSending(false); }
   };
@@ -53,9 +62,12 @@ export function TemplateCampaignPanel({ columns }: { columns: Pick<LeadColumn, "
         <option value="">{templates === null ? "Cargando…" : templates.length ? "Elige una plantilla" : "No hay plantillas aprobadas: sincronízalas en Plantillas oficiales"}</option>
         {(templates || []).map(item => <option key={item.id} value={item.id}>{item.name} · {item.language}{item.category ? ` · ${item.category}` : ""}</option>)}
       </select></label>
-      <label>Enviar a los leads de la columna<select value={columnId} onChange={event => { setColumnId(event.target.value); setResult(null); }}>
-        <option value="">Elige una columna</option>{columns.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-      </select></label>
+      <div className="remarketing-column-row">
+        <label>Enviar a los leads de la columna<select value={columnId} onChange={event => { setColumnId(event.target.value); setResult(null); }}>
+          <option value="">Elige una columna</option>{columns.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select></label>
+        <ScenariosCheckbox checked={enableScenarios} paused={current?.data?.scenariosPaused} onChange={setEnableScenarios} />
+      </div>
       {manual.map(mapping => { const key = `${mapping.component}:${mapping.position}`; return <label key={key}>{mapping.label || `Variable {{${mapping.position}}}`} <small>(igual para todos)</small><input value={values[key] || ""} maxLength={1024} onChange={event => setValues(current => ({ ...current, [key]: event.target.value }))} /></label>; })}
       {template && <div className="template-campaign-preview"><small>Así se verá</small><p>{text}</p>{buttons.length > 0 && <div className="template-campaign-buttons">{buttons.map(label => <span key={label}>↩ {label}</span>)}</div>}</div>}
       {columnId && <div className="template-campaign-audience" aria-live="polite">
@@ -68,7 +80,7 @@ export function TemplateCampaignPanel({ columns }: { columns: Pick<LeadColumn, "
       </div>}
       {issues.length > 0 && templateId && <p className="template-campaign-error">{issues[0]}</p>}
       {error && <p className="template-campaign-error" role="alert">{error}</p>}
-      {result && <p className="template-campaign-result" role="status">✓ {result.queued} {result.queued === 1 ? "mensaje en cola" : "mensajes en cola"}. Se envían en los próximos minutos; las respuestas llegan al inbox.{result.skipped.missingData > 0 ? ` ${result.skipped.missingData} se omitieron por falta de datos (${result.warning}).` : ""}</p>}
+      {result && <p className="template-campaign-result" role="status">✓ {result.queued} {result.queued === 1 ? "mensaje en cola" : "mensajes en cola"}. Se envían en los próximos minutos; las respuestas llegan al inbox.{result.scenariosEnabled ? ` Se encendieron los escenarios en ${result.scenariosEnabled} ${result.scenariosEnabled === 1 ? "chat" : "chats"}.` : ""}{result.skipped.missingData > 0 ? ` ${result.skipped.missingData} se omitieron por falta de datos (${result.warning}).` : ""}</p>}
       <button type="button" className="primary-action" disabled={sending || !columnId || !current?.data?.eligible || issues.length > 0} onClick={() => setConfirm(true)}>{sending ? "Enviando…" : "Enviar plantilla"}</button>
       <small className="template-campaign-hint">Meta cobra cada plantilla de marketing enviada y limita cuántas puedes mandar por día según la calidad de tu número. Envía solo a quien te dio permiso de contactarlo.</small>
     </div>
