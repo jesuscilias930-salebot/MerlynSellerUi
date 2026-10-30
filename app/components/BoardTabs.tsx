@@ -54,7 +54,7 @@ export function BoardTabs({ boards, activeBoardId, canEdit, onSelect, onChanged 
         <button type="button" disabled={busy} onClick={() => setEditing(null)}>Cancelar</button>
         <button type="submit" className="primary-action" disabled={busy || !editing.draft.name.trim()}>{busy ? "Guardando…" : editing.id ? "Guardar" : "Crear dashboard"}</button>
       </div>
-      {!editing.id && <small>Se crea con las mismas columnas del dashboard principal. Para que los chats lleguen solos, crea reglas en WhatsApp → Mover a columna por mensaje y lada.</small>}
+      {!editing.id && <small>Se crea solo con la columna «Primer contacto»; agrega las demás con «Agregar columna». Para que los chats lleguen solos, crea reglas en WhatsApp → Mover a columna por mensaje y lada.</small>}
       {error && <p role="alert">{error}</p>}
     </form>}
     {!editing && error && <p className="board-error" role="alert">{error}</p>}
