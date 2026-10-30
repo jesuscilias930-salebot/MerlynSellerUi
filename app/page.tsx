@@ -108,6 +108,8 @@ export default function Home() {
   const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null);
   const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null);
   const [inboxFilter, setInboxFilter] = useState<ConversationFilter>("all");
+  // Inbox: dashboard elegido ("" = todos); se combina con Todos / No leídos / Pendientes.
+  const [inboxBoardId, setInboxBoardId] = useState("");
   const [dashboardFilter, setDashboardFilter] = useState<ConversationFilter>("all");
   const soundContext = useRef<AudioContext | null>(null);
   const [sectionLoading, setSectionLoading] = useState(false);
@@ -252,7 +254,14 @@ export default function Home() {
     if (filter.startsWith("channel:")) return (item.channel || "whatsapp") === filter.slice("channel:".length);
     return true;
   };
-  const filteredChats = chats.filter((item) => matchesFilter(item, inboxFilter));
+  const boardOfColumn = new Map(boards.flatMap((board) => board.columns.map((column) => [column.id, board.id] as const)));
+  const inboxBoard = boards.some((board) => board.id === inboxBoardId) ? inboxBoardId : "";
+  const filteredChats = chats.filter((item) => matchesFilter(item, inboxFilter) && (!inboxBoard || boardOfColumn.get(item.leadColumnId || "") === inboxBoard));
+  const inboxBoardUnread: Record<string, number> = {};
+  for (const item of chats) {
+    const owner = boardOfColumn.get(item.leadColumnId || "");
+    if (owner && item.unreadCount > 0) inboxBoardUnread[owner] = (inboxBoardUnread[owner] || 0) + 1;
+  }
   const filteredPipeline = pipeline.map((column) => ({
     ...column,
     leads: column.leads.filter((lead) => matchesFilter(lead, dashboardFilter)),
@@ -1100,6 +1109,10 @@ export default function Home() {
         <Inbox
           chats={filteredChats}
           columns={allColumns}
+          boards={boards}
+          boardId={inboxBoard}
+          boardUnread={inboxBoardUnread}
+          onBoardChange={setInboxBoardId}
           filter={inboxFilter}
           chat={chat}
           messages={messages}

@@ -10,6 +10,7 @@ import type {
   CtaUrlMessage,
   DocumentOption,
   EntrepreneurPackage,
+  LeadBoardSummary,
   LeadColumn,
   Message,
   QuickReply,
@@ -22,6 +23,11 @@ import { OPEN_CHAT_EVENT } from "../lib/reminders";
 type Props = {
   chats: Chat[];
   columns: LeadColumn[];
+  /** Multi dashboard: filtro por dashboard (vacío = todos) y chats sin leer de cada uno. */
+  boards?: Pick<LeadBoardSummary, "id" | "name">[];
+  boardId?: string;
+  boardUnread?: Record<string, number>;
+  onBoardChange?: (boardId: string) => void;
   filter: ConversationFilter;
   chat: Chat | null;
   messages: Message[];
@@ -71,6 +77,10 @@ type Props = {
 export function Inbox({
   chats,
   columns,
+  boards = [],
+  boardId = "",
+  boardUnread = {},
+  onBoardChange,
   filter,
   chat,
   messages,
@@ -150,21 +160,32 @@ export function Inbox({
             ref={filterToggle}
             className="inbox-icon-button mobile-inbox-filter-toggle"
             type="button"
-            aria-label={filter !== "all" || search ? "Filtros de conversaciones (activos)" : "Filtros de conversaciones"}
+            aria-label={filter !== "all" || search || boardId ? "Filtros de conversaciones (activos)" : "Filtros de conversaciones"}
             aria-expanded={filtersOpen}
             aria-controls={filtersId}
             onClick={() => setFiltersOpen(open => !open)}
           >
             <ChatIcon name="filter" />
-            {(filter !== "all" || search) && <span className="inbox-filter-active-dot" />}
+            {(filter !== "all" || search || boardId) && <span className="inbox-filter-active-dot" />}
           </button>
           </div>
         </header>
         <div className="inbox-search"><ChatIcon name="search" /><input aria-label="Buscar conversación" placeholder="Buscar nombre o teléfono" value={search} onChange={event => setSearch(event.target.value)} />{search && <button type="button" aria-label="Limpiar búsqueda" onClick={() => setSearch("")}><ChatIcon name="close" /></button>}</div>
+        {boards.length > 1 && onBoardChange && <div className="inbox-board-filters" role="tablist" aria-label="Dashboards">
+          {[{ id: "", name: "Todos los dashboards" }, ...boards].map(board => <button key={board.id || "all"} type="button" role="tab" aria-selected={boardId === board.id} onClick={() => onBoardChange(board.id)}>
+            {board.name}{board.id && boardUnread[board.id] ? <b aria-label={`${boardUnread[board.id]} sin leer`}>{boardUnread[board.id] > 99 ? "99+" : boardUnread[board.id]}</b> : null}
+          </button>)}
+        </div>}
         <div className="inbox-quick-filters" aria-label="Filtros rápidos">
           {([['all', 'Todos'], ['unread', 'No leídos'], ['needs-response', 'Pendientes']] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => onFilterChange(value)}>{label}</button>)}
         </div>
         <div id={filtersId} className="inbox-filter-menu" data-open={filtersOpen} onKeyDown={event => { if (event.key === "Escape") { setFiltersOpen(false); filterToggle.current?.focus(); } }}>
+        {boards.length > 1 && onBoardChange && <div className="inbox-filter inbox-board-select">
+          <select value={boardId} onChange={event => onBoardChange(event.target.value)} aria-label="Dashboard">
+            <option value="">Todos los dashboards</option>
+            {boards.map(board => <option key={board.id} value={board.id}>Dashboard: {board.name}</option>)}
+          </select>
+        </div>}
         <div className="inbox-filter">
           <select
             value={filter}
@@ -187,7 +208,7 @@ export function Inbox({
           </select>
         </div>
         <div className="mobile-inbox-filter-actions">
-          <button type="button" disabled={filter === "all" && !search} onClick={() => { setSearch(""); onFilterChange("all"); }}>Limpiar filtros</button>
+          <button type="button" disabled={filter === "all" && !search && !boardId} onClick={() => { setSearch(""); onFilterChange("all"); onBoardChange?.(""); }}>Limpiar filtros</button>
           <button type="button" onClick={() => setFiltersOpen(false)}>Ver conversaciones</button>
         </div>
         </div>
