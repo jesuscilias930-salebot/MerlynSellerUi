@@ -50,7 +50,7 @@ export function RemarketingMovesPanel({ columns }: { columns: Pick<LeadColumn, "
     </select>;
   };
   return <div className="remarketing-moves">
-    <p className="remarketing-moves-intro">Para cada plantilla o mensaje guardado elige <b>en qué columna del tablero aparece</b> (para enviarlo desde ahí con el botón 📣) y a qué columna se mueve el lead. <b>Al enviar</b>: cuando el mensaje sale (no mueve a los leads fijados 📌). <b>Si responde</b>: con su primera respuesta a ese envío se mueve siempre —aunque esté fijado o en otro dashboard— y queda fijado ahí. Sin columna en «Si responde», se usa R-HOT como hasta ahora.</p>
+    <p className="remarketing-moves-intro">Para cada plantilla o mensaje guardado elige <b>en qué columna del tablero aparece</b> (para enviarlo desde ahí con el botón 📣) y a qué columna se mueve el lead. <b>Al enviar</b>: cuando el mensaje sale, aunque el lead esté fijado 📌 (se le quita el fijado). <b>Si responde</b>: con su primera respuesta a ese envío se mueve siempre —aunque esté fijado o en otro dashboard— y queda fijado ahí. Sin columna en «Si responde», se usa R-HOT como hasta ahora.</p>
     {error && <p className="template-campaign-error" role="alert">{error}</p>}
     {items === null ? <p>Cargando…</p> : items.length === 0 ? <div className="column-rules-empty"><b>No hay plantillas aprobadas ni mensajes guardados.</b><span>Sincroniza tus plantillas en Plantillas oficiales o guarda un mensaje en Mensaje libre.</span></div> :
       <div className="remarketing-moves-table" role="table">
