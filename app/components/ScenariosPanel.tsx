@@ -1,5 +1,6 @@
 "use client";
 
+import { CHANNEL_LABELS } from "../lib/channels";
 import {
   ChangeEvent,
   type CSSProperties,
@@ -1479,6 +1480,7 @@ function FlowBuilder({
                     <small>{index === 0 ? "Inicio · " : ""}{labels[step.type]}</small>
                     <strong>{step.label}</strong>
                     <em>{summary}</em>
+                    {step.channels?.length ? <span className="wf-node-channels" title="Solo en estos canales">{step.channels.map((channel) => CHANNEL_LABELS[channel]).join(" · ")}</span> : null}
                   </div>
                 </div>
                 {(issue || unreachable) && (
@@ -1611,6 +1613,26 @@ function FlowBuilder({
                   }
                 />
               </label>
+              <fieldset className="scenario-step-channels">
+                <legend>Canales donde se ejecuta este paso</legend>
+                {(["whatsapp", "messenger", "instagram"] as const).map((channel) => {
+                  const current = selectedStep.channels?.length ? selectedStep.channels : (["whatsapp", "messenger", "instagram"] as const);
+                  const checked = current.includes(channel);
+                  return <label key={channel} className={checked ? "selected" : ""}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={checked && current.length === 1}
+                      onChange={(event) => {
+                        const next = event.target.checked ? [...current, channel] : current.filter((item) => item !== channel);
+                        updateStep(selectedStep.id, { channels: next.length === 3 ? undefined : [...next] });
+                      }}
+                    />
+                    {CHANNEL_LABELS[channel]}
+                  </label>;
+                })}
+                <small>En los canales sin marcar el paso se salta y el flujo sigue al siguiente. Instagram no acepta PDF: para Instagram usa «Enviar imágenes» con un conjunto de fotos.</small>
+              </fieldset>
               <label>
                 Tipo de paso
                 <select

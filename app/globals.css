@@ -9311,3 +9311,11 @@ a.ad-referral:hover { background: #00000014; }
 .column-remarketing-audience { margin: 0; color: var(--ink); font-size: 13px; }
 .column-remarketing-check { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
 .column-remarketing-check input { accent-color: var(--green, #0f8a5f); }
+/* Escenarios: canales por paso */
+.scenario-step-channels { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.scenario-step-channels legend { padding: 0 4px; color: var(--deep, var(--ink)); font-size: 12px; font-weight: 800; }
+.scenario-step-channels > label { display: inline-flex !important; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--app-border-strong, #d0d5dd); border-radius: 999px; background: #fff; color: #344054 !important; font-size: 13px; font-weight: 700; cursor: pointer; }
+.scenario-step-channels > label.selected { border-color: var(--green); background: #eefaf4; color: #006b57 !important; }
+.scenario-step-channels > label input { width: auto !important; margin: 0; accent-color: var(--green, #0f8a5f); }
+.scenario-step-channels small { flex-basis: 100%; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.wf-node-channels { display: inline-block; margin-top: 3px; padding: 1px 7px; border-radius: 999px; background: #e0f2fe; color: #075985; font-size: 10px; font-style: normal; font-weight: 800; }
