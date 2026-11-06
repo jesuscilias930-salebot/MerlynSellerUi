@@ -9187,10 +9187,13 @@ a.ad-referral:hover { background: #00000014; }
 .lead-pinned { display: block; margin-top: 4px; color: #93370d; font-size: 11px; font-style: normal; font-weight: 700; }
 @media (max-width: 640px) { .column-rule-row { grid-template-columns: 1fr; } }
 /* Canal del chat en el inbox: Messenger / Instagram */
-.inbox-shell b:has(> .channel-dot), b:has(> .channel-dot) { position: relative; }
-.channel-dot { position: absolute; right: -2px; bottom: -2px; width: 15px; height: 15px; border: 2px solid #fff; border-radius: 50%; }
-.channel-dot.messenger { background: radial-gradient(circle at 30% 110%, #0099ff 0%, #a033ff 60%, #ff5280 100%); }
-.channel-dot.instagram { background: radial-gradient(circle at 30% 110%, #fdf497 0%, #fd5949 45%, #d6249f 60%, #285aeb 90%); }
+/* Insignia chiquita del canal (WhatsApp / Messenger / Instagram) sobre el avatar */
+.has-channel-badge { position: relative; overflow: visible !important; }
+.channel-badge { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 16px; height: 16px; box-sizing: border-box; border: 2px solid var(--app-surface, #fff); border-radius: 50%; color: #fff; font-style: normal; line-height: 0; pointer-events: auto; }
+.channel-badge svg { width: 9px; height: 9px; }
+.channel-badge.whatsapp { background: #25d366; }
+.channel-badge.messenger { background: #0084ff; }
+.channel-badge.instagram { background: #e1306c; }
 /* Remarketing con plantilla oficial */
 .remarketing-tabs { display: grid; gap: 14px; align-content: start; }
 .remarketing-tabs > nav { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 2px; }

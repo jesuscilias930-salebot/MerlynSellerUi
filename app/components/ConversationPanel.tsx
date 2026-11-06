@@ -1,5 +1,6 @@
 "use client";
 
+import { ChannelBadge } from "./ChannelBadge";
 import { ChangeEvent, FormEvent, Fragment, type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { VIDEO_ACCEPT } from "../lib/video-upload";
@@ -151,7 +152,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
     <section className="panel compact-chat-panel">
       <header className="chat-header">
         {(onMobileBack || onClose) && <button className="mobile-chat-control" type="button" aria-label="Volver a conversaciones" onClick={onMobileBack || onClose}><ChatIcon name="back" /></button>}
-        <b className="avatar">{chat ? initials(contactName(chat)) : "M"}</b>
+        <b className="avatar has-channel-badge">{chat ? initials(contactName(chat)) : "M"}{chat && <ChannelBadge contact={chat} />}</b>
         <div className="chat-title"><h2>{chat ? contactName(chat) : "Merlyn Seller"}</h2><small>{chat ? contactDetail(chat) : "Tu espacio de atención al cliente"}</small></div>
         {chat && <div className="inbox-chat-header-actions">
           <div className="inbox-options-anchor" ref={inventoryRef}>

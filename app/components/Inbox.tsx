@@ -1,6 +1,7 @@
+import { ChannelBadge } from "./ChannelBadge";
 import { ChangeEvent, FormEvent, useEffect, useId, useRef, useState } from "react";
 import { initials } from "../lib/format";
-import { channelOf, contactName } from "../lib/channels";
+import { contactName } from "../lib/channels";
 import { filterInboxContacts, inboxTimestamp } from "../lib/inbox-presentation";
 import { ChatIcon } from "./ChatIcon";
 import type {
@@ -240,7 +241,7 @@ export function Inbox({
               className={`${!internalOpen && item.id === chat?.id ? "row active" : "row"}${item.unreadCount > 0 ? " has-unread" : ""}`}
               key={item.id}
             >
-              <b>{initials(contactName(item))}{channelOf(item) !== "whatsapp" && <i className={`channel-dot ${channelOf(item)}`} aria-label={channelOf(item) === "instagram" ? "Instagram" : "Messenger"} />}</b>
+              <b className="has-channel-badge">{initials(contactName(item))}<ChannelBadge contact={item} /></b>
               <span className="inbox-contact-copy"><strong>{contactName(item)}</strong><small>{item.lastDirection === "outbound" && <span aria-label="Tu último mensaje">Tú: </span>}{item.last_message || "Sin mensajes aún"}</small></span>
               <span className="inbox-row-meta"><time dateTime={item.lastMessageAt || item.updated_at}>{inboxTimestamp(item.lastMessageAt || item.updated_at)}</time>
               {item.unreadCount > 0 && (
