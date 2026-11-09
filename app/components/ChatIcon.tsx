@@ -1,4 +1,4 @@
-type Name = "inventory" | "search" | "new" | "filter" | "tools" | "more" | "back" | "close" | "attach" | "send" | "audio" | "chat";
+type Name = "inventory" | "search" | "new" | "filter" | "tools" | "more" | "back" | "close" | "attach" | "send" | "audio" | "chat" | "quote";
 const paths: Record<Name, React.ReactNode> = {
   inventory: <><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z" /><path d="m3 7.5 9 4.5 9-4.5M12 12v9" /></>,
   search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></>,
@@ -11,6 +11,7 @@ const paths: Record<Name, React.ReactNode> = {
   attach: <path d="m9 7 6-5a4 4 0 0 1 6 6L10 19a6 6 0 0 1-8-8L13 1M6 13l9-9a2 2 0 0 1 3 3l-9 9" />,
   send: <><path d="m3 3 18 9-18 9 3-9-3-9ZM6 12h15" /></>,
   audio: <><path d="M9 18V5l10-2v13M9 7l10-2" /><ellipse cx="6" cy="18" rx="3" ry="2" /><ellipse cx="16" cy="16" rx="3" ry="2" /></>,
+  quote: <><path d="M3 6h11v10H3zM14 9h4l3 3v4h-7" /><circle cx="7" cy="17.5" r="1.8" /><circle cx="17" cy="17.5" r="1.8" /></>,
   chat: <><path d="M21 11.5a8.5 8.5 0 0 1-13 7.3L3 21l2-5a8.5 8.5 0 1 1 16-4.5Z" /><path d="M8 10h8M8 14h5" /></>,
 };
 export function ChatIcon({ name }: { name: Name }) {

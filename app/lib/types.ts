@@ -19,6 +19,9 @@ export type Chat = {
   needsResponse?: boolean;
   autoReplyEnabled?: boolean;
   scenarioEnabled?: boolean;
+  /** Paquete (bundle de Control) con el que abre el cotizador del chat; lo fija el escenario o la persona. */
+  quoteBundleId?: string | null;
+  quoteBundleName?: string | null;
 };
 
 export type AutomationIntent = { id: string; key: string; name: string; responseBody: string | null; action: "text" | "send_catalog" | "send_shipping_info"; examples: string[]; isActive: boolean; priority: number };
@@ -115,4 +118,6 @@ export type ScenarioMedia = { mediaId: string; filename?: string; caption?: stri
 export type ScenarioBudgetOption = { id: string; label: string; min?: number; max?: number; examples?: string[]; packageIds: string[]; items?: ScenarioMedia[]; recommendationBody: string };
 export type ScenarioOption = InteractiveOption & { nextStepId?: string };
 export type ScenarioStep = { id: string; type: "send_text" | "send_catalog" | "send_media" | "wait_reply" | "send_options" | "budget_recommendation" | "move_column" | "end"; label: string; channels?: ("whatsapp" | "messenger" | "instagram")[]; body?: string; header?: string; footer?: string; format?: InteractiveOptionsFormat; buttonText?: string; sectionTitle?: string; options?: ScenarioOption[]; caption?: string; fallbackBody?: string; resendCatalog?: boolean; items?: ScenarioMedia[]; packageIds?: string[]; branches?: ScenarioBranch[]; budgetOptions?: ScenarioBudgetOption[]; fallbackStepId?: string; nextStepId?: string; columnId?: string };
-export type AutomationScenario = { id: string; key: string; name: string; isActive: boolean; triggerExamples: string[]; aiDescription?: string | null; priority: number; canInterrupt: boolean; position: number; steps: ScenarioStep[]; updatedAt: string };
+export type AutomationScenario = { id: string; key: string; name: string; isActive: boolean; triggerExamples: string[]; aiDescription?: string | null; priority: number; canInterrupt: boolean; position: number; steps: ScenarioStep[]; updatedAt: string; quoteBundle?: QuoteBundleRef | null };
+/** Bundle de Control elegido para cotizar (se guarda su nombre para mostrarlo sin consultar Control). */
+export type QuoteBundleRef = { id: string; name: string };

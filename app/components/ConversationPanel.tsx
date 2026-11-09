@@ -23,6 +23,10 @@ import optionStyles from "./InteractiveOptions.module.css";
 import { ToolAccordion } from "./ToolAccordion";
 import { WhatsAppTemplateCard } from "./WhatsAppTemplateCard";
 import {ChatShippingModal} from "./ChatShippingModal";
+import { QuoteDrawer } from "./QuoteDrawer";
+import { QuoteBundlePicker } from "./QuoteBundlePicker";
+import { chatQuoteBundle } from "../lib/quote";
+import type { QuoteBundleRef } from "../lib/types";
 
 export type PendingChatImage = { id: string; file: File; previewUrl: string };
 type ToolTab = "share" | "sale";
@@ -34,7 +38,7 @@ type Props = {
   onDocumentChange: (mediaId: string) => void; onDocumentCaptionChange: (caption: string) => void; onSendDocument: () => void; onSendCtaUrl: (data: CtaUrlMessage) => Promise<void>;
   onSendEntrepreneurPackages: (selection: { packageIds?: string[]; imageIds?: string[] }) => Promise<void>; onSendSticker: (id: string) => Promise<void>; onRecordAudio: (audio: Blob, filename: string) => Promise<void>;
   onAutoReplyChange: (enabled: boolean) => void; onScenarioChange: (enabled: boolean) => void; automationIntents: AutomationIntent[]; onLearnIntent: (messageId: string, intentId: string) => Promise<void>; onReact: (messageId: string, emoji: string) => Promise<void>; onDeleteMessage: (messageId: string, scope: "for_me" | "for_everyone") => Promise<void>;
-  columns: LeadColumn[]; onMoveLead: (columnId: string) => Promise<void>; onOpenShipping: () => void; onDeleteConversation: () => void; onClose?: () => void; onMobileBack?: () => void; inboxLayout?: boolean;
+  columns: LeadColumn[]; onMoveLead: (columnId: string) => Promise<void>; onOpenShipping: () => void; onDeleteConversation: () => void; onQuoteBundleChange?: (bundle: QuoteBundleRef | null) => Promise<void>; onClose?: () => void; onMobileBack?: () => void; inboxLayout?: boolean;
 };
 const reactionEmojis = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 const composerEmojis = ["😀", "😊", "😍", "😂", "😉", "👍", "❤️", "🔥", "✨", "🙏", "🎉", "📦"];
@@ -50,6 +54,7 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
   const [mobile, setMobile] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
   const inventoryRef = useRef<HTMLDivElement>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const optionsRef = useRef<HTMLDivElement>(null);
@@ -69,7 +74,7 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
   const bundles = useMemo(() => entrepreneurPackages.filter((item) => item.controlBundleId != null), [entrepreneurPackages]);
   const images = useMemo(() => entrepreneurPackages.filter((item) => item.controlBundleId == null), [entrepreneurPackages]);
   useEffect(() => { if (!chat?.id || !messages.length || lastChatId.current === chat.id) return; const frame = requestAnimationFrame(() => { threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight }); lastChatId.current = chat.id; }); return () => cancelAnimationFrame(frame); }, [chat?.id, messages.length]);
-  useEffect(() => { let active = true; queueMicrotask(() => { if (!active) return; setSelectedSavedImageIds([]); setChatMenuOpen(false); setOptionsOpen(false); setInventoryOpen(false); setToolsOpen(false); setMenuId(null); setShippingOpen(false); setSaleModalOpen(false); setBundlePickerOpen(false); }); return () => { active = false; }; }, [chat?.id]);
+  useEffect(() => { let active = true; queueMicrotask(() => { if (!active) return; setSelectedSavedImageIds([]); setChatMenuOpen(false); setOptionsOpen(false); setInventoryOpen(false); setToolsOpen(false); setMenuId(null); setShippingOpen(false); setSaleModalOpen(false); setBundlePickerOpen(false); setQuoteOpen(false); }); return () => { active = false; }; }, [chat?.id]);
   useEffect(() => { let active = true; queueMicrotask(() => { if (active && (shippingOpen || saleModalOpen || bundlePickerOpen)) setToolsOpen(false); }); return () => { active = false; }; }, [shippingOpen, saleModalOpen, bundlePickerOpen]);
   useEffect(() => {
     if (!inventoryOpen || mobile) return;
@@ -153,7 +158,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
       <header className="chat-header">
         {(onMobileBack || onClose) && <button className="mobile-chat-control" type="button" aria-label="Volver a conversaciones" onClick={onMobileBack || onClose}><ChatIcon name="back" /></button>}
         <b className="avatar has-channel-badge">{chat ? initials(contactName(chat)) : "M"}{chat && <ChannelBadge contact={chat} />}</b>
-        <div className="chat-title"><h2>{chat ? contactName(chat) : "Merlyn Seller"}</h2><small>{chat ? contactDetail(chat) : "Tu espacio de atención al cliente"}</small></div>
+        <div className="chat-title"><h2><span className="chat-title-name">{chat ? contactName(chat) : "Merlyn Seller"}</span>{chat && props.onQuoteBundleChange && <QuoteBundlePicker key={chat.id} value={chatQuoteBundle(chat)} onChange={props.onQuoteBundleChange} />}</h2><small>{chat ? contactDetail(chat) : "Tu espacio de atención al cliente"}</small></div>
         {chat && <div className="inbox-chat-header-actions">
           <div className="inbox-options-anchor" ref={inventoryRef}>
             <button className="inbox-icon-button inbox-inventory-trigger" type="button" title="Buscar disponibilidad en inventario" aria-label="Buscar disponibilidad en inventario" aria-expanded={inventoryOpen} onClick={() => setInventoryOpen(value => !value)}><ChatIcon name="inventory" /><span>Inventario</span></button>
@@ -162,7 +167,8 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
               <InventoryQuickSearch onInsert={text => { onDraftChange(draft.trim() ? `${draft.trimEnd()}\n${text}` : text); setInventoryOpen(false); }} />
             </div>}
           </div>
-          {!onClose && <button className="inbox-icon-button inbox-tools-trigger" type="button" ref={toolsToggle} title="Herramientas del chat" aria-label="Herramientas del chat" aria-expanded={mobile ? toolsOpen : !toolsCollapsed} aria-controls={toolsId} onClick={() => { if (mobile) setToolsOpen(value => !value); else setToolsCollapsed(value => !value); }}><ChatIcon name="tools" /><span>Herramientas</span></button>}
+          <button className="inbox-icon-button inbox-quote-trigger" type="button" title="Cotizar envío" aria-label="Cotizar envío" aria-expanded={quoteOpen} onClick={() => { setInventoryOpen(false); setToolsOpen(false); if (!quoteOpen) setToolsCollapsed(true); setQuoteOpen(value => !value); }}><ChatIcon name="quote" /><span>Cotizar</span></button>
+          {!onClose && <button className="inbox-icon-button inbox-tools-trigger" type="button" ref={toolsToggle} title="Herramientas del chat" aria-label="Herramientas del chat" aria-expanded={mobile ? toolsOpen : !toolsCollapsed} aria-controls={toolsId} onClick={() => { setQuoteOpen(false); if (mobile) setToolsOpen(value => !value); else setToolsCollapsed(value => !value); }}><ChatIcon name="tools" /><span>Herramientas</span></button>}
           <div className="inbox-options-anchor" ref={optionsRef}>
             <button className="inbox-icon-button" type="button" ref={optionsToggle} title="Opciones de conversación" aria-label="Opciones de conversación" aria-expanded={optionsOpen} aria-controls={optionsId} onClick={() => setOptionsOpen(value => !value)}><ChatIcon name="more" /></button>
             {optionsOpen && !mobile && <div id={optionsId} className="inbox-options-popover" onKeyDown={event => { if (event.key === "Escape") { setOptionsOpen(false); optionsToggle.current?.focus(); } }}>{conversationOptions}</div>}
@@ -230,6 +236,14 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
     {mobile && optionsOpen && <MobileChatSheet title="Opciones de conversación" onClose={() => setOptionsOpen(false)}>{conversationOptions}</MobileChatSheet>}
     {mobile && toolsOpen && <MobileChatSheet title="Compartir y vender" onClose={() => setToolsOpen(false)}>{attachTools}<label className="mobile-audio-file">Adjuntar audio<input type="file" accept="audio/*" onChange={onUploadAudio} disabled={!chat || uploadingAudio} /></label>{tools}</MobileChatSheet>}
     {shippingOpen && chat && <ChatShippingModal key={chat.id} chat={chat} onClose={() => setShippingOpen(false)} />}
+    {quoteOpen && chat && !mobile && <>
+      <button className="quote-drawer-scrim" type="button" aria-label="Cerrar cotizador" onClick={() => setQuoteOpen(false)} />
+      <aside className="quote-drawer" aria-label="Cotizador de envío" onKeyDown={event => { if (event.key === "Escape") setQuoteOpen(false); }}>
+        <header><div><p>COTIZADOR</p><h2>Cotizar envío</h2><span>{contactName(chat)}</span></div><button type="button" aria-label="Cerrar cotizador" onClick={() => setQuoteOpen(false)}><ChatIcon name="close" /></button></header>
+        <QuoteDrawer key={chat.id} chat={chat} onQuoteBundleChange={props.onQuoteBundleChange} onInsert={text => onDraftChange(draft.trim() ? `${draft.trimEnd()}\n${text}` : text)} />
+      </aside>
+    </>}
+    {quoteOpen && chat && mobile && <MobileChatSheet title="Cotizar envío" onClose={() => setQuoteOpen(false)}><QuoteDrawer key={chat.id} chat={chat} onQuoteBundleChange={props.onQuoteBundleChange} onInsert={text => { onDraftChange(draft.trim() ? `${draft.trimEnd()}\n${text}` : text); setQuoteOpen(false); }} /></MobileChatSheet>}
     {saleModalOpen && chat && <ChatSaleModal chat={chat} onClose={() => setSaleModalOpen(false)} onSaved={async () => undefined} />}
   </>;
 }

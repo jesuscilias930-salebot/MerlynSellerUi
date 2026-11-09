@@ -251,3 +251,75 @@
 .inbox-board-filters b { min-width: 16px; padding: 0 5px; border-radius: 999px; background: #25d366; color: #fff; font-size: 10px; line-height: 16px; text-align: center; }
 .inbox-list .inbox-board-select { margin-bottom: 8px; }
 @media (max-width: 760px) { .inbox-board-filters { display: none; } }
+
+/* Cotizador del chat y paquete junto al nombre */
+.chat-title h2 { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.chat-title-name { flex: 0 1 auto; min-width: 8ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quote-bundle { position: relative; display: inline-flex; flex: 0 100 auto; min-width: 0; align-items: baseline; gap: 4px; color: #087f5b; font-size: 12px; font-weight: 500; }
+.quote-bundle-name { flex: 0 1 auto; min-width: 0; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quote-bundle-change { flex-shrink: 0; padding: 0 2px; border: 0; background: none; color: #54656f; font-size: 11px; font-weight: 400; text-decoration: underline; cursor: pointer; }
+.quote-bundle-change:hover, .quote-bundle-change[aria-expanded="true"] { color: #087f5b; }
+.quote-bundle-popover { position: fixed; z-index: 90; display: grid; gap: 8px; width: 260px; max-height: 340px; overflow: auto; padding: 12px; border: 1px solid #e3e9e5; border-radius: 10px; background: #fff; box-shadow: 0 12px 30px #1f3a2c26; color: #1f2c25; font-weight: 400; }
+.quote-bundle-title { font-size: 12px; color: #54656f; font-weight: 600; }
+.quote-bundle-options { display: grid; gap: 4px; }
+.quote-bundle-options button, .quote-bundle-clear { padding: 8px 10px; border: 1px solid #e3e9e5; border-radius: 8px; background: #fff; color: #1f2c25; font-size: 13px; text-align: left; cursor: pointer; }
+.quote-bundle-options button:hover { background: #f0f7f3; }
+.quote-bundle-options button.selected { border-color: #087f5b; background: #e7f5ee; color: #075e45; font-weight: 600; }
+.quote-bundle-clear { color: #b42318; text-align: center; }
+.inbox-quote-bundle { color: #087f5b; font-size: .85em; font-weight: 500; }
+.inbox-quote-trigger { width: auto; border-radius: 8px; padding: 0 10px; font-size: 12px; }
+@media (max-width: 1100px) { .inbox-quote-trigger span { display: none; } .inbox-quote-trigger { width: 40px; padding: 0; } }
+@media (max-width: 760px) { .inbox-shell .inbox-quote-trigger { width: 36px; } .quote-bundle-name { max-width: 90px; } }
+
+.quote-drawer-scrim { position: fixed; z-index: 80; inset: 0; border: 0; background: #203b2c33; cursor: default; }
+.quote-drawer { position: fixed; z-index: 85; inset: 0 0 0 auto; display: flex; flex-direction: column; width: min(400px, calc(100vw - 60px)); border-left: 1px solid #e3e9e5; background: #fff; box-shadow: -14px 0 36px #254b3526; color: #1f2c25; }
+.quote-drawer > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-height: 72px; padding: 16px; background: #f8faf9; border-bottom: 1px solid #e9eeeb; }
+.quote-drawer > header p { margin: 0 0 5px; color: #008069; font-size: 9px; font-weight: 700; letter-spacing: .08em; }
+.quote-drawer > header h2 { margin: 0; font-size: 17px; font-weight: 600; }
+.quote-drawer > header span { display: block; margin-top: 2px; color: #667781; font-size: 12px; }
+.quote-drawer > header button { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 0; border-radius: 50%; background: transparent; color: #54656f; cursor: pointer; }
+.quote-drawer > header button:hover { background: #e5eae8; }
+.quote-drawer > header svg { width: 18px; height: 18px; }
+.quote-drawer-body { display: flex; flex: 1; flex-direction: column; gap: 14px; min-height: 0; overflow: auto; padding: 14px 16px 0; }
+.quote-loading { margin: 24px 0; color: #667781; text-align: center; font-size: 13px; }
+.quote-notice { margin: 0; padding: 9px 11px; border-radius: 8px; background: #fff7e6; color: #7a4b00; font-size: 12px; }
+.quote-notice button { padding: 0; border: 0; background: none; color: inherit; text-decoration: underline; cursor: pointer; }
+.quote-product-card { display: grid; gap: 10px; padding: 12px; border: 1px solid #d8eadf; border-radius: 10px; background: #f0f7f3; }
+.quote-product-card small { display: block; color: #008069; font-size: 9px; font-weight: 700; letter-spacing: .08em; }
+.quote-product-card b { display: block; margin: 3px 0 2px; font-size: 15px; }
+.quote-product-card span { color: #54656f; font-size: 12px; }
+.quote-product-card button, .quote-link-button { justify-self: start; padding: 7px 11px; border: 1px solid #087f5b; border-radius: 8px; background: #fff; color: #087f5b; font-size: 12px; font-weight: 600; cursor: pointer; }
+.quote-product-card button:hover, .quote-link-button:hover { background: #e7f5ee; }
+.quote-section { display: grid; gap: 10px; }
+.quote-section-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.quote-section-title b { font-size: 14px; }
+.quote-section-title select { max-width: 55%; height: 30px; font-size: 12px; }
+.quote-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.quote-drawer-body label { display: grid; gap: 4px; min-width: 0; color: #54656f; font-size: 12px; }
+.quote-drawer-body label > span { color: #8696a0; font-size: 11px; }
+.quote-drawer-body input, .quote-drawer-body select { width: 100%; min-width: 0; height: 36px; padding: 0 10px; border: 1px solid #d5ddd8; border-radius: 8px; background: #fff; color: #1f2c25; font-size: 14px; }
+.quote-drawer-body input:focus, .quote-drawer-body select:focus { outline: 2px solid #087f5b33; border-color: #087f5b; }
+.quote-drawer-body input[readonly] { background: #f5f7f6; }
+.quote-field-wide, .quote-grid .envia-field-wide { grid-column: 1 / -1; }
+.quote-grid .envia-field-wide { color: #8696a0; font-size: 11px; }
+.quote-origin { margin: 0; color: #667781; font-size: 12px; }
+.quote-origin b { color: #1f2c25; font-weight: 600; }
+.quote-actions { position: sticky; bottom: 0; display: grid; gap: 6px; margin-top: auto; padding: 12px 0 16px; background: #fff; box-shadow: 0 -10px 12px -10px #1f3a2c1f; }
+.quote-actions small { color: #b42318; font-size: 11px; text-align: center; }
+.quote-primary { height: 42px; border: 0; border-radius: 8px; background: #087f5b; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+.quote-primary:hover { background: #066b4d; }
+.quote-primary:disabled { background: #9db8ab; cursor: not-allowed; }
+.quote-step-header { display: flex; align-items: center; gap: 10px; }
+.quote-step-header b { display: block; font-size: 15px; }
+.quote-step-header small { display: block; color: #667781; font-size: 12px; }
+.quote-back { display: inline-flex; flex: 0 0 34px; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid #d5ddd8; border-radius: 50%; background: #fff; color: #1f2c25; font-size: 17px; cursor: pointer; }
+.quote-back:hover { background: #f0f7f3; border-color: #087f5b; color: #087f5b; }
+.quote-rates { display: grid; gap: 8px; margin: 0 0 16px; padding: 0; list-style: none; }
+.quote-rates li { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 10px; padding: 10px 12px; border: 1px solid #e3e9e5; border-radius: 10px; }
+.quote-rates li:first-child { border-color: #087f5b; background: #f6fbf8; }
+.quote-rates li b { font-size: 13px; }
+.quote-rates li small { display: block; color: #667781; font-size: 12px; }
+.quote-rates li strong { font-size: 15px; color: #075e45; }
+.quote-rates li button { grid-column: 1 / -1; justify-self: start; padding: 0; border: 0; background: none; color: #087f5b; font-size: 12px; font-weight: 600; cursor: pointer; }
+.mobile-chat-sheet .quote-drawer-body { padding: 0; overflow: visible; }
+.scenario-quote-bundle small { display: block; color: #667781; font-size: 12px; font-weight: 400; }

@@ -15,6 +15,7 @@ import type {
   LeadColumn,
   Message,
   QuickReply,
+  QuoteBundleRef,
   SavedSticker,
 } from "../lib/types";
 import { ConversationPanel, type PendingChatImage } from "./ConversationPanel";
@@ -66,6 +67,7 @@ type Props = {
   onSendSticker: (stickerId: string) => Promise<void>;
   onAutoReplyChange: (enabled: boolean) => void;
   onScenarioChange: (enabled: boolean) => void;
+  onQuoteBundleChange?: (bundle: QuoteBundleRef | null) => Promise<void>;
   automationIntents: AutomationIntent[];
   onLearnIntent: (messageId: string, intentId: string) => Promise<void>;
   onReact: (messageId: string, emoji: string) => Promise<void>;
@@ -119,6 +121,7 @@ export function Inbox({
   onSendSticker,
   onAutoReplyChange,
   onScenarioChange,
+  onQuoteBundleChange,
   automationIntents,
   onLearnIntent,
   onReact,
@@ -242,7 +245,7 @@ export function Inbox({
               key={item.id}
             >
               <b className="has-channel-badge">{initials(contactName(item))}<ChannelBadge contact={item} /></b>
-              <span className="inbox-contact-copy"><strong>{contactName(item)}</strong><small>{item.lastDirection === "outbound" && <span aria-label="Tu último mensaje">Tú: </span>}{item.last_message || "Sin mensajes aún"}</small></span>
+              <span className="inbox-contact-copy"><strong>{contactName(item)}{item.quoteBundleName && <span className="inbox-quote-bundle"> ({item.quoteBundleName})</span>}</strong><small>{item.lastDirection === "outbound" && <span aria-label="Tu último mensaje">Tú: </span>}{item.last_message || "Sin mensajes aún"}</small></span>
               <span className="inbox-row-meta"><time dateTime={item.lastMessageAt || item.updated_at}>{inboxTimestamp(item.lastMessageAt || item.updated_at)}</time>
               {item.unreadCount > 0 && (
                 <b
@@ -292,6 +295,7 @@ export function Inbox({
         onSendSticker={onSendSticker}
         onAutoReplyChange={onAutoReplyChange}
         onScenarioChange={onScenarioChange}
+        onQuoteBundleChange={onQuoteBundleChange}
         automationIntents={automationIntents}
         onLearnIntent={onLearnIntent}
         onReact={onReact}

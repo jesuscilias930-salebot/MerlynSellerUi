@@ -17,6 +17,7 @@ import { api } from "../lib/api";
 import ScenarioCodexConnection from "./ScenarioCodexConnection";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { StepTypePicker } from "./StepTypePicker";
+import { ScenarioQuoteBundleField } from "./QuoteBundlePicker";
 import { NewScenarioStart, type NewScenarioChoice } from "./NewScenarioStart";
 import { buildFlowGraph, connectSteps, disconnectStep, hasNext, INPUT_Y, insertStepAfter, NODE_WIDTH, outputY, START_HEIGHT, START_WIDTH, stepPorts, type LinkSource } from "../lib/scenario-graph";
 import { FlowCanvas, type FlowCanvasHandle } from "./FlowCanvas";
@@ -124,6 +125,7 @@ const emptyScenario = (): Draft => {
     aiDescription: "",
     priority: 0,
     canInterrupt: true,
+    quoteBundle: null,
     steps: [message, end],
   };
 };
@@ -171,6 +173,7 @@ function FlowBuilder({
           aiDescription: initial.aiDescription || "",
           priority: initial.priority || 0,
           canInterrupt: initial.canInterrupt !== false,
+          quoteBundle: initial.quoteBundle ?? null,
           steps: initial.steps,
         }
       : initialDraft || emptyScenario(),
@@ -1240,6 +1243,10 @@ function FlowBuilder({
                 />{" "}
                 Puede reemplazar otro escenario activo si coincide claramente
               </label>
+              <ScenarioQuoteBundleField
+                value={value.quoteBundle ?? null}
+                onChange={(quoteBundle) => setValue({ ...value, quoteBundle })}
+              />
             </div>
             <footer>
               {saveError && (

@@ -8,7 +8,7 @@ import { ChangeEvent, DragEvent, FormEvent, useEffect, useEffectEvent, useRef, u
 import { api, request } from "./lib/api";
 import { controlSession, loginControl } from "./lib/control-api";
 import { crmResources, type CrmResource } from "./lib/section-data";
-import type { LeadBoardSummary, AutomationIntent, AutomationScenario, Chat, ConversationFilter, CtaUrlMessage, CtaUrlTemplate, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, QuickReply, RemarketingPreset, SavedSticker, User, WhatsAppTemplate, WhatsAppTemplateMapping } from "./lib/types";
+import type { LeadBoardSummary, AutomationIntent, QuoteBundleRef, AutomationScenario, Chat, ConversationFilter, CtaUrlMessage, CtaUrlTemplate, DocumentOption, DocumentTemplate, EntrepreneurPackage, LeadColumn, Message, QuickReply, RemarketingPreset, SavedSticker, User, WhatsAppTemplate, WhatsAppTemplateMapping } from "./lib/types";
 import { AutomationsPanel } from "./components/AutomationsPanel";
 import { DocumentTemplatesPanel } from "./components/DocumentTemplatesPanel";
 import { ConversationModal } from "./components/ConversationModal";
@@ -236,6 +236,17 @@ export default function Home() {
       if (chat?.id === target.id) setChat({ ...chat, scenarioEnabled: enabled });
       if (modalChat?.id === target.id) setModalChat({ ...modalChat, scenarioEnabled: enabled });
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible actualizar los escenarios."); }
+  };
+  const setQuoteBundle = async (target: Chat | null, bundle: QuoteBundleRef | null) => {
+    if (!target) return;
+    try {
+      const saved = await request<Pick<Chat, "quoteBundleId" | "quoteBundleName">>(`/conversations/${target.id}/quote-bundle`, { method: "PATCH", body: JSON.stringify({ bundle }) });
+      const update = (item: Chat) => item.id === target.id ? { ...item, ...saved } : item;
+      setChats((items) => items.map(update));
+      setPipeline((columns) => columns.map((column) => ({ ...column, leads: column.leads.map(update) })));
+      setChat((current) => current ? update(current) : current);
+      setModalChat((current) => current ? update(current) : current);
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible cambiar el paquete."); throw error; }
   };
   const deleteConversation = async (target: Chat | null) => {
     if (!target || !window.confirm(`¿Borrar la conversación de ${contactName(target)}? Esta acción elimina sus mensajes y el progreso de escenarios para poder hacer pruebas.`)) return;
@@ -1155,6 +1166,7 @@ export default function Home() {
           }
           onAutoReplyChange={(enabled) => setAutoReply(chat, enabled)}
           onScenarioChange={(enabled) => setScenarioEnabled(chat, enabled)}
+          onQuoteBundleChange={(bundle) => setQuoteBundle(chat, bundle)}
           automationIntents={automationIntents}
           onLearnIntent={(messageId, intentId) => learnIntent(chat, messageId, intentId)}
           onReact={(messageId, emoji) => reactToMessage(chat, messageId, emoji)}
@@ -1303,6 +1315,7 @@ export default function Home() {
         }
         onAutoReplyChange={(enabled) => setAutoReply(modalChat, enabled)}
         onScenarioChange={(enabled) => setScenarioEnabled(modalChat, enabled)}
+        onQuoteBundleChange={(bundle) => setQuoteBundle(modalChat, bundle)}
         automationIntents={automationIntents}
         onLearnIntent={(messageId, intentId) => learnIntent(modalChat, messageId, intentId)}
         onReact={(messageId, emoji) => reactToMessage(modalChat, messageId, emoji)}

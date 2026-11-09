@@ -1,6 +1,6 @@
 import { ChangeEvent, FormEvent } from "react";
 import { contactName } from "../lib/channels";
-import type { AutomationIntent, Chat, CtaUrlMessage, DocumentOption, EntrepreneurPackage, LeadColumn, Message, QuickReply, SavedSticker } from "../lib/types";
+import type { AutomationIntent, Chat, QuoteBundleRef, CtaUrlMessage, DocumentOption, EntrepreneurPackage, LeadColumn, Message, QuickReply, SavedSticker } from "../lib/types";
 import { ConversationPanel, type PendingChatImage } from "./ConversationPanel";
 
 type Props = {
@@ -17,7 +17,7 @@ type Props = {
   onDocumentChange: (mediaId: string) => void; onDocumentCaptionChange: (caption: string) => void; onSendDocument: () => void;
   onSendCtaUrl: (data: CtaUrlMessage) => Promise<void>; onSendEntrepreneurPackages: (selection: { packageIds?: string[]; imageIds?: string[] }) => Promise<void>;
   onSendSticker: (stickerId: string) => Promise<void>; onRecordAudio: (audio: Blob, filename: string) => Promise<void>;
-  onAutoReplyChange: (enabled: boolean) => void; onScenarioChange: (enabled: boolean) => void;
+  onAutoReplyChange: (enabled: boolean) => void; onScenarioChange: (enabled: boolean) => void; onQuoteBundleChange?: (bundle: QuoteBundleRef | null) => Promise<void>;
   automationIntents: AutomationIntent[]; onLearnIntent: (messageId: string, intentId: string) => Promise<void>;
   onReact: (messageId: string, emoji: string) => Promise<void>; onMoveLead: (columnId: string) => Promise<void>;
   onDeleteMessage: (messageId: string, scope: "for_me" | "for_everyone") => Promise<void>;
