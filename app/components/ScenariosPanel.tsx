@@ -1839,6 +1839,22 @@ function FlowBuilder({
                       <article key={item.mediaId}>
                         <span>{item.type === "document" ? "PDF" : item.type === "video" ? "VID" : "IMG"}</span>
                         <strong>{item.filename || item.mediaId}</strong>
+                        {/* Texto que viaja junto al archivo (pie del video/foto en WhatsApp; mensaje aparte en Messenger e Instagram). */}
+                        <textarea
+                          className="flow-media-caption"
+                          aria-label={`Mensaje que acompaña a ${item.filename || "el archivo"}`}
+                          placeholder={item.type === "video" ? "Mensaje que acompaña al video (opcional)" : item.type === "document" ? "Mensaje que acompaña al documento (opcional)" : "Mensaje que acompaña a la imagen (opcional)"}
+                          maxLength={1024}
+                          rows={2}
+                          value={item.caption || ""}
+                          onChange={(event) =>
+                            updateStep(selectedStep.id, {
+                              items: (selectedStep.items || []).map((candidate) =>
+                                candidate.mediaId === item.mediaId ? { ...candidate, caption: event.target.value || undefined } : candidate,
+                              ),
+                            })
+                          }
+                        />
                         <button
                           type="button"
                           className="danger-link"
