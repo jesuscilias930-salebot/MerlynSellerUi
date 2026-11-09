@@ -323,3 +323,16 @@
 .quote-rates li button { grid-column: 1 / -1; justify-self: start; padding: 0; border: 0; background: none; color: #087f5b; font-size: 12px; font-weight: 600; cursor: pointer; }
 .mobile-chat-sheet .quote-drawer-body { padding: 0; overflow: visible; }
 .scenario-quote-bundle small { display: block; color: #667781; font-size: 12px; font-weight: 400; }
+.quote-rate-actions { display: flex; grid-column: 1 / -1; gap: 16px; }
+.quote-rates li .quote-rate-actions button:disabled { color: #9db8ab; cursor: not-allowed; }
+.quote-rates li.confirming { border-color: #b54708; background: #fffaf3; }
+.quote-confirm { display: grid; grid-column: 1 / -1; gap: 8px; margin-top: 4px; padding-top: 8px; border-top: 1px solid #f1dcc4; }
+.quote-confirm p { margin: 0; color: #5c3b0b; font-size: 12px; }
+.quote-confirm > div { display: flex; justify-content: flex-end; gap: 8px; }
+.quote-rates li .quote-confirm button { grid-column: auto; padding: 0 12px; height: 34px; border: 1px solid #d5ddd8; border-radius: 8px; background: #fff; color: #1f2c25; font-size: 12px; }
+.quote-rates li .quote-confirm button.quote-primary { border: 0; background: #087f5b; color: #fff; }
+.quote-shipment { display: grid; gap: 6px; padding: 12px; border: 1px solid #087f5b; border-radius: 10px; background: #e7f5ee; }
+.quote-shipment b { color: #075e45; font-size: 14px; }
+.quote-shipment span { color: #1f2c25; font-size: 12px; }
+.quote-shipment > div { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.quote-shipment a, .quote-shipment button { padding: 0; border: 0; background: none; color: #087f5b; font-size: 12px; font-weight: 600; text-decoration: underline; cursor: pointer; }

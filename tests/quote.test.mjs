@@ -28,3 +28,9 @@ test('ordena por precio y arma el mensaje para el cliente', () => {
   assert.equal(rateMessage(rates[2], { city: 'Orizaba', postalCode: '94300' }, 'Paquete 100'), 'Envío de Paquete 100 a Orizaba, CP 94300 por ESTAFETA (Terrestre): $189.50 · entrega en 3 días hábiles.');
   assert.equal(rateMessage(rates[1], { city: '', postalCode: '' }), 'Envío por DHL (x): Precio no disponible.');
 });
+
+test('mensaje con el número de guía para el cliente', async () => {
+  const { trackingMessage } = await import('../app/lib/quote.ts');
+  assert.equal(trackingMessage({ carrier: 'estafeta', service: 'ground', trackingNumber: '123456' }), 'Tu pedido va por ESTAFETA (ground). Número de guía: 123456.');
+  assert.match(trackingMessage({ carrier: 'dhl', service: 'express', trackingNumber: null }), /ya está generada/);
+});

@@ -54,3 +54,11 @@ export function rateMessage(rate: QuoteRate, destination: Pick<ShippingAddress, 
   const delivery = rateDelivery(rate);
   return `Envío${bundleName ? ` de ${bundleName}` : ""}${place ? ` a ${place}` : ""} por ${rate.carrier.toUpperCase()} (${rate.serviceDescription || rate.service}): ${ratePrice(rate)}${delivery ? ` · entrega en ${delivery}` : ""}.`;
 }
+
+export type QuoteShipment = { id: string; carrier: string; service: string; trackingNumber?: string | null; labelUrl?: string | null; status?: string; price?: string | number | null; currency?: string | null; createdAt?: string };
+/** Texto para avisar al cliente su número de guía. */
+export function trackingMessage(shipment: Pick<QuoteShipment, "carrier" | "service" | "trackingNumber">): string {
+  return shipment.trackingNumber
+    ? `Tu pedido va por ${shipment.carrier.toUpperCase()} (${shipment.service}). Número de guía: ${shipment.trackingNumber}.`
+    : `Tu guía de ${shipment.carrier.toUpperCase()} (${shipment.service}) ya está generada; te comparto el número de rastreo en cuanto esté disponible.`;
+}

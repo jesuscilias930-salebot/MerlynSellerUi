@@ -4,7 +4,7 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { request } from "../lib/api";
 import { contactPhone } from "../lib/channels";
 import { readChatShippingDraft, writeChatShippingDraft, type ShippingAddress, type ShippingParcel } from "../lib/chat-shipping-draft";
-import { chatQuoteBundle, missingDestinationFields, quoteBundleRef, rateDelivery, rateMessage, ratePrice, ratesByPrice, storedParcel, type QuoteRate } from "../lib/quote";
+import { chatQuoteBundle, missingDestinationFields, quoteBundleRef, rateDelivery, rateMessage, ratePrice, ratesByPrice, storedParcel, trackingMessage, type QuoteRate, type QuoteShipment } from "../lib/quote";
 import { bundleShippingPackage, type StoredShippingPackage } from "../lib/shipping-package";
 import type { Chat, QuoteBundleRef } from "../lib/types";
 import { EnviaPostalFields } from "./EnviaPostalFields";
@@ -39,17 +39,23 @@ export function QuoteDrawer({ chat, onInsert, onQuoteBundleChange }: { chat: Cha
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [inserted, setInserted] = useState("");
+  // Lo cotizado tal cual: la guía se genera con la misma dirección y paquete que se cotizaron.
+  const [quoted, setQuoted] = useState<{ body: Record<string, unknown>; environment: string } | null>(null);
+  const [confirmKey, setConfirmKey] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [shipment, setShipment] = useState<QuoteShipment | null>(null);
+  const [previous, setPrevious] = useState<QuoteShipment[]>([]);
   const parcelResolved = useRef(false);
   const chatBundle = chatQuoteBundle(chat);
   const { bundles, loading: bundlesLoading, error: bundlesError, retry: retryBundles } = useControlBundles(true);
 
   useEffect(() => {
     let active = true;
-    void Promise.all([request<Settings>("/shipping/settings"), request<{ addresses: SavedAddress[] }>("/shipping/saved")])
-      .then(([nextSettings, nextSaved]) => { if (active) { setSettings(nextSettings); setPresets(nextSaved.addresses.filter(item => item.kind === "destination")); } })
+    void Promise.all([request<Settings>("/shipping/settings"), request<{ addresses: SavedAddress[] }>("/shipping/saved"), request<QuoteShipment[]>(`/shipping/shipments?conversationId=${encodeURIComponent(chat.id)}`).catch(() => [] as QuoteShipment[])])
+      .then(([nextSettings, nextSaved, shipments]) => { if (active) { setSettings(nextSettings); setPresets(nextSaved.addresses.filter(item => item.kind === "destination")); setPrevious(Array.isArray(shipments) ? shipments : []); } })
       .catch(error => { if (active) setLoadError(error instanceof Error ? error.message : "No fue posible cargar la configuración de envíos."); });
     return () => { active = false; };
-  }, []);
+  }, [chat.id]);
 
   // Paquete inicial: el del chat (fijado por el escenario o a mano); si no tiene, el borrador o el predeterminado.
   useEffect(() => {
@@ -82,10 +88,12 @@ export function QuoteDrawer({ chat, onInsert, onQuoteBundleChange }: { chat: Cha
     if (!parcel) return;
     const missing = missingDestinationFields(destination);
     if (missing.length) { setNotice(`Falta: ${missing.join(", ")}.`); return; }
-    setBusy(true); setNotice(""); setInserted("");
+    setBusy(true); setNotice(""); setInserted(""); setConfirmKey(""); setShipment(null);
     try {
       const comments = [destination.interiorNumber ? `Interior: ${destination.interiorNumber}` : "", destination.references].filter(Boolean).join(" · ").slice(0, 500);
-      const result = await request<{ rates: QuoteRate[]; unavailableCarriers?: string[] }>("/shipping/quote", { method: "POST", body: JSON.stringify({ destination: addressPayload(destination), packages: [packagePayload(parcel)], conversationId: chat.id, ...(comments ? { settings: { comments } } : {}) }) });
+      const body = { destination: addressPayload(destination), packages: [packagePayload(parcel)], conversationId: chat.id, ...(comments ? { settings: { comments } } : {}) };
+      const result = await request<{ environment: string; rates: QuoteRate[]; unavailableCarriers?: string[] }>("/shipping/quote", { method: "POST", body: JSON.stringify(body) });
+      setQuoted({ body, environment: result.environment });
       setRates(result.rates || []);
       setView("rates");
       if (!result.rates?.length) setNotice("No hubo tarifas disponibles para esta ruta y paquete.");
@@ -101,6 +109,16 @@ export function QuoteDrawer({ chat, onInsert, onQuoteBundleChange }: { chat: Cha
     if (next) { setParcel(next); setNotice(""); } else setNotice(`El bundle ${bundle.name} no tiene medidas o peso en Control. Captúralos aquí.`);
   };
   const insert = (text: string, key: string) => { onInsert(text); setInserted(key); };
+  const generate = async (rate: QuoteRate) => {
+    if (!quoted) return;
+    setGenerating(true); setNotice("");
+    try {
+      const settings = { ...((quoted.body.settings as Record<string, unknown>) || {}), printFormat: "PDF", printSize: "STOCK_4X6" };
+      const created = await request<QuoteShipment>("/shipping/generate", { method: "POST", body: JSON.stringify({ ...quoted.body, environment: quoted.environment, carrier: rate.carrier, service: rate.service, settings }) });
+      setShipment({ ...created, service: rate.serviceDescription || created.service }); setPrevious(current => [created, ...current]); setConfirmKey("");
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible generar la guía."); }
+    finally { setGenerating(false); }
+  };
 
   if (loadError) return <div className="quote-drawer-body"><p className="quote-notice" role="alert">{loadError}</p></div>;
   if (!settings || !parcel) return <div className="quote-drawer-body"><p className="quote-loading" role="status">Cargando cotizador…</p></div>;
@@ -126,11 +144,20 @@ export function QuoteDrawer({ chat, onInsert, onQuoteBundleChange }: { chat: Cha
   if (view === "rates") return <div className="quote-drawer-body">
     <div className="quote-step-header"><button type="button" className="quote-back" aria-label="Regresar al formulario" onClick={() => setView("form")}>←</button><div><b>Opciones de envío</b><small>{productName} · {[destination.city, destination.postalCode && `CP ${destination.postalCode}`].filter(Boolean).join(", ")}</small></div></div>
     {notice && <p className="quote-notice" role="status">{notice}</p>}
+    {shipment && <section className="quote-shipment" aria-label="Guía generada">
+      <b>✓ Guía generada</b>
+      <span>{shipment.carrier.toUpperCase()} · {shipment.service}{shipment.trackingNumber ? <> · Guía <strong>{shipment.trackingNumber}</strong></> : " · Número de rastreo pendiente"}</span>
+      <div>{shipment.labelUrl && <a href={shipment.labelUrl} target="_blank" rel="noreferrer">Descargar guía (PDF)</a>}<button type="button" onClick={() => insert(trackingMessage(shipment), "tracking")}>{inserted === "tracking" ? "✓ Agregado al mensaje" : "Agregar número de guía al mensaje"}</button></div>
+    </section>}
+    {!shipment && previous.length > 0 && <p className="quote-notice" role="status">Este chat ya tiene {previous.length === 1 ? "una guía generada" : `${previous.length} guías generadas`} ({previous.slice(0, 2).map(item => `${item.carrier.toUpperCase()}${item.trackingNumber ? ` ${item.trackingNumber}` : ""}`).join(", ")}). Revisa antes de generar otra.</p>}
     {sortedRates.length > 0 && <button type="button" className="quote-link-button" onClick={() => insert(sortedRates.slice(0, 3).map(rate => rateMessage(rate, destination, productName)).join("\n"), "top")}>{inserted === "top" ? "✓ Agregadas al mensaje" : "Agregar las 3 más económicas al mensaje"}</button>}
     <ul className="quote-rates">{sortedRates.map((rate, index) => {
       const key = `${rate.carrier}-${rate.service}-${index}`;
       const delivery = rateDelivery(rate);
-      return <li key={key}><div><b>{rate.carrier.toUpperCase()}</b><small>{rate.serviceDescription || rate.service}{delivery ? ` · ${delivery}` : ""}</small></div><strong>{ratePrice(rate)}</strong><button type="button" onClick={() => insert(rateMessage(rate, destination, productName), key)}>{inserted === key ? "✓ Agregada" : "Al mensaje"}</button></li>;
+      return <li key={key} className={confirmKey === key ? "confirming" : ""}><div><b>{rate.carrier.toUpperCase()}</b><small>{rate.serviceDescription || rate.service}{delivery ? ` · ${delivery}` : ""}</small></div><strong>{ratePrice(rate)}</strong>
+        <div className="quote-rate-actions"><button type="button" onClick={() => insert(rateMessage(rate, destination, productName), key)}>{inserted === key ? "✓ Agregada" : "Al mensaje"}</button>{!shipment && <button type="button" disabled={generating} onClick={() => setConfirmKey(current => current === key ? "" : key)}>Generar guía</button>}</div>
+        {confirmKey === key && !shipment && <div className="quote-confirm" role="alertdialog" aria-label="Confirmar guía"><p>Se generará la guía con <b>{rate.carrier.toUpperCase()} {rate.serviceDescription || rate.service}</b> por <b>{ratePrice(rate)}</b> a {[destination.name, destination.city].filter(Boolean).join(", ")}. Puede generar un cargo en tu cuenta de Envia.</p><div><button type="button" disabled={generating} onClick={() => setConfirmKey("")}>Cancelar</button><button type="button" className="quote-primary" disabled={generating} onClick={() => void generate(rate)}>{generating ? "Generando…" : "Confirmar y generar"}</button></div></div>}
+      </li>;
     })}</ul>
   </div>;
 
