@@ -1,5 +1,6 @@
 "use client";
 
+import { MAX_VIDEO_UPLOAD_BYTES, VIDEO_ACCEPT, videoContentType } from "../lib/video-upload";
 import { CHANNEL_LABELS } from "../lib/channels";
 import {
   ChangeEvent,
@@ -216,6 +217,7 @@ function FlowBuilder({
   const [hoverEdge, setHoverEdge] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(!initial && !initialDraft);
   const [stepEditorOpen, setStepEditorOpen] = useState(false);
@@ -496,21 +498,29 @@ function FlowBuilder({
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    // Videos (MP4, MOV, M4V, 3GPP): el servidor los convierte a MP4 compatible con WhatsApp.
+    const videoType = videoContentType(file);
     if (
+      !videoType &&
       !["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(
         file.type,
       )
     ) {
-      setError("Selecciona una imagen JPEG, PNG, WebP o un PDF.");
+      setError("Selecciona una imagen JPEG, PNG, WebP, un PDF o un video MP4/MOV.");
+      return;
+    }
+    if (videoType && file.size > MAX_VIDEO_UPLOAD_BYTES) {
+      setError("El video no puede superar 250 MB.");
       return;
     }
     setError("");
+    setUploadingVideo(Boolean(videoType));
     try {
-      const response = await fetch(`${api}/scenarios/evidence/upload`, {
+      const response = await fetch(`${api}/scenarios/evidence/${videoType ? "upload-video" : "upload"}`, {
         method: "POST",
         credentials: "include",
         headers: {
-          "Content-Type": file.type,
+          "Content-Type": videoType || file.type,
           "X-Upload-Filename": encodeURIComponent(file.name),
         },
         body: file,
@@ -529,8 +539,8 @@ function FlowBuilder({
           ...(step.items || []),
           {
             mediaId: uploaded.mediaId,
-            filename: uploaded.filename,
-            type: file.type === "application/pdf" ? "document" : "image",
+            filename: uploaded.filename || file.name,
+            type: videoType ? "video" : file.type === "application/pdf" ? "document" : "image",
           },
         ],
       });
@@ -540,6 +550,8 @@ function FlowBuilder({
           ? reason.message
           : "No fue posible subir el archivo.",
       );
+    } finally {
+      setUploadingVideo(false);
     }
   };
   const addReusableMedia = (step: ScenarioStep, mediaId: string) => {
@@ -1744,11 +1756,12 @@ function FlowBuilder({
                 <div className="flow-media-picker">
                   <strong>Archivos de este paso</strong>
                   <div>
-                    <label className="media-button">
-                      ＋ Subir archivo nuevo
+                    <label className={`media-button${uploadingVideo ? " busy" : ""}`}>
+                      {uploadingVideo ? "Preparando video…" : "＋ Subir imagen, video o PDF"}
                       <input
                         type="file"
-                        accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
+                        accept={`image/jpeg,image/png,image/webp,application/pdf,.pdf,${VIDEO_ACCEPT}`}
+                        disabled={uploadingVideo}
                         onChange={(event) => uploadMedia(selectedStep, event)}
                       />
                     </label>
@@ -1767,7 +1780,7 @@ function FlowBuilder({
                         )
                       }
                     >
-                      <option value="">Reutilizar imagen o documento…</option>
+                      <option value="">Reutilizar imagen, video o documento…</option>
                       {mediaLibrary
                         .filter(
                           (item) =>
@@ -1777,7 +1790,7 @@ function FlowBuilder({
                         )
                         .map((item) => (
                           <option key={item.mediaId} value={item.mediaId}>
-                            {item.type === "document" ? "PDF" : "Imagen"} ·{" "}
+                            {item.type === "document" ? "PDF" : item.type === "video" ? "Video" : "Imagen"} ·{" "}
                             {item.filename || "Sin nombre"} · {item.source}
                           </option>
                         ))}
@@ -1824,7 +1837,7 @@ function FlowBuilder({
                   ) : (
                     selectedStep.items?.map((item) => (
                       <article key={item.mediaId}>
-                        <span>{item.type === "document" ? "PDF" : "IMG"}</span>
+                        <span>{item.type === "document" ? "PDF" : item.type === "video" ? "VID" : "IMG"}</span>
                         <strong>{item.filename || item.mediaId}</strong>
                         <button
                           type="button"

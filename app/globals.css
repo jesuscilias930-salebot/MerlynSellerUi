@@ -9319,3 +9319,4 @@ a.ad-referral:hover { background: #00000014; }
 .scenario-step-channels > label input { width: auto !important; margin: 0; accent-color: var(--green, #0f8a5f); }
 .scenario-step-channels small { flex-basis: 100%; color: var(--muted); font-size: 12px; line-height: 1.45; }
 .wf-node-channels { display: inline-block; margin-top: 3px; padding: 1px 7px; border-radius: 999px; background: #e0f2fe; color: #075985; font-size: 10px; font-style: normal; font-weight: 800; }
+.flow-media-picker .media-button.busy { opacity: .65; cursor: progress; }
