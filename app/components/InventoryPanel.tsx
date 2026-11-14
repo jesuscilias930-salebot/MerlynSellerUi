@@ -3,7 +3,8 @@
 import { useDeferredValue, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { request } from "../lib/api";
 import { cachedInventory, loadInventory, updateCachedLocations, type InventorySnapshot } from "../lib/inventory-snapshot";
-import { applyFilters, BUNDLES_KEY, bundleRow, compareSizes, levelLabel, productRow, sizeMatrix, unitLabel, type InventoryRow, type LevelFilter } from "../lib/inventory-view";
+import { applyFilters, BUNDLES_KEY, bundleRow, compareSizes, levelLabel, parseStock, productRow, sizeMatrix, stockChanges, unitLabel, type InventoryRow, type LevelFilter } from "../lib/inventory-view";
+import { controlRequest } from "../lib/control-api";
 import { bundleAvailability, productFamily, type QuickBundle, type QuickProduct } from "../lib/quick-inventory";
 import { formatLocation, suggestions, type ProductLocation } from "../lib/product-locations";
 import { colorSwatch } from "../lib/product-colors";
@@ -30,6 +31,28 @@ function Swatch({ row }: { row: Pick<InventoryRow, "kind" | "color"> }) {
   const swatch = colorSwatch(row.color);
   return <i className={styles.dot} style={swatch ? { background: swatch } : undefined} aria-hidden="true" />;
 }
+/** Cantidad editable de un producto en el modo «Editar existencias». */
+function StockInput({ row, draft, error, onChange, compact }: { row: InventoryRow; draft?: string; error?: string; onChange: (id: number, value: string | null) => void; compact?: boolean }) {
+  const value = draft ?? String(row.stock);
+  const parsed = parseStock(value);
+  const changed = draft !== undefined && parsed !== row.stock;
+  const invalid = draft !== undefined && parsed === undefined;
+  return <span className={`${styles.stockEdit} ${compact ? styles.stockEditCompact : ""} ${changed ? styles.changed : ""} ${invalid || error ? styles.invalid : ""}`}>
+    <input type="text" inputMode="numeric" data-stock-input="" aria-label={`Existencias de ${row.name}${row.color ? ` ${row.color}` : ""}${row.size ? ` talla ${row.size}` : ""}`} aria-invalid={invalid || Boolean(error)} value={value} title={error || undefined}
+      onFocus={event => event.currentTarget.select()}
+      onChange={event => { const next = event.target.value; onChange(row.id, next === String(row.stock) ? null : next); }}
+      onKeyDown={event => {
+        if (event.key === "Escape") { onChange(row.id, null); return; }
+        if (event.key !== "Enter" && event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+        event.preventDefault();
+        // Enter o ↓ pasa al siguiente producto, ↑ al anterior: se puede capturar un conteo completo con el teclado.
+        const inputs = [...document.querySelectorAll<HTMLInputElement>("[data-stock-input]")];
+        const index = inputs.indexOf(event.currentTarget);
+        inputs[index + (event.key === "ArrowUp" ? -1 : 1)]?.focus();
+      }} />
+    {!compact && <small>{error ? error : changed ? `antes ${row.stock.toLocaleString("es-MX")}` : unitLabel(row, row.stock)}</small>}
+  </span>;
+}
 const variant = (row: InventoryRow) => row.kind === "bundle" ? "Paquete" : [row.color, row.size && `Talla ${row.size}`, row.gender].filter(Boolean).join(" · ");
 
 /** Inventario: busca cualquier producto y ve al instante cuántas piezas hay. */
@@ -45,6 +68,13 @@ export function InventoryPanel({ refreshKey }: { refreshKey: number }) {
   const [view, setView] = useState<View>(readView);
   const [limit, setLimit] = useState(PAGE);
   const [selected, setSelected] = useState<Selection | null>(null);
+  // Modo edición: cantidades escritas (por producto) que se guardan juntas con un motivo.
+  const [editing, setEditing] = useState(false);
+  const [drafts, setDrafts] = useState<Map<number, string>>(() => new Map());
+  const [saveErrors, setSaveErrors] = useState<Map<number, string>>(() => new Map());
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState<{ done: number; total: number } | null>(null);
+  const [saveNotice, setSaveNotice] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const searchId = useId();
   const deferredQuery = useDeferredValue(query);
@@ -79,6 +109,37 @@ export function InventoryPanel({ refreshKey }: { refreshKey: number }) {
     return { rack: suggestions(values, "rack"), level: suggestions(values, "level"), side: suggestions(values, "side") };
   }, [data]);
 
+  const pending = useMemo(() => stockChanges(drafts, rows), [drafts, rows]);
+  const setDraft = (id: number, value: string | null) => {
+    setDrafts(current => { const next = new Map(current); if (value === null) next.delete(id); else next.set(id, value); return next; });
+    setSaveErrors(current => { if (!current.has(id)) return current; const next = new Map(current); next.delete(id); return next; });
+  };
+  const discardEdits = () => { setDrafts(new Map()); setSaveErrors(new Map()); setReason(""); };
+  const toggleEditing = () => {
+    if (editing && (pending.changes.length || pending.invalid.length) && !window.confirm("Tienes cambios sin guardar. ¿Descartarlos?")) return;
+    if (editing) discardEdits();
+    setSaveNotice(""); setEditing(value => !value);
+  };
+  const saveEdits = async () => {
+    if (saving || !pending.changes.length || pending.invalid.length || !reason.trim()) return;
+    if (!window.confirm(`¿Guardar las existencias de ${pending.changes.length} ${pending.changes.length === 1 ? "producto" : "productos"}? Se conserva el historial de compras y ventas.`)) return;
+    const errors = new Map<number, string>();
+    setSaving({ done: 0, total: pending.changes.length }); setSaveNotice("");
+    for (const [index, change] of pending.changes.entries()) {
+      try {
+        await controlRequest(`/products/${change.id}/inventory`, { method: "PATCH", body: JSON.stringify({ quantity: change.to, expectedStock: change.from, reason: reason.trim() }) });
+      } catch (failure) { errors.set(change.id, failure instanceof Error ? failure.message : "No se pudo guardar"); }
+      setSaving({ done: index + 1, total: pending.changes.length });
+    }
+    const saved = pending.changes.length - errors.size;
+    // Solo quedan pendientes los que fallaron; los guardados toman la existencia nueva al recargar.
+    setDrafts(current => new Map([...current].filter(([id]) => errors.has(id))));
+    setSaveErrors(errors);
+    if (!errors.size) setReason("");
+    setSaveNotice(errors.size ? `Se guardaron ${saved} de ${pending.changes.length}. Revisa los marcados en rojo y vuelve a guardar.` : `✓ Existencias guardadas (${saved}).`);
+    setSaving(null);
+    await load(true);
+  };
   const changeView = (next: View) => { setView(next); try { window.localStorage.setItem(VIEW_KEY, next); } catch { /* Preferencia opcional. */ } };
   const resetPage = () => setLimit(PAGE);
   const open = (row: InventoryRow) => setSelected({ kind: row.kind, id: row.id });
@@ -108,11 +169,14 @@ export function InventoryPanel({ refreshKey }: { refreshKey: number }) {
         <input ref={input} id={searchId} type="search" autoComplete="off" maxLength={120} value={query} placeholder="¿Qué producto buscas? Nombre, color, talla…" onKeyDown={keyDown} onChange={event => { setQuery(event.target.value); resetPage(); }} />
         {query && <button type="button" onClick={() => { setQuery(""); resetPage(); input.current?.focus(); }} aria-label="Limpiar búsqueda"><ChatIcon name="close" /></button>}
       </div>
+      <button type="button" className={`${styles.editToggle} ${editing ? styles.editOn : ""}`} aria-pressed={editing} disabled={!data || Boolean(saving)} onClick={toggleEditing}>{editing ? "✓ Terminar edición" : "✏️ Editar existencias"}</button>
       <div className={styles.viewSwitch} role="group" aria-label="Forma de ver el inventario">
         <button type="button" aria-pressed={view === "list"} onClick={() => changeView("list")}>Lista</button>
         <button type="button" aria-pressed={view === "sizes"} onClick={() => changeView("sizes")}>Por tallas</button>
       </div>
     </div>
+    {editing && <p className={styles.editHint} role="status">Escribe la cantidad real de cada producto. <b>Enter</b> pasa al siguiente y <b>Esc</b> regresa al valor actual. Los cambios se guardan juntos abajo.</p>}
+    {!editing && saveNotice && <p className={styles.editHint} role="status">{saveNotice}</p>}
     <p className={styles.searchHint}>Ejemplos: <button type="button" onClick={() => setQuery("essential negro")}>essential negro</button> <button type="button" onClick={() => setQuery("caricatura 2-4")}>caricatura 2-4</button> · Enter abre el primer resultado.</p>
 
     <div className={styles.chips} role="group" aria-label="Filtrar por existencia">
@@ -154,25 +218,33 @@ export function InventoryPanel({ refreshKey }: { refreshKey: number }) {
     {data && view === "list" && filtered.results.length > 0 && <>
       <ul className={styles.list}>{filtered.results.slice(0, limit).map(row => {
         const out = row.kind === "product" ? piecesOut(loansMap.get(row.id)) : 0;
+        const meta = <span className={styles.rowMeta}>{row.kind === "bundle" ? "Cajas que se pueden armar" : row.category}{row.location && <small>📍 {row.location}</small>}{out > 0 && <small className={styles.out}>🚚 {out} fuera</small>}</span>;
+        const qty = <span className={`${styles.qty} ${styles[row.level]}`}><b>{row.level === "empty" ? "0" : number(row.stock)}</b><small>{row.level === "empty" ? "Agotado" : row.level === "low" ? `${unitLabel(row, row.stock)} · pocas` : unitLabel(row, row.stock)}</small></span>;
+        if (editing) return <li key={`${row.kind}-${row.id}`}><div className={`${styles.row} ${drafts.has(row.id) ? styles.rowChanged : ""}`}>
+          <Swatch row={row} />
+          <button type="button" className={styles.rowMain} onClick={() => open(row)}><strong>{row.name}</strong><small>{variant(row)}</small></button>
+          {meta}
+          {row.kind === "product" ? <StockInput row={row} draft={drafts.get(row.id)} error={saveErrors.get(row.id)} onChange={setDraft} /> : qty}
+        </div></li>;
         return <li key={`${row.kind}-${row.id}`}><button type="button" className={styles.row} onClick={() => open(row)}>
           <Swatch row={row} />
           <span className={styles.rowMain}><strong>{row.name}</strong><small>{variant(row)}</small></span>
-          <span className={styles.rowMeta}>{row.kind === "bundle" ? "Cajas que se pueden armar" : row.category}{row.location && <small>📍 {row.location}</small>}{out > 0 && <small className={styles.out}>🚚 {out} fuera</small>}</span>
-          <span className={`${styles.qty} ${styles[row.level]}`}><b>{row.level === "empty" ? "0" : number(row.stock)}</b><small>{row.level === "empty" ? "Agotado" : row.level === "low" ? `${unitLabel(row, row.stock)} · pocas` : unitLabel(row, row.stock)}</small></span>
+          {meta}
+          {qty}
         </button></li>;
       })}</ul>
       {filtered.results.length > limit && <button type="button" className={styles.more} onClick={() => setLimit(value => value + PAGE)}>Mostrar {number(Math.min(PAGE, filtered.results.length - limit))} más de {number(filtered.results.length - limit)}</button>}
     </>}
 
     {data && view === "sizes" && filtered.results.length > 0 && <div className={styles.matrixGroups}>
-      <p className={styles.legend}><span className={styles.ready}>■</span> Disponible <span className={styles.low}>■</span> Pocas (en la alerta mínima o menos) <span className={styles.empty}>■</span> Agotado · Toca una celda para ver el detalle.</p>
+      <p className={styles.legend}><span className={styles.ready}>■</span> Disponible <span className={styles.low}>■</span> Pocas (en la alerta mínima o menos) <span className={styles.empty}>■</span> Agotado · {editing ? "Escribe la cantidad en cada talla." : "Toca una celda para ver el detalle."}</p>
       {matrix.map(group => <section key={group.key} className={styles.matrixGroup} aria-label={group.name}>
         <h3>{group.name}</h3>
         <div className={styles.matrixScroll}><table className={styles.matrix}>
           <thead><tr><th scope="col">Producto</th>{group.sizes.map(size => <th scope="col" key={size}>{size || "Única"}</th>)}<th scope="col">Total</th></tr></thead>
           <tbody>{group.lines.map(line => <tr key={line.key}>
             <th scope="row"><span className={styles.lineTitle}><Swatch row={{ kind: "product", color: line.color }} /><span><b>{line.title}</b>{line.detail && <small>{line.detail}</small>}</span></span></th>
-            {group.sizes.map(size => { const row = line.cells.get(size); return <td key={size}>{row ? <button type="button" className={`${styles.cell} ${styles[row.level]}`} title={`${row.name} · ${variant(row)} · ${levelLabel(row.level)}`} onClick={() => open(row)}>{number(row.stock)}</button> : <span className={styles.none} aria-label="No existe">—</span>}</td>; })}
+            {group.sizes.map(size => { const row = line.cells.get(size); return <td key={size}>{row && editing ? <StockInput compact row={row} draft={drafts.get(row.id)} error={saveErrors.get(row.id)} onChange={setDraft} /> : row ? <button type="button" className={`${styles.cell} ${styles[row.level]}`} title={`${row.name} · ${variant(row)} · ${levelLabel(row.level)}`} onClick={() => open(row)}>{number(row.stock)}</button> : <span className={styles.none} aria-label="No existe">—</span>}</td>; })}
             <td className={styles.lineTotal}>{number(line.total)}</td>
           </tr>)}</tbody>
         </table></div>
@@ -181,6 +253,20 @@ export function InventoryPanel({ refreshKey }: { refreshKey: number }) {
         <h3>📦 Paquetes</h3>
         <ul className={styles.list}>{bundleResults.map(row => <li key={row.id}><button type="button" className={styles.row} onClick={() => open(row)}><Swatch row={row} /><span className={styles.rowMain}><strong>{row.name}</strong><small>Paquete</small></span><span className={styles.rowMeta}>Cajas que se pueden armar hoy</span><span className={`${styles.qty} ${styles[row.level]}`}><b>{number(row.stock)}</b><small>{row.level === "empty" ? "Agotado" : unitLabel(row, row.stock)}</small></span></button></li>)}</ul>
       </section>}
+    </div>}
+
+    {editing && <div className={styles.saveBar} role="region" aria-label="Guardar existencias">
+      <div className={styles.saveSummary}>
+        <b>{pending.changes.length ? `${pending.changes.length} ${pending.changes.length === 1 ? "producto modificado" : "productos modificados"}` : "Sin cambios todavía"}</b>
+        {pending.invalid.length > 0 && <small className={styles.saveWarn}>{pending.invalid.length} con cantidad inválida (solo enteros desde 0)</small>}
+        {pending.changes.length > 0 && <details><summary>Ver cambios</summary><ul>{pending.changes.map(change => <li key={change.id}><span>{change.name}</span><span>{number(change.from)} → <b>{number(change.to)}</b></span><button type="button" aria-label={`Quitar cambio de ${change.name}`} onClick={() => setDraft(change.id, null)}>×</button></li>)}</ul></details>}
+        {saveNotice && <small>{saveNotice}</small>}
+      </div>
+      <label className={styles.reason}><span>Motivo del ajuste</span><input maxLength={500} value={reason} disabled={Boolean(saving)} placeholder="Ej. Conteo físico de bodega" onChange={event => setReason(event.target.value)} /></label>
+      <div className={styles.saveActions}>
+        <button type="button" disabled={Boolean(saving) || (!drafts.size && !reason)} onClick={discardEdits}>Descartar</button>
+        <button type="button" className={styles.savePrimary} disabled={Boolean(saving) || !pending.changes.length || pending.invalid.length > 0 || !reason.trim()} title={!reason.trim() && pending.changes.length ? "Escribe el motivo del ajuste" : undefined} onClick={() => void saveEdits()}>{saving ? `Guardando ${saving.done} de ${saving.total}…` : `Guardar ${pending.changes.length || ""} ${pending.changes.length === 1 ? "cambio" : "cambios"}`}</button>
+      </div>
     </div>}
 
     {data && selected && <InventoryDetail key={`${selected.kind}-${selected.id}`} selection={selected} data={data} loans={loans} loansMap={loansMap} locationOptions={locationOptions}

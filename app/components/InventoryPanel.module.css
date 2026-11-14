@@ -103,6 +103,38 @@
 .bundleItems b{font-size:13px}.bundleItems small{color:var(--muted);font-size:12px}
 .bundleItems em{font-style:normal;font-size:12px;font-weight:700;white-space:nowrap}
 .bundleItems em.ready{color:#0b7a52}.bundleItems em.low{color:#9a5b00}.bundleItems em.empty{color:#b42332}
+.panel .editToggle{flex:none;min-height:48px;padding:0 16px;border:1.5px solid var(--app-border-strong);border-radius:12px;background:var(--app-surface);color:var(--ink);font-size:13px;font-weight:600;cursor:pointer}
+.panel .editToggle:hover:not(:disabled){border-color:var(--green)}
+.panel .editToggle.editOn{border-color:var(--green);background:var(--green);color:#fff}
+.editHint{margin:-4px 0 0;padding:10px 12px;border-radius:10px;background:var(--app-selected);color:var(--ink);font-size:13px}
+.panel button.rowMain{padding:0;border:0;background:none;color:inherit;text-align:left;cursor:pointer}
+.panel button.rowMain:hover strong{color:var(--green);text-decoration:underline}
+.rowChanged{background:#fffbea!important}
+.stockEdit{display:grid;justify-items:end;gap:3px}
+.panel .stockEdit input{width:100px;min-height:44px;padding:0 10px;border:1.5px solid var(--app-border-strong);border-radius:10px;background:var(--app-surface);color:var(--ink);font-size:20px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.panel .stockEdit input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--app-selected)}
+.stockEdit small{max-width:160px;color:var(--muted);font-size:11px;font-weight:600;text-align:right}
+.stockEdit.changed input{border-color:#e09a1a;background:#fff8e6}
+.stockEdit.changed small{color:#9a5b00}
+.stockEdit.invalid input{border-color:#b42332;background:#fdecee}
+.stockEdit.invalid small{color:#b42332}
+.stockEditCompact{justify-items:center}
+.panel .stockEditCompact input{width:64px;min-height:40px;font-size:16px;text-align:center}
+.saveBar{position:sticky;bottom:0;z-index:20;display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,320px) auto;align-items:end;gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--app-surface);box-shadow:0 -10px 28px #0b141a1f}
+.saveSummary{display:grid;gap:4px;min-width:0;font-size:13px}
+.saveSummary small{color:var(--muted);font-size:12px}
+.saveSummary .saveWarn{color:#b42332;font-weight:600}
+.saveSummary details summary{color:var(--green);font-size:12px;font-weight:600;cursor:pointer}
+.saveSummary ul{display:grid;gap:4px;max-height:160px;margin:6px 0 0;padding:0;overflow:auto;list-style:none}
+.saveSummary li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;font-size:12px}
+.saveSummary li>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.panel .saveSummary li button{width:24px;height:24px;padding:0;border:0;border-radius:50%;background:var(--app-hover);color:var(--muted);cursor:pointer}
+.reason{display:grid;gap:5px;font-size:12px;font-weight:600}
+.panel .reason input{min-height:42px;padding:0 12px;border:1.5px solid var(--app-border-strong);border-radius:10px;background:var(--app-surface);color:var(--ink);font-size:14px}
+.saveActions{display:flex;gap:8px}
+.panel .saveActions button{min-height:42px;padding:0 14px;border:1px solid var(--app-border-strong);border-radius:10px;background:var(--app-surface);color:var(--ink);font-size:13px;font-weight:600;cursor:pointer}
+.panel .saveActions .savePrimary{border-color:var(--green);background:var(--green);color:#fff}
+.panel .saveActions button:disabled{opacity:.5}
 @media(max-width:900px){.panel .row{grid-template-columns:auto minmax(0,1fr) 104px}.rowMeta{display:none}}
 @media(max-width:760px){
   .panel .searchField input{font-size:16px;min-height:50px}
@@ -113,4 +145,8 @@
   .matrix th[scope=row],.matrix thead th:first-child{min-width:140px;max-width:170px;padding:8px 10px}
   .panel .cell{min-width:48px}
   .drawer{width:100vw}
+  .panel .editToggle{width:100%}
+  .saveBar{grid-template-columns:1fr;padding:12px}
+  .saveActions button{flex:1}
+  .panel .stockEdit input{width:84px;font-size:18px}
 }

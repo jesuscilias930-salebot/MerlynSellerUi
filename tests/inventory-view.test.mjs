@@ -54,3 +54,15 @@ test('tabla por tallas: una fila por producto y color, columnas ordenadas', () =
   assert.equal(groups[0].lines[1].cells.get('22-24').id, 5);
   assert.deepEqual(groups[1].sizes, ['2-4', '5-7']);
 });
+
+test('edición de existencias: solo cuenta lo que cambió y marca lo inválido', async () => {
+  const { stockChanges, parseStock } = await import('../app/lib/inventory-view.ts');
+  assert.equal(parseStock(' 1,200 '), 1200);
+  assert.equal(parseStock('-1'), undefined);
+  assert.equal(parseStock('2.5'), undefined);
+  assert.equal(parseStock(''), undefined);
+  const drafts = new Map([[1, '30'], [2, '10'], [3, 'x'], [9, '5'], [99, '4']]);
+  const result = stockChanges(drafts, rows);
+  assert.deepEqual(result.changes, [{ id: 2, name: 'Caricatura niña · Rosa · Talla 2-4', from: 4, to: 10 }]);
+  assert.deepEqual(result.invalid, [3]);
+});

@@ -123,3 +123,25 @@ export function sizeMatrix(rows: InventoryRow[]): MatrixGroup[] {
 
 export const unitLabel = (row: Pick<InventoryRow, "kind">, count: number) => row.kind === "bundle" ? (count === 1 ? "caja" : "cajas") : (count === 1 ? "par" : "pares");
 export const levelLabel = (level: StockLevel) => level === "empty" ? "Agotado" : level === "low" ? "Pocas" : "Disponible";
+
+export type StockChange = { id: number; name: string; from: number; to: number };
+/** Cantidad escrita en la edición de existencias: entero de 0 a mil millones; si no, undefined. */
+export function parseStock(text: string): number | undefined {
+  const clean = text.trim().replace(/,/g, "");
+  if (!/^\d+$/.test(clean)) return undefined;
+  const value = Number(clean);
+  return Number.isSafeInteger(value) && value <= 1_000_000_000 ? value : undefined;
+}
+/** Cambios a guardar (solo los que difieren de la existencia actual) y productos con una cantidad inválida. */
+export function stockChanges(drafts: Map<number, string>, rows: InventoryRow[]) {
+  const byId = new Map(rows.filter(row => row.kind === "product").map(row => [row.id, row]));
+  const changes: StockChange[] = [], invalid: number[] = [];
+  drafts.forEach((text, id) => {
+    const row = byId.get(id);
+    if (!row) return;
+    const value = parseStock(text);
+    if (value === undefined) invalid.push(id);
+    else if (value !== row.stock) changes.push({ id, name: [row.name, row.color, row.size && `Talla ${row.size}`].filter(Boolean).join(" · "), from: row.stock, to: value });
+  });
+  return { changes, invalid };
+}
