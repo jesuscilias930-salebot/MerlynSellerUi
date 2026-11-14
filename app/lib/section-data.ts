@@ -26,7 +26,7 @@ export function controlResources(tab: string): ControlResource[] {
     case "customers": return ["customers"];
     case "categories": return ["categories"];
     case "products": return ["products", "categories"];
-    case "inventory": return []; // InventoryPanel loads categories, opened pages and server typeahead only.
+    case "inventory": return []; // InventoryPanel uses the shared inventory snapshot (/products/all).
     case "weights": case "prices": case "bundles": return ["products"];
     case "sales": return []; // SalesWorkspace loads only the opened subtab.
     case "purchases": return ["products"]; // PurchasesWorkspace pagina su propio historial.

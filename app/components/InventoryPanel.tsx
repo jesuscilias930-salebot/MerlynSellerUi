@@ -1,238 +1,262 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, type KeyboardEvent } from "react";
-import { controlRequest } from "../lib/control-api";
-import { inventoryCategoryKey, inventoryCategoryName, inventoryFilterParams, inventoryPagePath, inventoryProductName, inventorySearchText, inventoryStockState, matchesColor, splitColorQuery, type InventoryCategory, type InventoryPage, type InventoryProduct } from "../lib/inventory-catalog";
-import { InventoryQuantityEditor } from "./InventoryQuantityEditor";
-import { ProductLocationEditor } from "./ProductLocationEditor";
-import { LocationFinder } from "./LocationFinder";
+import { useDeferredValue, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { request } from "../lib/api";
-import { updateCachedLocations } from "../lib/inventory-snapshot";
-import { locationMap, suggestions, type LocationMap, type ProductLocation } from "../lib/product-locations";
-import { ChatIcon } from "./ChatIcon";
-import { CopyStockButton } from "./CopyStockButton";
-import { groupBySize } from "../lib/size-groups";
+import { cachedInventory, loadInventory, updateCachedLocations, type InventorySnapshot } from "../lib/inventory-snapshot";
+import { applyFilters, BUNDLES_KEY, bundleRow, compareSizes, levelLabel, productRow, sizeMatrix, unitLabel, type InventoryRow, type LevelFilter } from "../lib/inventory-view";
+import { bundleAvailability, productFamily, type QuickBundle, type QuickProduct } from "../lib/quick-inventory";
+import { formatLocation, suggestions, type ProductLocation } from "../lib/product-locations";
 import { colorSwatch } from "../lib/product-colors";
 import { loansByProduct, piecesOut, type InventoryLoan } from "../lib/inventory-loans";
+import { ChatIcon } from "./ChatIcon";
+import { CopyStockButton } from "./CopyStockButton";
+import { InventoryQuantityEditor } from "./InventoryQuantityEditor";
+import { LocationFinder } from "./LocationFinder";
+import { ProductLocationEditor } from "./ProductLocationEditor";
 import { LoansSummary, ProductLoans } from "./ProductLoans";
-
-type Colors = Map<number, string>;
-function VariantChips({ color, size }: { color?: string; size?: string | null }) {
-  if (!color && !size) return null;
-  return <span className="inventory-variant">
-    {color && <span className="inventory-variant-chip"><i className="inventory-color-dot" style={colorSwatch(color) ? { background: colorSwatch(color) || undefined } : undefined} aria-hidden="true" />{color}</span>}
-    {size && <span className="inventory-variant-chip">Talla {size}</span>}
-  </span>;
-}
 import styles from "./InventoryPanel.module.css";
 
-const errorMessage = (error: unknown) => error instanceof Error ? error.message : "No pudimos consultar el inventario. Intenta nuevamente.";
+type View = "list" | "sizes";
+type Selection = { kind: InventoryRow["kind"]; id: number };
+const VIEW_KEY = "merlyn.inventoryView";
+const PAGE = 150;
 const number = (value: number) => value.toLocaleString("es-MX");
+const money = (value: number) => value.toLocaleString("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: value % 1 ? 2 : 0 });
+const readView = (): View => { try { return typeof window !== "undefined" && window.localStorage.getItem(VIEW_KEY) === "sizes" ? "sizes" : "list"; } catch { return "list"; } };
+const LEVELS: { key: LevelFilter; label: string }[] = [{ key: "all", label: "Todos" }, { key: "ready", label: "Disponibles" }, { key: "low", label: "Pocas" }, { key: "empty", label: "Agotados" }];
 
+function Swatch({ row }: { row: Pick<InventoryRow, "kind" | "color"> }) {
+  if (row.kind === "bundle") return <span className={styles.bundleIcon} aria-hidden="true">📦</span>;
+  const swatch = colorSwatch(row.color);
+  return <i className={styles.dot} style={swatch ? { background: swatch } : undefined} aria-hidden="true" />;
+}
+const variant = (row: InventoryRow) => row.kind === "bundle" ? "Paquete" : [row.color, row.size && `Talla ${row.size}`, row.gender].filter(Boolean).join(" · ");
+
+/** Inventario: busca cualquier producto y ve al instante cuántas piezas hay. */
 export function InventoryPanel({ refreshKey }: { refreshKey: number }) {
-  const [text, setText] = useState("");
-  const [settledText, setSettledText] = useState("");
-  const [selected, setSelected] = useState<InventoryProduct | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [active, setActive] = useState(-1);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [revision, setRevision] = useState(0);
-  const [categories, setCategories] = useState<{ key: string; data?: InventoryCategory[]; error?: string }>();
-  const [suggestions, setSuggestions] = useState<{ key: string; data?: InventoryProduct[]; error?: string }>();
-  const [locations, setLocations] = useState<LocationMap>(() => new Map());
-  const [locationError, setLocationError] = useState("");
-  const [colors, setColors] = useState<Colors>(() => new Map());
-  useEffect(() => {
-    let active = true;
-    // El color vive en el CRM; si falla, el inventario se muestra sin él.
-    request<{ productId: number; color?: string | null }[]>("/product-details")
-      .then(rows => { if (active) setColors(new Map((Array.isArray(rows) ? rows : []).filter(row => row?.color).map(row => [row.productId, row.color as string]))); })
-      .catch(() => undefined);
-    request<ProductLocation[]>("/inventory-locations")
-      .then(rows => { if (active) setLocations(locationMap(rows)); })
-      .catch(error => { if (active) setLocationError(errorMessage(error)); });
-    return () => { active = false; };
-  }, []);
-  // Prendas tomadas temporalmente (solo aviso; no cambia la existencia).
+  const [data, setData] = useState<InventorySnapshot | null>(cachedInventory);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [loans, setLoans] = useState<InventoryLoan[]>([]);
   const [loansKey, setLoansKey] = useState(0);
+  const [query, setQuery] = useState("");
+  const [level, setLevel] = useState<LevelFilter>("all");
+  const [category, setCategory] = useState("");
+  const [view, setView] = useState<View>(readView);
+  const [limit, setLimit] = useState(PAGE);
+  const [selected, setSelected] = useState<Selection | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const searchId = useId();
+  const deferredQuery = useDeferredValue(query);
+
+  const load = async (force = false) => {
+    setLoading(true); setError("");
+    try { setData(await loadInventory(force)); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "No se pudo consultar el inventario."); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => {
+    void Promise.resolve().then(() => load(refreshKey > 0));
+  }, [refreshKey]);
+  useEffect(() => { input.current?.focus(); }, []);
   useEffect(() => {
     let active = true;
     request<InventoryLoan[]>("/inventory-loans").then(rows => { if (active) setLoans(Array.isArray(rows) ? rows : []); }).catch(() => undefined);
     return () => { active = false; };
   }, [refreshKey, loansKey]);
   const loansMap = useMemo(() => loansByProduct(loans), [loans]);
-  const reloadLoans = () => setLoansKey(value => value + 1);
-  const locationSaved = (rows: ProductLocation[]) => {
-    setLocations(current => {
-      const next = new Map(current);
-      rows.forEach(row => { if (row.rack || row.level || row.side) next.set(row.productId, row); else next.delete(row.productId); });
-      return next;
-    });
-    updateCachedLocations(rows);
+
+  const rows = useMemo(() => data ? [
+    ...data.products.map(product => productRow(product, formatLocation(data.locations.get(product.id)))),
+    ...data.bundles.map(bundle => bundleRow(bundle, bundleAvailability(bundle, data.products))),
+  ] : [], [data]);
+  const filtered = useMemo(() => applyFilters(rows, { query: deferredQuery, level, category }), [rows, deferredQuery, level, category]);
+  const productResults = useMemo(() => filtered.results.filter(row => row.kind === "product"), [filtered]);
+  const bundleResults = useMemo(() => filtered.results.filter(row => row.kind === "bundle"), [filtered]);
+  const matrix = useMemo(() => view === "sizes" ? sizeMatrix(productResults) : [], [view, productResults]);
+  const locationOptions = useMemo(() => {
+    const values = data ? [...data.locations.values()] : [];
+    return { rack: suggestions(values, "rack"), level: suggestions(values, "level"), side: suggestions(values, "side") };
+  }, [data]);
+
+  const changeView = (next: View) => { setView(next); try { window.localStorage.setItem(VIEW_KEY, next); } catch { /* Preferencia opcional. */ } };
+  const resetPage = () => setLimit(PAGE);
+  const open = (row: InventoryRow) => setSelected({ kind: row.kind, id: row.id });
+  const clearAll = () => { setQuery(""); setLevel("all"); setCategory(""); resetPage(); input.current?.focus(); };
+  const keyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape" && query) { event.preventDefault(); setQuery(""); resetPage(); }
+    if (event.key === "Enter" && filtered.results[0]) { event.preventDefault(); open(filtered.results[0]); }
   };
-  const listId = useId();
-  const rawQuery = inventorySearchText(text);
-  // Los colores se filtran aquí; el resto del texto se busca en Control.
-  const colorValues = useMemo(() => [...colors.values()], [colors]);
-  const settled = useMemo(() => splitColorQuery(settledText, colorValues), [settledText, colorValues]);
-  const colorFilter = useMemo(() => selected || !rawQuery ? [] : settled.colors, [selected, rawQuery, settled]);
-  const serverText = settled.text.length >= 2 ? settled.text : "";
-  const q = selected ? "" : rawQuery ? serverText : "";
-  const productId = selected?.id;
-  const filter = inventoryFilterParams(q, productId).toString();
-  const resultKey = `${filter}:${refreshKey}:${revision}`;
-  const currentCategories = categories?.key === resultKey ? categories : undefined;
-  const currentSuggestions = suggestions?.key === rawQuery && settledText === rawQuery && !selected ? suggestions : undefined;
-  const options = (currentSuggestions?.data || []).filter(product => matchesColor(colors.get(product.id), colorFilter)).slice(0, 8);
-  const colorOnly = colorFilter.length > 0 && !serverText;
-  const popup = menuOpen && !selected && rawQuery.length >= 2;
-  const total = currentCategories?.data?.reduce((sum, row) => sum + row.productCount, 0) || 0;
-  const categoryCount = currentCategories?.data?.length || 0;
-
-  useEffect(() => {
-    if (selected) return; // The full suggestion label is not a new search query.
-    const timer = window.setTimeout(() => setSettledText(rawQuery), 300);
-    return () => window.clearTimeout(timer);
-  }, [rawQuery, selected]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    controlRequest<InventoryCategory[]>(`/products/inventory/categories?${filter}`, { signal: controller.signal })
-      .then(data => { if (!controller.signal.aborted) setCategories({ key: resultKey, data }); })
-      .catch(error => { if (!controller.signal.aborted) setCategories({ key: resultKey, error: errorMessage(error) }); });
-    return () => controller.abort();
-  }, [filter, resultKey]);
-
-  useEffect(() => {
-    if (!settledText || selected || settledText !== rawQuery || !serverText) return;
-    const controller = new AbortController();
-    const params = new URLSearchParams({ q: serverText, limit: colorFilter.length ? "50" : "8" });
-    controlRequest<InventoryProduct[]>(`/products/typeahead?${params}`, { signal: controller.signal })
-      .then(data => { if (!controller.signal.aborted) setSuggestions({ key: settledText, data }); })
-      .catch(error => { if (!controller.signal.aborted) setSuggestions({ key: settledText, error: errorMessage(error) }); });
-    return () => controller.abort();
-  }, [settledText, rawQuery, selected, refreshKey, revision, serverText, colorFilter]);
-
-  function choose(product: InventoryProduct) {
-    setSelected(product); setText(inventoryProductName(product)); setMenuOpen(false); setActive(-1); setExpanded({});
-  }
-  function clear() { setText(""); setSettledText(""); setSelected(null); setSuggestions(undefined); setActive(-1); setExpanded({}); setMenuOpen(false); }
-  function keyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Escape") { setMenuOpen(false); setActive(-1); return; }
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault(); setMenuOpen(true);
-      setActive(index => options.length ? event.key === "ArrowDown" ? (index + 1) % options.length : (index <= 0 ? options.length - 1 : index - 1) : -1);
-    }
-    if (event.key === "Enter") {
-      event.preventDefault();
-      if (popup && active >= 0 && options[active]) choose(options[active]);
-      else setMenuOpen(false);
-    }
-  }
+  const locationSaved = (saved: ProductLocation[]) => {
+    updateCachedLocations(saved);
+    setData(current => {
+      if (!current) return current;
+      const next = new Map(current.locations);
+      saved.forEach(row => { if (row.rack || row.level || row.side) next.set(row.productId, row); else next.delete(row.productId); });
+      return { ...current, locations: next };
+    });
+  };
+  const filtering = Boolean(query.trim() || level !== "all" || category);
+  const bulkIds = category && category !== BUNDLES_KEY && productResults.length > 1 && productResults.length <= 300 ? productResults.map(row => row.id) : [];
+  const categoryName = filtered.categories.find(item => item.key === category)?.name;
 
   return <section className={styles.panel} aria-label="Inventario de productos">
-    <div className={styles.intro}><h2>Encuentra tus productos</h2><p>Consulta las existencias por categoría o busca un producto específico.</p></div>
-    <div className={styles.searchArea} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) { setMenuOpen(false); setActive(-1); } }}>
-      <label htmlFor={`${listId}-input`}>Buscar en inventario</label>
-      <div className={styles.searchField}><ChatIcon name="search"/><input id={`${listId}-input`} type="text" role="combobox" autoComplete="off" maxLength={120} value={text}
-        placeholder="Nombre, color, talla, categoría o género…" aria-expanded={popup} aria-autocomplete="list" aria-controls={popup ? listId : undefined}
-        aria-activedescendant={popup && active >= 0 && options[active] ? `${listId}-${options[active].id}` : undefined} aria-describedby={`${listId}-help`}
-        onFocus={() => setMenuOpen(true)} onKeyDown={keyDown} onChange={event => { setText(event.target.value); setSelected(null); setMenuOpen(true); setActive(-1); setExpanded({}); }}/>
-        {text && <button type="button" onClick={clear} aria-label="Limpiar búsqueda"><ChatIcon name="close"/></button>}
+    <div className={styles.toolbar}>
+      <div className={styles.searchField}>
+        <ChatIcon name="search" />
+        <label htmlFor={searchId} className={styles.srOnly}>Buscar en inventario</label>
+        <input ref={input} id={searchId} type="search" autoComplete="off" maxLength={120} value={query} placeholder="¿Qué producto buscas? Nombre, color, talla…" onKeyDown={keyDown} onChange={event => { setQuery(event.target.value); resetPage(); }} />
+        {query && <button type="button" onClick={() => { setQuery(""); resetPage(); input.current?.focus(); }} aria-label="Limpiar búsqueda"><ChatIcon name="close" /></button>}
       </div>
-      <small id={`${listId}-help`}>Escribe al menos 2 caracteres. Puedes combinar palabras como “essential negro 25-28”.</small>
-      {popup && <div className={styles.suggestionPanel}>
-        {colorOnly && <p role="status">Mostrando abajo los productos de color {colorFilter.join(", ")}.</p>}
-        {!colorOnly && !currentSuggestions && <p role="status">Buscando sugerencias…</p>}
-        {currentSuggestions?.error && <p role="alert">{currentSuggestions.error}</p>}
-        {currentSuggestions?.data && options.length === 0 && <p>No hay productos que coincidan.</p>}
-        <div id={listId} role="listbox" aria-label="Productos sugeridos">{options.map((product, index) => <button type="button" role="option" tabIndex={-1} id={`${listId}-${product.id}`} aria-selected={index === active} key={product.id} onClick={() => choose(product)}>
-          <span><strong>{product.name}</strong><small>{[colors.get(product.id), product.size && `Talla ${product.size}`, product.categoryName || "Sin categoría", product.gender || "Sin género"].filter(Boolean).join(" · ")}</small></span><b>{number(product.currentStock)} disponibles</b>
-        </button>)}</div>
-        {options.length > 0 && <p className={styles.keyboardHint}>↑ ↓ para navegar · Enter para elegir · Esc para cerrar</p>}
-      </div>}
+      <div className={styles.viewSwitch} role="group" aria-label="Forma de ver el inventario">
+        <button type="button" aria-pressed={view === "list"} onClick={() => changeView("list")}>Lista</button>
+        <button type="button" aria-pressed={view === "sizes"} onClick={() => changeView("sizes")}>Por tallas</button>
+      </div>
     </div>
-    {locationError && <p className={styles.hint} role="alert">No se pudieron cargar las ubicaciones: {locationError}</p>}
-    <LocationFinder locations={locations} />
-    <LoansSummary loans={loans} />
-    <div className={styles.resultsHeading}>
-      <p role="status">{!currentCategories ? "Consultando inventario…" : currentCategories.error ? "No se pudo cargar el inventario." : `${colorFilter.length ? "Revisando" : `${number(total)} ${total === 1 ? "producto" : "productos"} en`} ${categoryCount} ${categoryCount === 1 ? "categoría" : "categorías"}${selected ? " · Producto seleccionado" : q ? ` · Resultados para “${q}”` : ""}${colorFilter.length ? ` · Color: ${colorFilter.join(", ")}` : ""}`}</p>
-      {!!currentCategories?.data?.length && <div className={styles.groupActions}><button type="button" onClick={() => setExpanded(Object.fromEntries(currentCategories.data!.map(row => [inventoryCategoryKey(row), true])))}>Expandir todas</button><button type="button" onClick={() => setExpanded(Object.fromEntries(currentCategories.data!.map(row => [inventoryCategoryKey(row), false])))}>Contraer todas</button></div>}
+    <p className={styles.searchHint}>Ejemplos: <button type="button" onClick={() => setQuery("essential negro")}>essential negro</button> <button type="button" onClick={() => setQuery("caricatura 2-4")}>caricatura 2-4</button> · Enter abre el primer resultado.</p>
+
+    <div className={styles.chips} role="group" aria-label="Filtrar por existencia">
+      {LEVELS.map(item => <button key={item.key} type="button" className={`${styles.chip} ${item.key !== "all" ? styles[`chip_${item.key}`] : ""}`} aria-pressed={level === item.key} onClick={() => { setLevel(item.key); resetPage(); }}>
+        {item.key !== "all" && <i aria-hidden="true" />}{item.label}<b>{number(filtered.levels[item.key])}</b>
+      </button>)}
     </div>
-    {currentCategories?.error && <div role="alert" className={styles.error}>{currentCategories.error}<button type="button" onClick={() => setRevision(value => value + 1)}>Reintentar</button></div>}
-    {currentCategories?.data?.length === 0 && <div className={styles.empty}><h3>{q || selected ? "Sin coincidencias" : "Aún no hay productos"}</h3><p>{q || selected ? "Prueba otro nombre, categoría o género." : "Crea tus productos en Control de ventas → Productos y registra la mercancía recibida."}</p>{(q || selected) && <button type="button" onClick={clear}>Ver todo el inventario</button>}</div>}
-    {!q && !selected && !!currentCategories?.data?.length && <p className={styles.hint}>Abre una categoría para consultar y ajustar sus existencias.</p>}
-    <div className={styles.groups}>{currentCategories?.data?.map(category => {
-      const key = inventoryCategoryKey(category), open = expanded[key] ?? Boolean(q || selected || colorFilter.length);
-      return <section key={key} className={styles.category}>
-        <h3><button type="button" className={styles.categoryToggle} aria-expanded={open} aria-controls={`${listId}-category-${key}`} onClick={() => setExpanded(current => ({ ...current, [key]: !open }))}>
-          <span className={styles.categoryIcon} aria-hidden="true">▦</span><strong>{inventoryCategoryName(category)}</strong><span className={styles.count}>{number(category.productCount)} {category.productCount === 1 ? "producto" : "productos"}</span><span className={styles.chevron} aria-hidden="true">{open ? "⌄" : "›"}</span>
-        </button></h3>
-        <div id={`${listId}-category-${key}`} hidden={!open}>{open && <InventoryCategoryProducts key={`${key}:${filter}`} category={category} q={q} productId={productId} revision={`${refreshKey}:${revision}`} onSaved={async () => setRevision(value => value + 1)} locations={locations} onLocationSaved={locationSaved} colors={colors} colorFilter={colorFilter} loans={loansMap} allLoans={loans} onLoansChanged={reloadLoans}/>}</div>
-      </section>;
-    })}</div>
+    {filtered.categories.length > 1 && <div className={`${styles.chips} ${styles.categoryChips}`} role="group" aria-label="Filtrar por categoría">
+      <button type="button" className={styles.chip} aria-pressed={!category} onClick={() => { setCategory(""); resetPage(); }}>Todas las categorías<b>{number(filtered.total)}</b></button>
+      {filtered.categories.map(item => <button key={item.key} type="button" className={styles.chip} aria-pressed={category === item.key} disabled={!item.count && category !== item.key} onClick={() => { setCategory(category === item.key ? "" : item.key); resetPage(); }}>
+        {item.key === BUNDLES_KEY && "📦 "}{item.name}<b>{number(item.count)}</b>
+      </button>)}
+    </div>}
+
+    <div className={styles.status}>
+      <p role="status">{!data ? (loading ? "Cargando inventario…" : "") : `${number(filtered.results.length)} ${filtered.results.length === 1 ? "resultado" : "resultados"}${categoryName ? ` en ${categoryName}` : ""}`}
+        {data && <span> · Actualizado {new Date(data.loadedAt).toLocaleTimeString("es-MX", { hour: "numeric", minute: "2-digit" })}</span>}
+      </p>
+      <div className={styles.statusActions}>
+        {filtering && <button type="button" onClick={clearAll}>Quitar filtros</button>}
+        <button type="button" disabled={loading} onClick={() => void load(true)}>{loading && data ? "Actualizando…" : "↻ Actualizar"}</button>
+      </div>
+    </div>
+
+    {error && <div role="alert" className={styles.error}>{error}<button type="button" onClick={() => void load(true)}>Reintentar</button></div>}
+    {!data && !error && <div className={styles.skeleton} aria-hidden="true">{Array.from({ length: 6 }, (_, index) => <span key={index} />)}</div>}
+
+    {data && <div className={styles.extras}>
+      <div className={styles.extrasRow}><LoansSummary loans={loans} /><LocationFinder locations={data.locations} /></div>
+      {bulkIds.length > 0 && <ProductLocationEditor key={`${category}:${bulkIds.length}:${deferredQuery}`} productIds={bulkIds} options={locationOptions} onSaved={locationSaved} bulkLabel={`Asignar una ubicación a los ${bulkIds.length} productos mostrados`} />}
+    </div>}
+
+    {data && filtered.results.length === 0 && <div className={styles.emptyState}>
+      <h3>{rows.length ? "No encontramos ese producto" : "Aún no hay productos"}</h3>
+      <p>{rows.length ? "Revisa la ortografía, usa menos palabras o quita los filtros." : "Crea tus productos en Control de ventas → Productos y registra la mercancía recibida."}</p>
+      {filtering && <button type="button" onClick={clearAll}>Ver todo el inventario</button>}
+    </div>}
+
+    {data && view === "list" && filtered.results.length > 0 && <>
+      <ul className={styles.list}>{filtered.results.slice(0, limit).map(row => {
+        const out = row.kind === "product" ? piecesOut(loansMap.get(row.id)) : 0;
+        return <li key={`${row.kind}-${row.id}`}><button type="button" className={styles.row} onClick={() => open(row)}>
+          <Swatch row={row} />
+          <span className={styles.rowMain}><strong>{row.name}</strong><small>{variant(row)}</small></span>
+          <span className={styles.rowMeta}>{row.kind === "bundle" ? "Cajas que se pueden armar" : row.category}{row.location && <small>📍 {row.location}</small>}{out > 0 && <small className={styles.out}>🚚 {out} fuera</small>}</span>
+          <span className={`${styles.qty} ${styles[row.level]}`}><b>{row.level === "empty" ? "0" : number(row.stock)}</b><small>{row.level === "empty" ? "Agotado" : row.level === "low" ? `${unitLabel(row, row.stock)} · pocas` : unitLabel(row, row.stock)}</small></span>
+        </button></li>;
+      })}</ul>
+      {filtered.results.length > limit && <button type="button" className={styles.more} onClick={() => setLimit(value => value + PAGE)}>Mostrar {number(Math.min(PAGE, filtered.results.length - limit))} más de {number(filtered.results.length - limit)}</button>}
+    </>}
+
+    {data && view === "sizes" && filtered.results.length > 0 && <div className={styles.matrixGroups}>
+      <p className={styles.legend}><span className={styles.ready}>■</span> Disponible <span className={styles.low}>■</span> Pocas (en la alerta mínima o menos) <span className={styles.empty}>■</span> Agotado · Toca una celda para ver el detalle.</p>
+      {matrix.map(group => <section key={group.key} className={styles.matrixGroup} aria-label={group.name}>
+        <h3>{group.name}</h3>
+        <div className={styles.matrixScroll}><table className={styles.matrix}>
+          <thead><tr><th scope="col">Producto</th>{group.sizes.map(size => <th scope="col" key={size}>{size || "Única"}</th>)}<th scope="col">Total</th></tr></thead>
+          <tbody>{group.lines.map(line => <tr key={line.key}>
+            <th scope="row"><span className={styles.lineTitle}><Swatch row={{ kind: "product", color: line.color }} /><span><b>{line.title}</b>{line.detail && <small>{line.detail}</small>}</span></span></th>
+            {group.sizes.map(size => { const row = line.cells.get(size); return <td key={size}>{row ? <button type="button" className={`${styles.cell} ${styles[row.level]}`} title={`${row.name} · ${variant(row)} · ${levelLabel(row.level)}`} onClick={() => open(row)}>{number(row.stock)}</button> : <span className={styles.none} aria-label="No existe">—</span>}</td>; })}
+            <td className={styles.lineTotal}>{number(line.total)}</td>
+          </tr>)}</tbody>
+        </table></div>
+      </section>)}
+      {bundleResults.length > 0 && <section className={styles.matrixGroup} aria-label="Paquetes">
+        <h3>📦 Paquetes</h3>
+        <ul className={styles.list}>{bundleResults.map(row => <li key={row.id}><button type="button" className={styles.row} onClick={() => open(row)}><Swatch row={row} /><span className={styles.rowMain}><strong>{row.name}</strong><small>Paquete</small></span><span className={styles.rowMeta}>Cajas que se pueden armar hoy</span><span className={`${styles.qty} ${styles[row.level]}`}><b>{number(row.stock)}</b><small>{row.level === "empty" ? "Agotado" : unitLabel(row, row.stock)}</small></span></button></li>)}</ul>
+      </section>}
+    </div>}
+
+    {data && selected && <InventoryDetail key={`${selected.kind}-${selected.id}`} selection={selected} data={data} loans={loans} loansMap={loansMap} locationOptions={locationOptions}
+      onSelect={setSelected} onClose={() => setSelected(null)} onLocationSaved={locationSaved} onLoansChanged={() => setLoansKey(value => value + 1)} onStockSaved={() => load(true)} />}
   </section>;
 }
 
-// Control entrega máximo 50 por página; juntamos la categoría completa para agruparla por talla.
-const PAGE_SIZE = 50, MAX_PAGES = 40;
-function InventoryCategoryProducts({ category, q, productId, revision, onSaved, locations, onLocationSaved, colors, colorFilter, loans, allLoans, onLoansChanged }: { category: InventoryCategory; q: string; productId?: number; revision: string; onSaved: () => Promise<void>; locations: LocationMap; onLocationSaved: (rows: ProductLocation[]) => void; colors: Colors; colorFilter: string[]; loans: Map<number, InventoryLoan[]>; allLoans: InventoryLoan[]; onLoansChanged: () => void }) {
-  const options = { rack: suggestions(locations.values(), "rack"), level: suggestions(locations.values(), "level"), side: suggestions(locations.values(), "side") };
-  const [retry, setRetry] = useState(0);
-  const [result, setResult] = useState<{ key: string; data?: { items: InventoryProduct[]; total: number }; error?: string }>();
-  const key = `${inventoryPagePath(category, q, productId, 0, PAGE_SIZE)}:${revision}:${retry}`;
-  const current = result?.key === key ? result : undefined;
+type DetailProps = {
+  selection: Selection; data: InventorySnapshot; loans: InventoryLoan[]; loansMap: Map<number, InventoryLoan[]>;
+  locationOptions: { rack: string[]; level: string[]; side: string[] };
+  onSelect: (selection: Selection) => void; onClose: () => void; onLocationSaved: (rows: ProductLocation[]) => void; onLoansChanged: () => void; onStockSaved: () => Promise<void>;
+};
+/** Panel lateral con todo lo que se hace con un producto: ver tallas y colores, ubicación, préstamos y ajustes. */
+function InventoryDetail({ selection, data, loans, loansMap, locationOptions, onSelect, onClose, onLocationSaved, onLoansChanged, onStockSaved }: DetailProps) {
+  const panel = useRef<HTMLElement>(null);
   useEffect(() => {
-    const controller = new AbortController();
-    (async () => {
-      const items: InventoryProduct[] = [];
-      let page = 0, totalPages = 1, total = 0;
-      do {
-        const data = await controlRequest<InventoryPage>(inventoryPagePath(category, q, productId, page, PAGE_SIZE), { signal: controller.signal });
-        items.push(...data.content);
-        totalPages = data.totalPages; total = data.totalElements; page += 1;
-      } while (page < totalPages && page < MAX_PAGES && !controller.signal.aborted);
-      return { items, total };
-    })()
-      .then(data => { if (!controller.signal.aborted) setResult({ key, data }); })
-      .catch(error => { if (!controller.signal.aborted) setResult({ key, error: errorMessage(error) }); });
-    return () => controller.abort();
-  }, [category, q, productId, key]);
-  const visible = useMemo(() => (current?.data?.items || []).filter(product => matchesColor(colors.get(product.id), colorFilter)), [current, colors, colorFilter]);
-  const sizes = useMemo(() => groupBySize(visible), [visible]);
-  const openByDefault = Boolean(q || productId || colorFilter.length) || sizes.length === 1;
-  return <div className={styles.categoryBody} aria-busy={!current}>
-    {!current && <p role="status">Cargando productos de {inventoryCategoryName(category)}…</p>}
-    {current?.error && <div role="alert" className={styles.error}>{current.error}<button type="button" onClick={() => setRetry(value => value + 1)}>Reintentar categoría</button></div>}
-    {current?.data?.items.length === 0 && <p>No hay productos en esta categoría.</p>}
-    {!!current?.data?.items.length && !visible.length && <p>No hay productos de color {colorFilter.join(", ")} en esta categoría.</p>}
-    {!!current?.data && current.data.total > current.data.items.length && <p className={styles.hint}>Se muestran {number(current.data.items.length)} de {number(current.data.total)} productos. Usa la búsqueda para encontrar los demás.</p>}
-    <div className={styles.sizeGroups}>{sizes.map(size => {
-      const stock = size.items.reduce((sum, product) => sum + Number(product.currentStock || 0), 0);
-      const low = size.items.filter(product => inventoryStockState(product) !== "ready").length;
-      return <details key={size.key} className={styles.sizeGroup} open={openByDefault}>
-        <summary>
-          <strong>{size.label}</strong>
-          <span className={styles.count}>{number(size.items.length)} {size.items.length === 1 ? "producto" : "productos"} · {number(stock)} piezas</span>
-          {low > 0 && <span className={`${styles.badge} ${styles.low}`}>{low} por surtir</span>}
-          <span className={styles.chevron} aria-hidden="true">›</span>
-        </summary>
-        <div className={styles.sizeBody}>
-          {size.items.length > 1 && <ProductLocationEditor productIds={size.items.map(product => product.id)} options={options} onSaved={onLocationSaved} bulkLabel={`Asignar una ubicación a los ${size.items.length} productos de ${size.size ? `talla ${size.size}` : "esta sección"}`}/>}
-          <div className={styles.products}>{size.items.map(product => {
-            const state = inventoryStockState(product);
-            return <article key={product.id} className={styles.product}>
-              <header><div><h4>{product.name}</h4><VariantChips color={colors.get(product.id)} size={product.size} /><p>{[product.gender || "Sin género", `#${product.id}`].filter(Boolean).join(" · ")}</p>{piecesOut(loans.get(product.id)) > 0 && <span className="loan-badge">🚚 {piecesOut(loans.get(product.id))} fuera</span>}</div><span className={`${styles.badge} ${styles[state]}`}>{state === "empty" ? "Sin existencias" : state === "low" ? "Stock bajo" : "Disponible"}</span></header>
-              <div className={styles.stock}><strong>{number(product.currentStock)}</strong><span>unidades disponibles</span><small>Alerta mínima: {number(product.minStockAlert ?? 0)}</small></div>
-              <CopyStockButton productId={product.id} />
-              <ProductLocationEditor productIds={[product.id]} location={locations.get(product.id)} options={options} onSaved={onLocationSaved}/>
-              <ProductLoans productId={product.id} productName={[product.name?.trim() || "Producto", product.gender?.trim(), colors.get(product.id), product.size?.trim() && `Talla ${product.size.trim()}`].filter(Boolean).join(" · ")} loans={loans.get(product.id) || []} allLoans={allLoans} onChanged={onLoansChanged} />
-              <InventoryQuantityEditor id={product.id} name={inventoryProductName(product)} stock={product.currentStock} onSaved={onSaved}/>
-            </article>;
-          })}</div>
-        </div>
-      </details>;
-    })}</div>
-  </div>;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    panel.current?.focus();
+    const close = (event: globalThis.KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    document.addEventListener("keydown", close);
+    return () => { document.removeEventListener("keydown", close); previous?.focus(); };
+  }, [onClose]);
+  const product = selection.kind === "product" ? data.products.find(item => item.id === selection.id) : undefined;
+  const bundle = selection.kind === "bundle" ? data.bundles.find(item => item.id === selection.id) : undefined;
+  return <>
+    <button type="button" className={styles.scrim} aria-label="Cerrar detalle" onClick={onClose} />
+    <aside ref={panel} tabIndex={-1} className={styles.drawer} aria-label="Detalle del producto">
+      <header><p>{bundle ? "PAQUETE" : "PRODUCTO"}</p><button type="button" aria-label="Cerrar detalle" onClick={onClose}><ChatIcon name="close" /></button></header>
+      <div className={styles.drawerBody}>
+        {product && <ProductDetail product={product} data={data} loans={loans} loansMap={loansMap} locationOptions={locationOptions} onSelect={onSelect} onLocationSaved={onLocationSaved} onLoansChanged={onLoansChanged} onStockSaved={onStockSaved} />}
+        {bundle && <BundleDetail bundle={bundle} data={data} onSelect={onSelect} />}
+        {!product && !bundle && <p className={styles.hint}>Este producto ya no está en Control de ventas.</p>}
+      </div>
+    </aside>
+  </>;
+}
+
+function ProductDetail({ product, data, loans, loansMap, locationOptions, onSelect, onLocationSaved, onLoansChanged, onStockSaved }: Omit<DetailProps, "selection" | "onClose"> & { product: QuickProduct }) {
+  const row = productRow(product, formatLocation(data.locations.get(product.id)));
+  const family = useMemo(() => productFamily(data.products, product).map(item => productRow(item)).sort((a, b) => a.color.localeCompare(b.color, "es") || compareSizes(a.size, b.size)), [data, product]);
+  const out = piecesOut(loansMap.get(product.id));
+  const fullName = [row.name, row.gender, row.color, row.size && `Talla ${row.size}`].filter(Boolean).join(" · ");
+  return <>
+    <div className={styles.detailHead}><Swatch row={row} /><div><h2>{row.name}</h2><p>{[row.color, row.size && `Talla ${row.size}`, row.gender, row.category].filter(Boolean).join(" · ")}</p></div></div>
+    <div className={`${styles.bigStock} ${styles[row.level]}`}><b>{number(row.stock)}</b><span>{unitLabel(row, row.stock)} disponibles</span><em>{levelLabel(row.level)}</em></div>
+    <p className={styles.hint}>Alerta mínima: {number(row.min)} · #{row.id}{out > 0 && <> · 🚚 {out} fuera del almacén</>}</p>
+    <CopyStockButton productId={product.id} />
+    {family.length > 1 && <section className={styles.detailSection}>
+      <h3>Otras tallas y colores</h3>
+      <div className={styles.family}>{family.map(item => <button key={item.id} type="button" aria-current={item.id === product.id} className={`${styles.familyItem} ${styles[item.level]}`} onClick={() => onSelect({ kind: "product", id: item.id })}>
+        <span>{[item.color, item.size && `Talla ${item.size}`].filter(Boolean).join(" · ") || item.name}</span><b>{number(item.stock)}</b>
+      </button>)}</div>
+    </section>}
+    <section className={styles.detailSection}><h3>Ubicación en bodega</h3><ProductLocationEditor productIds={[product.id]} location={data.locations.get(product.id)} options={locationOptions} onSaved={onLocationSaved} /></section>
+    <section className={styles.detailSection}><h3>Prendas fuera del almacén</h3><ProductLoans productId={product.id} productName={fullName} loans={loansMap.get(product.id) || []} allLoans={loans} onChanged={onLoansChanged} /></section>
+    <section className={styles.detailSection}><h3>Ajustar existencias</h3><InventoryQuantityEditor id={product.id} name={fullName} stock={row.stock} onSaved={onStockSaved} /></section>
+  </>;
+}
+
+function BundleDetail({ bundle, data, onSelect }: { bundle: QuickBundle; data: InventorySnapshot; onSelect: (selection: Selection) => void }) {
+  const available = bundleAvailability(bundle, data.products);
+  const row = bundleRow(bundle, available);
+  const byId = new Map(data.products.map(product => [product.id, product]));
+  const price = Number(bundle.fixedPrice);
+  return <>
+    <div className={styles.detailHead}><Swatch row={row} /><div><h2>{bundle.name}</h2><p>{bundle.storeCategory || "Paquete"}{Number.isFinite(price) && price > 0 ? ` · ${money(price)}` : ""}</p></div></div>
+    <div className={`${styles.bigStock} ${styles[row.level]}`}><b>{number(available)}</b><span>{unitLabel(row, available)} se pueden armar hoy</span><em>{levelLabel(row.level)}</em></div>
+    <section className={styles.detailSection}><h3>Contenido de cada caja</h3>
+      <ul className={styles.bundleItems}>{bundle.items.map((item, index) => {
+        const product = byId.get(item.productId);
+        const itemRow = product ? productRow(product) : null;
+        return <li key={`${item.productId}-${index}`}>{itemRow ? <button type="button" onClick={() => onSelect({ kind: "product", id: itemRow.id })}>
+          <span><b>{item.quantity} × {itemRow.name}</b><small>{[itemRow.color, itemRow.size && `Talla ${itemRow.size}`, item.assorted ? "surtido" : ""].filter(Boolean).join(" · ")}</small></span>
+          <em className={styles[itemRow.level]}>{number(itemRow.stock)} disp.</em>
+        </button> : <span><b>{item.quantity} × Producto #{item.productId}</b><small>Ya no está en Control</small></span>}</li>;
+      })}</ul>
+    </section>
+  </>;
 }
