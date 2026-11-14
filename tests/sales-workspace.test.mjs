@@ -24,3 +24,16 @@ test("product identity keeps category and gender; never guesses legacy sale sour
   assert.equal(saleSource("CHAT"), "Chat");
   assert.equal(saleSource(null), "Sin origen registrado");
 });
+
+test("precio manual: vacío usa el configurado; acepta pesos con comas", async () => {
+  const { manualPrice } = await import("../app/lib/sales-workspace.ts");
+  assert.equal(manualPrice(""), null);
+  assert.equal(manualPrice("   "), null);
+  assert.equal(manualPrice("8.5"), 8.5);
+  assert.equal(manualPrice("$1,250.50"), 1250.5);
+  assert.equal(manualPrice("0"), 0);
+  assert.equal(manualPrice("-3"), undefined);
+  assert.equal(manualPrice("8.555"), undefined);
+  assert.equal(manualPrice("abc"), undefined);
+  assert.equal(manualPrice("20000000"), undefined);
+});

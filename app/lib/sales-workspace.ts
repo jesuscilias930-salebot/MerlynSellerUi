@@ -33,3 +33,15 @@ export function saleProductName(product?: SaleProduct | null): string {
 export function saleSource(source?: string | null): string {
   return ({ CHAT: "Chat", MANUAL: "Manual", STORE: "Tienda" } as Record<string, string>)[source || ""] || "Sin origen registrado";
 }
+
+/**
+ * Precio acordado en una venta manual. Vacío = usar el precio configurado (null);
+ * un monto inválido devuelve undefined. Acepta «$1,250.50».
+ */
+export function manualPrice(text: string): number | null | undefined {
+  const clean = text.trim().replace(/[$\s,]/g, "");
+  if (!clean) return null;
+  if (!/^\d+(\.\d{1,2})?$/.test(clean)) return undefined;
+  const value = Number(clean);
+  return Number.isFinite(value) && value <= 10_000_000 ? value : undefined;
+}

@@ -36,7 +36,7 @@
 .pagination { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; }
 .orders { border-top: 1px solid var(--line); padding-top: 15px; display: grid; gap: 16px; }
 .manualLines { display: grid; gap: 14px; }
-.manualLine { display: grid; grid-template-columns: 170px minmax(0, 1fr) 120px auto; gap: 12px; align-items: end; border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.manualLine { display: grid; grid-template-columns: 170px minmax(0, 1fr) 110px 150px auto; gap: 12px; align-items: end; border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
 .secondary { justify-self: start; }
 .expenseForm { border: 1px solid var(--line); background: var(--app-subtle); border-radius: 12px; padding: 16px; }
 .expenses > div { display: flex; align-items: center; gap: 18px; padding: 14px 0; border-bottom: 1px solid var(--line); }
@@ -69,3 +69,6 @@
   .result { flex-direction: column; }
   .expenses > div { flex-wrap: wrap; gap: 10px; }
 }
+
+.optional { color: var(--muted); font-size: 12px; font-weight: 400; }
+.manualLine input[aria-invalid="true"] { border-color: var(--app-danger); box-shadow: 0 0 0 2px var(--app-danger-soft); }
