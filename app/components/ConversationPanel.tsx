@@ -24,6 +24,7 @@ import { ToolAccordion } from "./ToolAccordion";
 import { WhatsAppTemplateCard } from "./WhatsAppTemplateCard";
 import {ChatShippingModal} from "./ChatShippingModal";
 import { QuoteDrawer } from "./QuoteDrawer";
+import { ProductStockSender } from "./ProductStockImages";
 import { QuoteBundlePicker } from "./QuoteBundlePicker";
 import { chatQuoteBundle } from "../lib/quote";
 import type { QuoteBundleRef } from "../lib/types";
@@ -121,6 +122,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
         <textarea value={documentCaption} onChange={(event) => onDocumentCaptionChange(event.target.value)} placeholder="Mensaje que acompaña el catálogo" disabled={!selectedDocumentId} />
         <button className="tool-primary-button" type="button" disabled={!chat || !selectedDocumentId || uploadingMedia} onClick={onSendDocument}>Enviar catálogo</button>
       </ToolAccordion>
+      <ToolAccordion icon="👕" title="Producto con tallas" description="Envía fotos de productos con sus tallas disponibles del inventario.">{chat && <ProductStockSender key={chat.id} chatId={chat.id} />}</ToolAccordion>
       <CtaUrlCard disabled={!chat} packages={entrepreneurPackages} onSend={onSendCtaUrl} />
       <InteractiveOptionsCard conversationId={chat?.id} disabled={!chat} />
       <>{chat && <StoreOrders key={chat.id} conversationId={chat.id}/>}</>{isWhatsApp(chat) ? <WhatsAppTemplateCard conversationId={chat?.id} disabled={!chat} /> : <p className="tool-notice">Las plantillas oficiales son solo para WhatsApp. En {contactDetail(chat!).split(" · ")[0]} puedes responder hasta 24 h después del último mensaje del cliente (7 días si vino de un anuncio o respondes como persona del equipo).</p>}

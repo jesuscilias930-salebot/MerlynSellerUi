@@ -18,6 +18,7 @@ import ScenarioCodexConnection from "./ScenarioCodexConnection";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { StepTypePicker } from "./StepTypePicker";
 import { ScenarioQuoteBundleField } from "./QuoteBundlePicker";
+import { ScenarioProductImages } from "./ProductStockImages";
 import { NewScenarioStart, type NewScenarioChoice } from "./NewScenarioStart";
 import { buildFlowGraph, connectSteps, disconnectStep, hasNext, INPUT_Y, insertStepAfter, NODE_WIDTH, outputY, START_HEIGHT, START_WIDTH, stepPorts, type LinkSource } from "../lib/scenario-graph";
 import { FlowCanvas, type FlowCanvasHandle } from "./FlowCanvas";
@@ -357,8 +358,8 @@ function FlowBuilder({
         const prefix = `Paso ${index + 1}`;
         if (step.type === "send_text" && !step.body?.trim())
           return [`${prefix}: falta el mensaje.`];
-        if (step.type === "send_media" && !(step.items || []).length && !(step.packageIds || []).length)
-          return [`${prefix}: agrega al menos un archivo o conjunto.`];
+        if (step.type === "send_media" && !(step.items || []).length && !(step.packageIds || []).length && !(step.products || []).length)
+          return [`${prefix}: agrega al menos un archivo, conjunto o producto.`];
         if (step.type === "wait_reply" && !(step.branches || []).length)
           return [`${prefix}: agrega una respuesta posible.`];
         if (step.type === "send_options") {
@@ -1461,7 +1462,7 @@ function FlowBuilder({
               step.type === "send_text"
                 ? truncate(step.body, 60)
                 : step.type === "send_media"
-                  ? [(step.items || []).length && `${(step.items || []).length} archivo${(step.items || []).length === 1 ? "" : "s"}`, (step.packageIds || []).length && `${(step.packageIds || []).length} conjunto${(step.packageIds || []).length === 1 ? "" : "s"}`].filter(Boolean).join(" · ") || "Sin archivos"
+                  ? [(step.items || []).length && `${(step.items || []).length} archivo${(step.items || []).length === 1 ? "" : "s"}`, (step.packageIds || []).length && `${(step.packageIds || []).length} conjunto${(step.packageIds || []).length === 1 ? "" : "s"}`, (step.products || []).length && `${(step.products || []).length} producto${(step.products || []).length === 1 ? "" : "s"} con tallas`].filter(Boolean).join(" · ") || "Sin archivos"
                   : step.type === "wait_reply"
                     ? "Espera lo que escribe el cliente"
                     : step.type === "send_options"
@@ -1840,7 +1841,7 @@ function FlowBuilder({
                     );
                   })}
                   {(selectedStep.items || []).length === 0 && (selectedStep.packageIds || []).length === 0 ? (
-                    <small>Aún no hay archivos ni conjuntos para enviar. Los conjuntos envían sus fotos actuales de Documentos → Conjuntos reutilizables.</small>
+                    (selectedStep.products || []).length > 0 ? null : <small>Aún no hay archivos ni conjuntos para enviar. Los conjuntos envían sus fotos actuales de Documentos → Conjuntos reutilizables.</small>
                   ) : (
                     selectedStep.items?.map((item) => (
                       <article key={item.mediaId}>
@@ -1879,6 +1880,10 @@ function FlowBuilder({
                       </article>
                     ))
                   )}
+                  <ScenarioProductImages
+                    value={selectedStep.products || []}
+                    onChange={(products) => updateStep(selectedStep.id, { products: products.length ? products : undefined })}
+                  />
                 </div>
               )}
               {selectedStep.type === "wait_reply" && (
