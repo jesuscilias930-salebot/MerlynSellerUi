@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { controlSession } from "../lib/control-api";
 import { cachedInventory, loadInventory, type InventorySnapshot as Snapshot } from "../lib/inventory-snapshot";
-import { availabilityMessage, normalizeText, searchInventory, sizeSuggestions, type QuickResult } from "../lib/quick-inventory";
+import { availabilityMessage, normalizeText, productUnit, searchInventory, sizeSuggestions, type QuickResult } from "../lib/quick-inventory";
 import { colorSwatch } from "../lib/product-colors";
 
 const money = (value: number) => value.toLocaleString("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: value % 1 ? 2 : 0 });
@@ -12,7 +12,7 @@ const ago = (time: number) => {
   return seconds < 60 ? "hace un momento" : `hace ${Math.round(seconds / 60)} min`;
 };
 const stockLabel = (result: QuickResult) =>
-  result.state === "empty" ? "Agotado" : `${result.state === "low" ? "Pocas · " : ""}${result.available} ${result.kind === "bundle" ? (result.available === 1 ? "caja" : "cajas") : (result.available === 1 ? "par" : "pares")}`;
+  result.state === "empty" ? "Agotado" : `${result.state === "low" ? "Pocas · " : ""}${result.available} ${result.kind === "bundle" ? (result.available === 1 ? "caja" : "cajas") : productUnit(result.size, result.available)}`;
 
 /** Búsqueda rápida de existencias (productos y bundles) desde el chat. */
 export function InventoryQuickSearch({ onInsert, autoFocus = true }: { onInsert: (text: string) => void; autoFocus?: boolean }) {

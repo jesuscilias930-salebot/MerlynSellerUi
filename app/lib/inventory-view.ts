@@ -121,7 +121,10 @@ export function sizeMatrix(rows: InventoryRow[]): MatrixGroup[] {
   return [...groups].map(([key, group]) => ({ key, name: group.name, sizes: [...group.sizes].sort(compareSizes), lines: [...group.lines.values()] }));
 }
 
-export const unitLabel = (row: Pick<InventoryRow, "kind">, count: number) => row.kind === "bundle" ? (count === 1 ? "caja" : "cajas") : (count === 1 ? "par" : "pares");
+const LETTER_SIZES = ["xxch", "xch", "xs", "ch", "s", "m", "g", "l", "eg", "xl", "xxl", "2xl", "xxg", "xxxl", "3xl"];
+/** Cajas para paquetes; piezas para ropa (tallas CH, S, M, G…); pares para calcetines. */
+export const unitLabel = (row: Pick<InventoryRow, "kind"> & { size?: string }, count: number) => row.kind === "bundle" ? (count === 1 ? "caja" : "cajas")
+  : LETTER_SIZES.includes(normalize(row.size || "").replace(/ /g, "")) ? (count === 1 ? "pieza" : "piezas") : (count === 1 ? "par" : "pares");
 export const levelLabel = (level: StockLevel) => level === "empty" ? "Agotado" : level === "low" ? "Pocas" : "Disponible";
 
 export type StockChange = { id: number; name: string; from: number; to: number };

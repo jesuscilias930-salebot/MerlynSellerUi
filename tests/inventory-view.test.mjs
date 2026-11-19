@@ -66,3 +66,11 @@ test('edición de existencias: solo cuenta lo que cambió y marca lo inválido',
   assert.deepEqual(result.changes, [{ id: 2, name: 'Caricatura niña · Rosa · Talla 2-4', from: 4, to: 10 }]);
   assert.deepEqual(result.invalid, [3]);
 });
+
+test('unidad: piezas para ropa, pares para calcetines, cajas para paquetes', async () => {
+  const { unitLabel } = await import('../app/lib/inventory-view.ts');
+  assert.equal(unitLabel({ kind: 'product', size: 'M' }, 2), 'piezas');
+  assert.equal(unitLabel({ kind: 'product', size: 'CH' }, 1), 'pieza');
+  assert.equal(unitLabel({ kind: 'product', size: '22-24' }, 2), 'pares');
+  assert.equal(unitLabel({ kind: 'bundle' }, 3), 'cajas');
+});

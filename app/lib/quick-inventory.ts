@@ -177,7 +177,7 @@ export function searchInventory(text: string, products: QuickProduct[], bundles:
 export function availabilityMessage(result: QuickResult) {
   const name = result.kind === "bundle" ? result.title : [result.title, result.color, result.size && `Talla ${result.size}`, result.detail].filter(Boolean).join(" · ");
   if (result.state === "empty") return `Por ahora «${name}» está agotado 😔. ¿Te muestro otra opción similar?`;
-  return `¡Sí tenemos disponible «${name}»! 🙌 ¿Cuántos ${result.kind === "bundle" ? "paquetes" : "pares"} necesitas?`;
+  return `¡Sí tenemos disponible «${name}»! 🙌 ¿Cuántos ${result.kind === "bundle" ? "paquetes" : productUnit(result.size, 2)} necesitas?`;
 }
 
 /**
@@ -191,38 +191,81 @@ export function productFamily(products: QuickProduct[], product: QuickProduct) {
   return products.filter(item => !normalizeText(item.model || "") && normalizeText(item.name) === name);
 }
 
-const pairs = (count: number) => `${new Intl.NumberFormat("es-MX").format(count)} ${count === 1 ? "par" : "pares"}`;
+const LETTER_SIZES = ["xxch", "xch", "xs", "ch", "s", "m", "g", "l", "eg", "xl", "xxl", "2xl", "xxg", "xxxl", "3xl"];
+const letterIndex = (size: string) => LETTER_SIZES.indexOf(normalizeText(size).replace(/\s+/g, ""));
+/** Ropa (tallas CH, S, M, G…) se cuenta en piezas; calcetines (2-4, 22-24…) en pares. */
+export const productUnit = (size: string | null | undefined, count: number) => letterIndex(size || "") !== -1 ? (count === 1 ? "pieza" : "piezas") : (count === 1 ? "par" : "pares");
+const unitFor = (products: QuickProduct[]) => products.some(product => letterIndex(product.size || "") !== -1) ? { one: "pieza", many: "piezas" } : { one: "par", many: "pares" };
+/** Línea del producto: su nombre sin el color ni la talla («Essentials 1.1 · Negro» → «essentials 1 1»). */
+const lineOf = (product: QuickProduct) => {
+  let name = ` ${normalizeText(product.name)} `;
+  for (const part of [product.color, product.size]) {
+    const text = normalizeText(part || "");
+    if (text) name = name.replace(` ${text} `, " ");
+  }
+  return name.trim();
+};
+const lineLabel = (product: QuickProduct) => {
+  let name = product.name.trim();
+  for (const part of [product.color, product.size]) {
+    const text = part?.trim();
+    // Solo palabras completas: la talla «S» no se quita de «Essentials».
+    if (text) name = name.replace(new RegExp(`(?:^|\\s*[·\\-–]\\s*|\\s+)${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\s|$|\\s*[·\\-–])`, "i"), "").trim();
+  }
+  return name || product.name.trim();
+};
+/** Tallas de letra de menor a mayor (CH, M, G); numéricas de mayor a menor, como siempre. */
+const compareSizeLabels = (a: string, b: string) => {
+  const la = letterIndex(a), lb = letterIndex(b);
+  if (la !== -1 || lb !== -1) return (la === -1 ? 999 : la) - (lb === -1 ? 999 : lb);
+  return naturalDesc(a, b);
+};
 /**
- * Existencias listas para enviar por mensaje, separadas por talla (de mayor a menor).
- * Omite lo que no tiene existencia. Devuelve "" si no hay nada disponible.
+ * Existencias listas para enviar por mensaje, separadas por talla.
+ * Omite lo que no tiene existencia y suma lo repetido (mismo color y talla). Si el modelo agrupa
+ * productos distintos (p. ej. dos calidades de una sudadera), los separa en lugar de mezclarlos.
+ * Devuelve "" si no hay nada disponible.
  */
 export function stockListMessage(title: string, products: QuickProduct[]) {
   const available = products.filter(product => stockOf(product) > 0);
   if (!available.length) return "";
+  const unit = unitFor(products);
+  const count = (value: number) => `${new Intl.NumberFormat("es-MX").format(value)} ${value === 1 ? unit.one : unit.many}`;
   const genders = new Set(available.map(product => genderLabel(product.gender)).filter(Boolean));
+  const lines = new Map<string, string>();
+  for (const product of available) if (!lines.has(lineOf(product))) lines.set(lineOf(product), lineLabel(product));
+  const splitLines = lines.size > 1;
   const withColor = available.some(product => product.color?.trim());
-  const groups = new Map<string, { size: string; items: QuickProduct[] }>();
+  type Group = { line: string; lineName: string; size: string; label: string; colors: Map<string, { color: string; stock: number }>; stock: number };
+  const groups = new Map<string, Group>();
   for (const product of available) {
     const size = product.size?.trim().replace(/\s+/g, " ") || "";
     const gender = genders.size > 1 ? genderLabel(product.gender) : "";
-    const key = `${normalizeText(size)}|${normalizeText(gender)}`;
-    const group = groups.get(key) ?? { size: [size ? `Talla ${size}` : "Sin talla", gender && `(${gender})`].filter(Boolean).join(" "), items: [] };
-    group.items.push(product);
+    const line = splitLines ? lineOf(product) : "";
+    const key = `${line}|${normalizeText(size)}|${normalizeText(gender)}`;
+    const lineName = splitLines ? lines.get(line) || "" : "";
+    const group = groups.get(key) ?? { line, lineName, size, label: [lineName, [size ? `Talla ${size}` : "Sin talla", gender && `(${gender})`].filter(Boolean).join(" ")].filter(Boolean).join(" · "), colors: new Map(), stock: 0 };
+    const color = product.color?.trim() || "Sin color";
+    const entry = group.colors.get(normalizeText(color)) ?? { color, stock: 0 };
+    entry.stock += stockOf(product);
+    group.colors.set(normalizeText(color), entry);
+    group.stock += stockOf(product);
     groups.set(key, group);
   }
-  const ordered = [...groups.values()].sort((a, b) => (a.size === "Sin talla" ? 1 : b.size === "Sin talla" ? -1 : naturalDesc(a.size, b.size)));
+  const ordered = [...groups.values()].sort((a, b) => a.lineName.localeCompare(b.lineName, "es")
+    || (!a.size ? 1 : !b.size ? -1 : compareSizeLabels(a.size, b.size)));
   const total = available.reduce((sum, product) => sum + stockOf(product), 0);
-  const lines = [`*${title.trim() || "Producto"}*`, "Existencias disponibles:", ""];
+  const out = [`*${title.trim() || "Producto"}*`, "Existencias disponibles:", ""];
   if (!withColor) {
-    for (const group of ordered) lines.push(`• ${group.size}: ${pairs(group.items.reduce((sum, product) => sum + stockOf(product), 0))}`);
+    for (const group of ordered) out.push(`• ${group.label}: ${count(group.stock)}`);
   } else {
     ordered.forEach((group, index) => {
-      if (index) lines.push("");
-      lines.push(`*${group.size}*`);
-      for (const product of [...group.items].sort((a, b) => (a.color || "").localeCompare(b.color || "", "es")))
-        lines.push(`• ${product.color?.trim() || "Sin color"}: ${pairs(stockOf(product))}`);
+      if (index) out.push("");
+      out.push(`*${group.label}*`);
+      for (const entry of [...group.colors.values()].sort((a, b) => a.color.localeCompare(b.color, "es")))
+        out.push(`• ${entry.color}: ${count(entry.stock)}`);
     });
   }
-  lines.push("", `Total: ${pairs(total)}`);
-  return lines.join("\n");
+  out.push("", `Total: ${count(total)}`);
+  return out.join("\n");
 }

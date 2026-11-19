@@ -100,3 +100,24 @@ test('lista de existencias por talla para mensaje, sin agotados', async () => {
   const variants = [{ id: 11, name: 'Deportiva · Negro', model: 'Deportiva', currentStock: 2, size: '25-28', color: 'Negro' }, { id: 12, name: 'Deportiva · Gris', model: 'deportiva', currentStock: 1, size: '25-28', color: 'Gris' }];
   assert.equal(productFamily(variants, variants[0]).length, 2, 'variantes por modelo');
 });
+
+test('copiar existencias: separa líneas del mismo modelo, suma repetidos y usa piezas en ropa', async () => {
+  const { productFamily, stockListMessage } = await import('../app/lib/quick-inventory.ts');
+  const hoodie = (id, name, size, color, stock) => ({ id, name, model: 'Hoodie', size, color, currentStock: stock, gender: 'Unisex' });
+  const products = [
+    hoodie(1, 'Essentials 1.1', 'S', 'Negro', 8), hoodie(2, 'Essentials High Quality', 'S', 'Negro', 5),
+    hoodie(3, 'Essentials 1.1', 'M', 'Beige', 5), hoodie(4, 'Essentials 1.1', 'G', 'Gris Obscuro', 6),
+    hoodie(5, 'Essentials 1.1', 'G', 'Gris Obscuro', 4), hoodie(6, 'Essentials High Quality', 'G', 'Gris Obscuro', 13),
+    hoodie(7, 'Essentials High Quality · Gris', 'M', 'Gris', 2), hoodie(8, 'Essentials 1.1', 'S', 'Beige', 0),
+  ];
+  assert.equal(stockListMessage('Hoodie', productFamily(products, products[0])), [
+    '*Hoodie*', 'Existencias disponibles:', '',
+    '*Essentials 1.1 · Talla S*', '• Negro: 8 piezas', '',
+    '*Essentials 1.1 · Talla M*', '• Beige: 5 piezas', '',
+    '*Essentials 1.1 · Talla G*', '• Gris Obscuro: 10 piezas', '',
+    '*Essentials High Quality · Talla S*', '• Negro: 5 piezas', '',
+    '*Essentials High Quality · Talla M*', '• Gris: 2 piezas', '',
+    '*Essentials High Quality · Talla G*', '• Gris Obscuro: 13 piezas', '',
+    'Total: 43 piezas',
+  ].join('\n'));
+});
