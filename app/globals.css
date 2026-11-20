@@ -8566,6 +8566,18 @@ article.inbound:hover .message-reaction-picker, .message-reaction-picker:focus-w
 .bulk-move-popover select { width: 100%; padding: 8px; border: 1px solid #cfe0d5; border-radius: 7px; background: #fff; font: inherit; font-size: 12px; }
 .bulk-move-popover > div { display: flex; justify-content: flex-end; gap: 7px; }
 .bulk-move-popover > div button { padding: 7px 9px; font-size: 11px; }
+.bulk-move-popover { width: 272px; }
+.bulk-move-dates { display: grid; gap: 7px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.bulk-move-dates legend { margin-bottom: 6px; padding: 0; color: var(--deep); font-size: 11px; font-weight: 800; }
+.bulk-move-dates legend small { color: var(--muted); font-weight: 600; }
+.bulk-move-shortcuts { display: flex; flex-wrap: wrap; gap: 5px; }
+.bulk-move-shortcuts button { padding: 4px 8px; border: 1px solid #cfe0d5; border-radius: 999px; background: #fff; color: var(--deep); font-size: 11px; cursor: pointer; }
+.bulk-move-shortcuts button.selected { border-color: var(--green); background: #e9f7ef; color: var(--green); font-weight: 700; }
+.bulk-move-range { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.bulk-move-range label { font-weight: 700; }
+.bulk-move-range input { width: 100%; min-width: 0; padding: 6px; border: 1px solid #cfe0d5; border-radius: 7px; font: inherit; font-size: 12px; }
+.bulk-move-clear { justify-self: start; padding: 0; border: 0; background: none; color: var(--green); font-size: 11px; text-decoration: underline; cursor: pointer; }
+.bulk-move-note.warning { color: #b42318; }
 
 @media (max-width: 580px) {
     .tool-accordion-trigger { padding: 12px; }

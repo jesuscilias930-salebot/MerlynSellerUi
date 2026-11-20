@@ -45,6 +45,7 @@ import { VideosPanel } from "./components/VideosPanel";
 import { FinancesPanel } from "./components/FinancesPanel";
 import { ConversationAnalysisPanel } from "./components/ConversationAnalysisPanel";
 import type { PendingChatImage } from "./components/ConversationPanel";
+import { rangeLabel, type DateRange } from "./lib/lead-move";
 import { OutgoingContext, outgoingFromComposer, withOutgoing, type OutgoingItem } from "./lib/outgoing";
 
 type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "column-rules" | "ecommerce-categories" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
@@ -776,11 +777,12 @@ export default function Home() {
       );
     }
   };
-  const moveAllLeads = async (sourceColumn: LeadColumn, targetColumnId: string) => {
+  const moveAllLeads = async (sourceColumn: LeadColumn, targetColumnId: string, range: DateRange = {}) => {
     try {
-      const result = await request<{ movedLeads: number }>(`/leads/columns/${sourceColumn.id}/move-leads`, { method: "PATCH", body: JSON.stringify({ targetColumnId }) });
+      const result = await request<{ movedLeads: number }>(`/leads/columns/${sourceColumn.id}/move-leads`, { method: "PATCH", body: JSON.stringify({ targetColumnId, from: range.from || null, to: range.to || null }) });
       await refreshData();
-      setNotice(`${result.movedLeads} ${result.movedLeads === 1 ? "lead movido" : "leads movidos"} desde “${sourceColumn.name}”.`);
+      const dates = rangeLabel(range);
+      setNotice(`${result.movedLeads} ${result.movedLeads === 1 ? "lead movido" : "leads movidos"} desde “${sourceColumn.name}”${dates ? ` (chats ${dates})` : ""}.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "No se pudieron mover los leads.";
       setNotice(message);

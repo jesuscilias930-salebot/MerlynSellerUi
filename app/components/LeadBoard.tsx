@@ -3,6 +3,7 @@ import { initials } from "../lib/format";
 import { ColumnRemarketing } from "./ColumnRemarketing";
 import { ChannelBadge } from "./ChannelBadge";
 import { contactDetail, contactName } from "../lib/channels";
+import { dayOffset, leadsInRange, rangeLabel, type DateRange } from "../lib/lead-move";
 import type { Chat, ConversationFilter, LeadBoardSummary, LeadColumn } from "../lib/types";
 
 type Props = {
@@ -10,7 +11,8 @@ type Props = {
   draggingLeadId: string | null; draggingColumnId: string | null;
   onColumnNameChange: (value: string) => void; onFilterChange: (filter: ConversationFilter) => void;
   onAddColumn: (event: FormEvent) => void; onRemoveColumn: (column: LeadColumn) => void;
-  onMoveAll: (sourceColumn: LeadColumn, targetColumnId: string) => Promise<void>;
+  /** range: solo los leads cuyo último mensaje cae en esas fechas; vacío = todos. */
+  onMoveAll: (sourceColumn: LeadColumn, targetColumnId: string, range: DateRange) => Promise<void>;
   onOpenLead: (lead: Chat) => void; onDragStart: (event: DragEvent<HTMLButtonElement>, leadId: string) => void;
   onDragEnd: () => void; onDrop: (event: DragEvent<HTMLElement>, columnId: string) => void;
   onColumnDragStart: (event: DragEvent<HTMLButtonElement>, columnId: string) => void;
@@ -27,26 +29,48 @@ function BulkMoveControl({ column, columns, boards = [], activeBoardId = "", onM
   const [open, setOpen] = useState(false);
   const [boardId, setBoardId] = useState(activeBoardId);
   const [targetColumnId, setTargetColumnId] = useState("");
+  const [range, setRange] = useState<DateRange>({});
   const [moving, setMoving] = useState(false);
   // Destino: columnas del dashboard abierto o de otro dashboard.
   const otherBoard = boardId && boardId !== activeBoardId ? boards.find((board) => board.id === boardId) : undefined;
   const targets = otherBoard ? otherBoard.columns.map((item) => ({ id: item.id, name: item.name })) : columns.filter((item) => item.id !== column.id);
   const canMoveAnywhere = targets.length > 0 || boards.length > 1;
+  const filtered = Boolean(range.from || range.to);
+  const invalidRange = Boolean(range.from && range.to && range.from > range.to);
+  // La columna puede traer solo una parte de sus leads: el conteo exacto lo da el servidor al mover.
+  const complete = column.leadCount === undefined || column.leadCount <= column.leads.length;
+  const total = column.leadCount ?? column.leads.length;
+  const matching = leadsInRange(column.leads, range).length;
+  const countText = !filtered ? `${total} ${total === 1 ? "lead" : "leads"}` : complete ? `${matching} de ${total} leads` : `los leads con chat ${rangeLabel(range)}`;
+  const reset = () => { setTargetColumnId(""); setBoardId(activeBoardId); setRange({}); };
   const move = async () => {
     const target = targets.find((item) => item.id === targetColumnId);
-    if (!target || !column.leads.length) return;
+    if (!target || !total || invalidRange) return;
+    if (filtered && complete && !matching) return;
     const destination = otherBoard ? `“${target.name}” del dashboard “${otherBoard.name}”` : `“${target.name}”`;
-    if (!window.confirm(`Mover ${column.leads.length} ${column.leads.length === 1 ? "lead" : "leads"} de “${column.name}” a ${destination}?`)) return;
+    const what = filtered ? `${complete ? `${matching} ${matching === 1 ? "lead" : "leads"}` : "los leads"} con último mensaje ${rangeLabel(range)}` : `${total} ${total === 1 ? "lead" : "leads"}`;
+    if (!window.confirm(`¿Mover ${what} de “${column.name}” a ${destination}?`)) return;
     setMoving(true);
-    try { await onMoveAll(column, targetColumnId); setOpen(false); setTargetColumnId(""); setBoardId(activeBoardId); }
+    try { await onMoveAll(column, targetColumnId, range); setOpen(false); reset(); }
     finally { setMoving(false); }
   };
+  const shortcut = (days: number, label: string) => <button type="button" className={range.from === dayOffset(-days) && !range.to ? "selected" : ""} onClick={() => setRange({ from: dayOffset(-days) })}>{label}</button>;
   if (!canMoveAnywhere) return null;
-  return <div className="bulk-move-control"><button type="button" className="bulk-move-trigger" disabled={!column.leads.length} onClick={() => { setOpen((value) => !value); setBoardId(activeBoardId); setTargetColumnId(""); }}>Mover todos</button>{open && <div className="bulk-move-popover">
+  return <div className="bulk-move-control"><button type="button" className="bulk-move-trigger" disabled={!column.leads.length} onClick={() => { setOpen((value) => !value); reset(); }}>Mover todos</button>{open && <div className="bulk-move-popover">
     {boards.length > 1 && <label>Dashboard<select value={boardId} onChange={(event) => { setBoardId(event.target.value); setTargetColumnId(""); }}>{boards.map((board) => <option key={board.id} value={board.id}>{board.name}{board.id === activeBoardId ? " (este)" : ""}</option>)}</select></label>}
     <label>Columna<select value={targetColumnId} onChange={(event) => setTargetColumnId(event.target.value)}><option value="">Selecciona una columna</option>{targets.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select></label>
+    <fieldset className="bulk-move-dates">
+      <legend>Fecha del chat <small>(último mensaje · opcional)</small></legend>
+      <span className="bulk-move-shortcuts">{shortcut(0, "Hoy")}{shortcut(7, "7 días")}{shortcut(30, "30 días")}<button type="button" className={range.to === dayOffset(-30) && !range.from ? "selected" : ""} onClick={() => setRange({ to: dayOffset(-30) })}>Más de 30 días</button></span>
+      <span className="bulk-move-range">
+        <label>Desde<input type="date" value={range.from || ""} max={range.to || undefined} onChange={(event) => setRange((current) => ({ ...current, from: event.target.value || undefined }))} /></label>
+        <label>Hasta<input type="date" value={range.to || ""} min={range.from || undefined} onChange={(event) => setRange((current) => ({ ...current, to: event.target.value || undefined }))} /></label>
+      </span>
+      {filtered && <button type="button" className="bulk-move-clear" onClick={() => setRange({})}>Quitar fechas (mover todos)</button>}
+    </fieldset>
+    <small className={`bulk-move-note ${invalidRange || (filtered && complete && !matching) ? "warning" : ""}`}>{invalidRange ? "La fecha «Desde» es posterior a «Hasta»." : filtered && complete && !matching ? "Ningún lead de esta columna tiene chats en esas fechas." : `Se moverán ${countText}.`}</small>
     {otherBoard && <small className="bulk-move-note">Los leads se irán al dashboard «{otherBoard.name}».</small>}
-    <div><button type="button" className="plain-button" onClick={() => setOpen(false)}>Cancelar</button><button type="button" disabled={!targetColumnId || moving} onClick={() => void move()}>{moving ? "Moviendo…" : "Confirmar"}</button></div></div>}</div>;
+    <div><button type="button" className="plain-button" onClick={() => setOpen(false)}>Cancelar</button><button type="button" disabled={!targetColumnId || moving || invalidRange || (filtered && complete && !matching)} onClick={() => void move()}>{moving ? "Moviendo…" : "Confirmar"}</button></div></div>}</div>;
 }
 
 export function LeadBoard({ columns, filter, canEdit, columnName, draggingLeadId, draggingColumnId, onColumnNameChange, onFilterChange, onAddColumn, onRemoveColumn, onMoveAll, onOpenLead, onDragStart, onDragEnd, onDrop, onColumnDragStart, onColumnDragEnd, onColumnDrop, tabs, boards, activeBoardId, onRemarketingSent }: Props) {
