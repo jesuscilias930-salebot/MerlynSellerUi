@@ -37,6 +37,8 @@ export type Message = {
   deletedForEveryone?: boolean;
   error_code?: string | null;
   created_at: string;
+  /** Vista previa local de una foto que todavía se está enviando. */
+  localPreviewUrl?: string;
   replyToMessageId?: string | null;
   replyToBody?: string | null;
   replyToType?: string | null;

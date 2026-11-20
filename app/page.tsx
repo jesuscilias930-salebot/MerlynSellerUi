@@ -45,6 +45,7 @@ import { VideosPanel } from "./components/VideosPanel";
 import { FinancesPanel } from "./components/FinancesPanel";
 import { ConversationAnalysisPanel } from "./components/ConversationAnalysisPanel";
 import type { PendingChatImage } from "./components/ConversationPanel";
+import { OutgoingContext, outgoingFromComposer, withOutgoing, type OutgoingItem } from "./lib/outgoing";
 
 type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "column-rules" | "ecommerce-categories" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./components/ControlPanel").ControlTab;
@@ -98,6 +99,11 @@ export default function Home() {
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [pendingImages, setPendingImages] = useState<PendingChatImage[]>([]);
+  // Lo que salió del composer y aún se envía: se ve en el chat con reloj (como WhatsApp) y el
+  // composer queda libre al instante, así no se reenvía lo mismo por no saber si ya salió.
+  const [outgoing, setOutgoing] = useState<OutgoingItem[]>([]);
+  const outgoingQueue = useRef<Promise<void>>(Promise.resolve());
+  const outgoingTargets = useRef(new Map<string, Chat>());
   const [documentOptions, setDocumentOptions] = useState<DocumentOption[]>([]);
   const [documentTemplates, setDocumentTemplates] = useState<DocumentTemplate[]>([]);
   const [entrepreneurPackages, setEntrepreneurPackages] = useState<EntrepreneurPackage[]>([]);
@@ -499,6 +505,42 @@ export default function Home() {
     }
   };
 
+  const finishOutgoing = (item: OutgoingItem) => {
+    if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+    outgoingTargets.current.delete(item.id);
+    setOutgoing((current) => current.filter((value) => value.id !== item.id));
+  };
+  const deliverOutgoing = async (item: OutgoingItem) => {
+    const target = outgoingTargets.current.get(item.id);
+    if (!target) return;
+    try {
+      if (item.kind === "image" && item.file) await uploadMedia(target, "image", item.file, item.body);
+      else {
+        await request(`/conversations/${target.id}/messages/text`, { method: "POST", body: JSON.stringify({ body: item.body, replyToMessageId: item.replyToMessageId }) });
+        await refreshData();
+      }
+      // El mensaje real ya llegó con la recarga: se quita la burbuja local sin dejar hueco.
+      finishOutgoing(item);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo enviar.";
+      setOutgoing((current) => current.map((value) => value.id === item.id ? { ...value, status: "failed", error: message } : value));
+    }
+  };
+  // En orden: una foto termina de subirse antes de empezar la siguiente.
+  const enqueueOutgoing = (items: OutgoingItem[]) => {
+    for (const item of items) outgoingQueue.current = outgoingQueue.current.then(() => deliverOutgoing(item));
+  };
+  const outgoingActions = {
+    retry: (id: string) => {
+      const item = outgoing.find((value) => value.id === id && value.status === "failed");
+      if (!item) return;
+      const retried = { ...item, status: "sending" as const, error: undefined };
+      setOutgoing((current) => current.map((value) => value.id === id ? retried : value));
+      enqueueOutgoing([retried]);
+    },
+    discard: (id: string) => { const item = outgoing.find((value) => value.id === id && value.status === "failed"); if (item) finishOutgoing(item); },
+  };
+
   const sendText = async (
     event: FormEvent,
     target: Chat | null,
@@ -506,22 +548,15 @@ export default function Home() {
     clear: () => void,
   ) => {
     event.preventDefault();
-    if (!target || (!value.trim() && !pendingImages.length)) return;
-    try {
-      if (pendingImages.length) {
-        for (const [index, image] of pendingImages.entries()) await uploadMedia(target, "image", image.file, index === 0 ? value.trim() || undefined : undefined);
-        pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
-        setPendingImages([]);
-      } else await request(`/conversations/${target.id}/messages/text`, {
-        method: "POST",
-        body: JSON.stringify({ body: value, replyToMessageId: replyToMessage?.id || undefined }),
-      });
-      clear();
-      setReplyToMessage(null);
-      await refreshData();
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "No se pudo enviar.");
-    }
+    if (!target) return;
+    const items = outgoingFromComposer({ chatId: target.id, text: value, images: pendingImages, replyToMessageId: replyToMessage?.id });
+    if (!items.length) return;
+    clear();
+    setPendingImages([]);
+    setReplyToMessage(null);
+    items.forEach((item) => outgoingTargets.current.set(item.id, target));
+    setOutgoing((current) => [...current, ...items]);
+    enqueueOutgoing(items);
   };
 
   const uploadAudio = async (
@@ -1104,6 +1139,7 @@ export default function Home() {
       />
     );
   return (
+    <OutgoingContext.Provider value={outgoingActions}>
     <main className={view === "inbox" ? "shell inbox-shell" : "shell pipeline-mode"}>
       <Sidebar
         user={user}
@@ -1126,7 +1162,7 @@ export default function Home() {
           onBoardChange={setInboxBoardId}
           filter={inboxFilter}
           chat={chat}
-          messages={messages}
+          messages={withOutgoing(messages, outgoing, chat?.id)}
           number={number}
           draft={draft}
           uploadingAudio={uploadingAudio}
@@ -1280,7 +1316,7 @@ export default function Home() {
       ) : null}
       <ConversationModal
         chat={modalChat}
-        messages={modalMessages}
+        messages={withOutgoing(modalMessages, outgoing, modalChat?.id)}
         draft={modalDraft}
         uploadingAudio={uploadingAudio}
         uploadingMedia={uploadingMedia}
@@ -1337,5 +1373,6 @@ export default function Home() {
         </div>
       )}
     </main>
+    </OutgoingContext.Provider>
   );
 }

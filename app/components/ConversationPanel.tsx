@@ -1,7 +1,7 @@
 "use client";
 
 import { ChannelBadge } from "./ChannelBadge";
-import { ChangeEvent, FormEvent, Fragment, type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, Fragment, type ReactNode, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { VIDEO_ACCEPT } from "../lib/video-upload";
 import { initials } from "../lib/format";
@@ -26,6 +26,7 @@ import {ChatShippingModal} from "./ChatShippingModal";
 import { QuoteDrawer } from "./QuoteDrawer";
 import { ProductStockSender } from "./ProductStockImages";
 import { LocationQuickCards, LocationSender } from "./LocationSender";
+import { OutgoingContext, isLocalMessage, LOCAL_PREFIX } from "../lib/outgoing";
 import { QuoteBundlePicker } from "./QuoteBundlePicker";
 import { chatQuoteBundle } from "../lib/quote";
 import type { QuoteBundleRef } from "../lib/types";
@@ -71,6 +72,7 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
     return () => { active = false; query.removeEventListener("change", update); };
   }, []);
   const threadRef = useRef<HTMLDivElement>(null); const lastChatId = useRef<string | null>(null);
+  const outgoingActions = useContext(OutgoingContext);
   const [toolsCollapsed, setToolsCollapsed] = useState(Boolean(props.inboxLayout)); const [tab, setTab] = useState<ToolTab>("share"); const [notice, setNotice] = useState(""); const [menuId, setMenuId] = useState<string | null>(null); const [chatMenuOpen, setChatMenuOpen] = useState(false); const [moving, setMoving] = useState(false); const [bundlePickerOpen, setBundlePickerOpen] = useState(false); const [bundleIds, setBundleIds] = useState<string[]>([]); const [selectedSavedImageIds, setSelectedSavedImageIds] = useState<string[]>([]); const [saleModalOpen, setSaleModalOpen] = useState(false); const [shippingOpen, setShippingOpen] = useState(false);
   const quickMatches = draft.trim().startsWith("/") ? quickReplies.filter((reply) => reply.shortcut.includes(draft.trim().toLowerCase()) || reply.name.toLowerCase().includes(draft.trim().slice(1).toLowerCase())).slice(0, 6) : [];
   const bundles = useMemo(() => entrepreneurPackages.filter((item) => item.controlBundleId != null), [entrepreneurPackages]);
@@ -95,6 +97,7 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
     if (message.deletedForEveryone) return <p className="deleted-message">🚫 Este mensaje fue eliminado.</p>;
     if (message.type === "audio" && message.media_id) return <audio controls src={mediaUrl(message)} />;
     if (message.type === "sticker" && message.media_id) return <img className="sticker" src={mediaUrl(message)} alt="Sticker" />;
+    if (message.type === "image" && message.localPreviewUrl) return <><span className="chat-image-sending"><img className="chat-image" src={message.localPreviewUrl} alt="Imagen en envío" />{message.status === "pending" && <span className="chat-image-spinner" aria-hidden="true" />}</span>{message.body && <p className="media-caption">{message.body}</p>}</>;
     if (message.type === "image" && message.media_id) return <><img className="chat-image" src={mediaUrl(message)} alt="Imagen" />{message.body && <p className="media-caption">{message.body}</p>}</>;
     if (message.type === "video" && message.media_id) return <video className="chat-video" playsInline preload="metadata" controls src={mediaUrl(message)} />;
     if (message.type === "document" && message.media_id) return <><a className="document-card" href={mediaUrl(message)} target="_blank" rel="noreferrer"><b className="document-icon">PDF</b><span><strong>{message.filename || "Documento adjunto"}</strong><small>Abrir documento</small></span></a>{message.body && <p className="media-caption">{message.body}</p>}</>;
@@ -186,7 +189,14 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
         {chat && messages.length === 0 && <div className="inbox-thread-empty"><p>Inicia la conversación</p><small>Escribe un mensaje o comparte un catálogo desde las herramientas.</small></div>}
         {messages.map((message, index) => <Fragment key={message.id}>
           {(index === 0 || messageDayKey(message.created_at) !== messageDayKey(messages[index - 1].created_at)) && <div className="inbox-day-separator"><span>{messageDayLabel(message.created_at)}</span></div>}
-          <article className={message.direction}>
+          {isLocalMessage(message) ? <article className={`outbound local-outgoing ${message.status}`}>
+            {renderContent(message)}
+            <div className="message-meta">
+              {message.status === "failed"
+                ? <span className="local-outgoing-failed" role="alert"><b>! No se envió</b>{message.error_code && <small>{message.error_code}</small>}<span><button type="button" onClick={() => outgoingActions?.retry(message.id.slice(LOCAL_PREFIX.length))}>Reintentar</button><button type="button" onClick={() => outgoingActions?.discard(message.id.slice(LOCAL_PREFIX.length))}>Descartar</button></span></span>
+                : <small className="local-outgoing-status"><span className="delivery pending" aria-hidden="true">◷</span> {message.type === "image" ? "Enviando foto…" : "Enviando…"}</small>}
+            </div>
+          </article> : <article className={message.direction}>
             {message.direction === "inbound" && <AdReferralCard referral={message.referral} />}
             {message.replyToMessageId && <div className="quoted-message"><b>{message.replyToDirection === "inbound" ? chat?.name || "Cliente" : "Tú"}</b><span>{message.replyToBody || `[${message.replyToType || "mensaje"}]`}</span></div>}
             {renderContent(message)}
@@ -211,7 +221,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
               </div>)}
             </div>
             <IntentLearner message={message} intents={automationIntents} onLearn={onLearnIntent} />
-          </article>
+          </article>}
         </Fragment>)}
       </div>
       {inventoryOpen && mobile && <MobileChatSheet title="Disponibilidad" onClose={() => setInventoryOpen(false)}><InventoryQuickSearch autoFocus={false} onInsert={text => { onDraftChange(draft.trim() ? `${draft.trimEnd()}\n${text}` : text); setInventoryOpen(false); }} /></MobileChatSheet>}

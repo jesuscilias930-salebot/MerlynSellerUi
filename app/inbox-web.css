@@ -336,3 +336,17 @@
 .quote-shipment span { color: #1f2c25; font-size: 12px; }
 .quote-shipment > div { display: flex; flex-wrap: wrap; gap: 8px 14px; }
 .quote-shipment a, .quote-shipment button { padding: 0; border: 0; background: none; color: #087f5b; font-size: 12px; font-weight: 600; text-decoration: underline; cursor: pointer; }
+
+/* Mensajes en envío (como el reloj de WhatsApp): la foto se ve atenuada con un indicador hasta que el servidor la acepta. */
+.local-outgoing .chat-image-sending { position: relative; display: inline-block; }
+.local-outgoing.pending .chat-image-sending .chat-image { opacity: .55; filter: saturate(.7); }
+.local-outgoing .chat-image-spinner { position: absolute; inset: 50% auto auto 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border: 3px solid rgba(255, 255, 255, .7); border-top-color: #1f8f5a; border-radius: 50%; animation: local-outgoing-spin .8s linear infinite; }
+.local-outgoing .local-outgoing-status { color: #667085; display: inline-flex; align-items: center; gap: 4px; }
+.local-outgoing.failed { box-shadow: inset 0 0 0 1px #e4a19c; }
+.local-outgoing-failed { display: grid; gap: 4px; color: #b43a35; font-size: 12px; text-align: right; }
+.local-outgoing-failed small { color: #8a3d39; max-width: 280px; }
+.local-outgoing-failed span { display: flex; gap: 6px; justify-content: flex-end; }
+.local-outgoing-failed button { border: 1px solid #d0d5dd; background: #fff; color: #1f2937; border-radius: 6px; padding: 3px 9px; font-size: 12px; cursor: pointer; }
+.local-outgoing-failed button:first-child { border-color: #1f8f5a; color: #1f8f5a; font-weight: 600; }
+@keyframes local-outgoing-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .local-outgoing .chat-image-spinner { animation-duration: 2.4s; } }
