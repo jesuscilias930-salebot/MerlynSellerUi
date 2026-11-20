@@ -296,7 +296,7 @@ export function ControlPanel({
       }
       resetProductEditor();
       await load();
-      setNotice(detailError ? `Producto guardado, pero no se pudo guardar el color y modelo: ${detailError}` : wasEditing ? "Producto actualizado." : "Producto guardado. Registra una compra para agregar existencias.");
+      setNotice(detailError ? `Producto guardado, pero no se pudo guardar el color y modelo: ${detailError}` : wasEditing ? "Producto actualizado." : "Producto guardado. Agrega sus existencias desde Inventario o registra una compra.");
     } catch (error) {
       setNotice(
         error instanceof Error

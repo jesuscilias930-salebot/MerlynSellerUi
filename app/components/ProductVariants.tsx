@@ -109,7 +109,7 @@ export function VariantGenerator({ categories, products, colors, models, initial
         await onCreated(`Se crearon ${ids.length} productos, pero no se pudo guardar su modelo y color (${detailError instanceof Error ? detailError.message : "error"}). Asígnalos desde Editar.`);
         return;
       }
-      await onCreated(`Listo: ${ids.length} ${ids.length === 1 ? "variante creada" : "variantes creadas"} de “${name}”. Registra una compra para agregar existencias.`);
+      await onCreated(`Listo: ${ids.length} ${ids.length === 1 ? "variante creada" : "variantes creadas"} de “${name}”. Agrega sus existencias desde Inventario o registra una compra.`);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "No fue posible crear las variantes.");
     } finally {
