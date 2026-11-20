@@ -33,3 +33,24 @@ export function geolocationError(code: number | undefined): string {
   if (code === 3) return "Tu ubicación tardó demasiado. Intenta de nuevo, de preferencia con el GPS o Wi-Fi activado.";
   return "No se pudo obtener tu ubicación en este dispositivo.";
 }
+
+export type MapTile = { key: string; url: string; left: number; top: number };
+const TILE = 256;
+
+/** Mosaicos de OpenStreetMap que cubren un recuadro centrado en el punto (vista previa como la de WhatsApp). */
+export function mapTiles({ latitude, longitude }: SharedLocation, width: number, height: number, zoom = 16): MapTile[] {
+  const scale = TILE * 2 ** zoom;
+  const lat = Math.max(-85.0511, Math.min(85.0511, latitude)) * Math.PI / 180;
+  const centerX = (longitude + 180) / 360 * scale;
+  const centerY = (1 - Math.log(Math.tan(lat) + 1 / Math.cos(lat)) / Math.PI) / 2 * scale;
+  const left = centerX - width / 2, top = centerY - height / 2;
+  const count = 2 ** zoom, tiles: MapTile[] = [];
+  for (let ty = Math.floor(top / TILE); ty <= Math.floor((top + height - 1) / TILE); ty++) {
+    if (ty < 0 || ty >= count) continue;
+    for (let tx = Math.floor(left / TILE); tx <= Math.floor((left + width - 1) / TILE); tx++) {
+      const wrapped = ((tx % count) + count) % count;
+      tiles.push({ key: `${zoom}/${tx}/${ty}`, url: `https://tile.openstreetmap.org/${zoom}/${wrapped}/${ty}.png`, left: Math.round(tx * TILE - left), top: Math.round(ty * TILE - top) });
+    }
+  }
+  return tiles;
+}

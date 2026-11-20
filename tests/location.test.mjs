@@ -19,3 +19,16 @@ test('detecta enlaces cortos y explica errores del GPS', () => {
   assert.equal(accuracyLabel(2300), '±2.3 km');
   assert.match(geolocationError(1), /permiso/);
 });
+
+test('los mosaicos del mapa cubren el recuadro y dejan el punto al centro', async () => {
+  const { mapTiles } = await import('../app/lib/location.ts');
+  const tiles = mapTiles({ latitude: 18.873185, longitude: -97.104741 }, 280, 150, 16);
+  assert.ok(tiles.length >= 2 && tiles.length <= 4);
+  assert.ok(tiles.every(tile => /^https:\/\/tile\.openstreetmap\.org\/16\/\d+\/\d+\.png$/.test(tile.url)));
+  // Cubre todo el recuadro: algún mosaico empieza en o antes de (0,0) y alguno termina después de (280,150).
+  assert.ok(tiles.some(tile => tile.left <= 0 && tile.top <= 0));
+  assert.ok(tiles.some(tile => tile.left + 256 >= 280 && tile.top + 256 >= 150));
+  // Orizaba en zoom 16: x = (lng + 180) / 360 · 2^16 ≈ 15090 (comprobación de la proyección).
+  const [x] = tiles[0].url.match(/16\/(\d+)\//).slice(1).map(Number);
+  assert.ok(Math.abs(x - 15090) <= 1, String(x));
+});

@@ -1,0 +1,11 @@
+.card { display: grid; width: min(280px, 100%); overflow: hidden; border: 1px solid #d5e5da; border-radius: 10px; background: #fff; color: #1f2937; text-decoration: none; }
+.card:hover { border-color: #8bc9a8; }
+.map { position: relative; display: block; max-width: 100%; overflow: hidden; background: #e8eee9; }
+.map img { position: absolute; width: 256px; height: 256px; max-width: none; user-select: none; }
+.pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); font-size: 30px; line-height: 1; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .35)); }
+.attribution { position: absolute; right: 0; bottom: 0; padding: 1px 5px; background: rgba(255, 255, 255, .8); color: #475467; font-size: 9px; }
+.fallback { position: absolute; inset: 0; display: grid; place-items: center; color: #667085; font-size: 12px; }
+.text { display: grid; gap: 2px; padding: 8px 10px; text-align: left; }
+.text b { font-size: 14px; }
+.text small { color: #667085; font-size: 12px; overflow-wrap: anywhere; }
+.text .open { color: #1f8f5a; font-weight: 600; }
