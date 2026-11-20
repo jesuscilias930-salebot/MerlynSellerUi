@@ -6422,7 +6422,9 @@ button {
     gap: 7px;
 }
 
-.tool-file-cards label {
+.tool-file-cards label,
+
+.tool-file-cards > button {
     display: grid;
     gap: 3px;
     place-items: center;
@@ -6434,7 +6436,9 @@ button {
     cursor: pointer;
 }
 
-.tool-file-cards label:hover {
+.tool-file-cards label:hover,
+
+.tool-file-cards > button:hover:not(:disabled) {
     border-color: #83c9a0;
     background: #f1faf4;
 }
@@ -6679,7 +6683,8 @@ button {
     grid-column: 1 / -1;
 }
 
-.composer-tools-popover .tool-file-cards label {
+.composer-tools-popover .tool-file-cards label,
+.composer-tools-popover .tool-file-cards > button {
     padding: 7px 2px;
 }
 
@@ -6910,7 +6915,9 @@ button {
     gap: 10px;
 }
 
-.tool-file-cards label {
+.tool-file-cards label,
+
+.tool-file-cards > button {
     min-height: 82px;
     padding: 11px 4px;
     border-color: #d8dfe0;
@@ -6918,7 +6925,9 @@ button {
     background: #fff;
 }
 
-.tool-file-cards label:hover {
+.tool-file-cards label:hover,
+
+.tool-file-cards > button:hover:not(:disabled) {
     border-color: #9fc9af;
     background: #fafffc;
 }

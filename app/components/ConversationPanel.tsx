@@ -25,6 +25,7 @@ import { WhatsAppTemplateCard } from "./WhatsAppTemplateCard";
 import {ChatShippingModal} from "./ChatShippingModal";
 import { QuoteDrawer } from "./QuoteDrawer";
 import { ProductStockSender } from "./ProductStockImages";
+import { LocationQuickCards, LocationSender } from "./LocationSender";
 import { QuoteBundlePicker } from "./QuoteBundlePicker";
 import { chatQuoteBundle } from "../lib/quote";
 import type { QuoteBundleRef } from "../lib/types";
@@ -111,7 +112,7 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
   const toggleSavedImageSet = (imageIds: string[]) => setSelectedSavedImageIds((current) => imageIds.every((id) => current.includes(id)) ? current.filter((id) => !imageIds.includes(id)) : [...new Set([...current, ...imageIds])]);
   const submitBundles = async () => { if (!bundleIds.length) return; try { await onSendEntrepreneurPackages({ packageIds: bundleIds }); setBundleIds([]); setBundlePickerOpen(false); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar el bundle."); } };
   const moveLead = async (columnId: string) => { if (!chat || !columnId || columnId === chat.leadColumnId) return; setMoving(true); try { await onMoveLead(columnId); } finally { setMoving(false); } };
-const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Documento</small><input type="file" accept="application/pdf,.pdf" onChange={event => { onUploadDocument(event); if (mobile && event.target.files?.length) setToolsOpen(false); }} disabled={!chat || uploadingMedia} /></label><label><b>▧</b><small>Imágenes</small><input type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={event => { onUploadImage(event); if (mobile && event.target.files?.length) setToolsOpen(false); }} disabled={!chat || uploadingMedia} /></label><label><b>▶</b><small>Video</small><input type="file" accept={VIDEO_ACCEPT} onChange={event => { onUploadVideo(event); if (mobile && event.target.files?.length) setToolsOpen(false); }} disabled={!chat || uploadingMedia} /></label></div>;
+const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Documento</small><input type="file" accept="application/pdf,.pdf" onChange={event => { onUploadDocument(event); if (mobile && event.target.files?.length) setToolsOpen(false); }} disabled={!chat || uploadingMedia} /></label><label><b>▧</b><small>Imágenes</small><input type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={event => { onUploadImage(event); if (mobile && event.target.files?.length) setToolsOpen(false); }} disabled={!chat || uploadingMedia} /></label><label><b>▶</b><small>Video</small><input type="file" accept={VIDEO_ACCEPT} onChange={event => { onUploadVideo(event); if (mobile && event.target.files?.length) setToolsOpen(false); }} disabled={!chat || uploadingMedia} /></label><LocationQuickCards chatId={chat?.id} onNotice={setNotice} onDone={() => setToolsOpen(false)} onConfigure={() => { setToolsOpen(false); setTab("share"); setToolsCollapsed(false); }} /></div>;
   const shareTools = (
     <>
       <ToolAccordion defaultOpen icon="▤" title="Catálogo" description="Comparte un catálogo con un mensaje personalizado.">
@@ -123,6 +124,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
         <button className="tool-primary-button" type="button" disabled={!chat || !selectedDocumentId || uploadingMedia} onClick={onSendDocument}>Enviar catálogo</button>
       </ToolAccordion>
       <ToolAccordion icon="👕" title="Producto con tallas" description="Envía fotos de productos con sus tallas disponibles del inventario.">{chat && <ProductStockSender key={chat.id} chatId={chat.id} />}</ToolAccordion>
+      <ToolAccordion icon="📍" title="Ubicación" description="Envía tu ubicación actual o la de la bodega.">{chat && <LocationSender key={chat.id} chatId={chat.id} />}</ToolAccordion>
       <CtaUrlCard disabled={!chat} packages={entrepreneurPackages} onSend={onSendCtaUrl} />
       <InteractiveOptionsCard conversationId={chat?.id} disabled={!chat} />
       <>{chat && <StoreOrders key={chat.id} conversationId={chat.id}/>}</>{isWhatsApp(chat) ? <WhatsAppTemplateCard conversationId={chat?.id} disabled={!chat} /> : <p className="tool-notice">Las plantillas oficiales son solo para WhatsApp. En {contactDetail(chat!).split(" · ")[0]} puedes responder hasta 24 h después del último mensaje del cliente (7 días si vino de un anuncio o respondes como persona del equipo).</p>}
