@@ -28,6 +28,7 @@ import { ProductStockSender } from "./ProductStockImages";
 import { LocationQuickCards, LocationSender } from "./LocationSender";
 import { LocationMapCard } from "./LocationMapCard";
 import { OutgoingContext, isLocalMessage, LOCAL_PREFIX } from "../lib/outgoing";
+import { quotedLabel, quotedThumbnailKind } from "../lib/quoted";
 import { QuoteBundlePicker } from "./QuoteBundlePicker";
 import { chatQuoteBundle } from "../lib/quote";
 import type { QuoteBundleRef } from "../lib/types";
@@ -116,6 +117,14 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
   }, [optionsOpen, mobile]);
+  // Tocar una cita lleva al mensaje original y lo resalta un momento (como WhatsApp).
+  const jumpToMessage = (id: string) => {
+    const target = document.getElementById(`message-${id}`);
+    if (!target) { setNotice("El mensaje original ya no está en esta conversación."); return; }
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.remove("message-highlight"); void target.offsetWidth; target.classList.add("message-highlight");
+    window.setTimeout(() => target.classList.remove("message-highlight"), 1600);
+  };
   const mediaUrl = (message: Message) => `${api}/conversations/${chat?.id}/messages/${message.id}/media`;
   const renderContent = (message: Message): ReactNode => {
     if (message.deletedForEveryone) return <p className="deleted-message">🚫 Este mensaje fue eliminado.</p>;
@@ -221,9 +230,9 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
                 ? <span className="local-outgoing-failed" role="alert"><b>! No se envió</b>{message.error_code && <small>{message.error_code}</small>}<span><button type="button" onClick={() => outgoingActions?.retry(message.id.slice(LOCAL_PREFIX.length))}>Reintentar</button><button type="button" onClick={() => outgoingActions?.discard(message.id.slice(LOCAL_PREFIX.length))}>Descartar</button></span></span>
                 : <small className="local-outgoing-status"><span className="delivery pending" aria-hidden="true">◷</span> {message.type === "image" ? "Enviando foto…" : "Enviando…"}</small>}
             </div>
-          </article> : <article className={message.direction}>
+          </article> : <article className={message.direction} id={`message-${message.id}`}>
             {message.direction === "inbound" && <AdReferralCard referral={message.referral} />}
-            {message.replyToMessageId && <div className="quoted-message"><b>{message.replyToDirection === "inbound" ? chat?.name || "Cliente" : "Tú"}</b><span>{message.replyToBody || `[${message.replyToType || "mensaje"}]`}</span></div>}
+            {message.replyToMessageId && (() => { const thumb = quotedThumbnailKind(message.replyToType, message.replyToHasMedia); const src = `${api}/conversations/${chat?.id}/messages/${message.replyToMessageId}/media`; return <button type="button" className={`quoted-message${thumb ? " has-thumb" : ""}`} title="Ir al mensaje original" onClick={() => jumpToMessage(message.replyToMessageId!)}><span className="quoted-text"><b>{message.replyToDirection === "inbound" ? chat?.name || "Cliente" : "Tú"}</b><span>{quotedLabel(message.replyToType, message.replyToBody, message.replyToFilename)}</span></span>{thumb === "image" && <img className="quoted-thumb" src={src} alt="Foto respondida" loading="lazy" />}{thumb === "video" && <video className="quoted-thumb" src={src} muted playsInline preload="metadata" aria-label="Video respondido" />}</button>; })()}
             {renderContent(message)}
             {message.reactions?.length ? <div className="message-reactions">{message.reactions.map(reaction => <span key={`${reaction.actorDirection}-${reaction.emoji}`}>{reaction.emoji}</span>)}</div> : null}
             {message.direction === "inbound" && !message.deletedForEveryone && <div className="message-reaction-picker">{reactionEmojis.map(emoji => <button key={emoji} type="button" aria-label={`Reaccionar ${emoji}`} onClick={() => void onReact(message.id, emoji)}>{emoji}</button>)}</div>}
@@ -253,7 +262,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
       {bundlePickerOpen && <div className="bundle-picker-backdrop" onMouseDown={() => setBundlePickerOpen(false)}><section className="bundle-picker-modal" role="dialog" aria-modal="true" aria-label="Enviar bundle" onMouseDown={event => event.stopPropagation()}><header><h2>Enviar bundle</h2><button type="button" aria-label="Cerrar selección de bundles" onClick={() => setBundlePickerOpen(false)}>×</button></header>{bundles.map(item => <label key={item.id}><input type="checkbox" checked={bundleIds.includes(item.id)} onChange={() => setBundleIds(current => current.includes(item.id) ? current.filter(id => id !== item.id) : [...current, item.id])} /> {item.name} · {item.images.length} fotografías</label>)}<footer><button type="button" className="plain-button" onClick={() => setBundlePickerOpen(false)}>Cancelar</button><button type="button" disabled={!bundleIds.length} onClick={() => void submitBundles()}>Enviar fotografías</button></footer></section></div>}
       <div className="chat-compose-area">
         <form className="composer compact-composer" onSubmit={onSendText}>
-          {replyToMessage && <div className="reply-preview"><div><b>Respondiendo a {replyToMessage.direction === "inbound" ? chat?.name || "cliente" : "ti"}</b><span>{replyToMessage.body || `[${replyToMessage.type}]`}</span></div><button type="button" aria-label="Cancelar respuesta" onClick={() => onReplyToChange(null)}>×</button></div>}
+          {replyToMessage && <div className="reply-preview"><div><b>Respondiendo a {replyToMessage.direction === "inbound" ? chat?.name || "cliente" : "ti"}</b><span>{quotedLabel(replyToMessage.type, replyToMessage.body, replyToMessage.filename)}</span></div>{replyToMessage.media_id && (replyToMessage.type === "image" || replyToMessage.type === "sticker") && <img className="quoted-thumb" src={mediaUrl(replyToMessage)} alt="Foto a la que respondes" />}{replyToMessage.media_id && replyToMessage.type === "video" && <video className="quoted-thumb" src={mediaUrl(replyToMessage)} muted playsInline preload="metadata" />}<button type="button" aria-label="Cancelar respuesta" onClick={() => onReplyToChange(null)}>×</button></div>}
           {pendingImages.length > 0 && <div className="composer-image-previews">{pendingImages.map(image => <figure key={image.id}><img src={image.previewUrl} alt={image.file.name} /><button type="button" aria-label={`Quitar imagen ${image.file.name}`} onClick={() => onRemovePendingImage(image.id)}>×</button><figcaption>{image.file.name}</figcaption></figure>)}</div>}
           <div className="composer-tools">
             <button className="composer-tools-button" aria-label="Adjuntar archivos y abrir herramientas" aria-expanded={toolsOpen} type="button" disabled={!chat} onClick={() => setToolsOpen(value => !value)}><ChatIcon name="attach" /></button>

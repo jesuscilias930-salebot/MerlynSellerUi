@@ -43,6 +43,9 @@ export type Message = {
   replyToBody?: string | null;
   replyToType?: string | null;
   replyToDirection?: "inbound" | "outbound" | null;
+  /** El mensaje respondido tiene foto/video/archivo (para mostrar su miniatura en la cita). */
+  replyToHasMedia?: boolean;
+  replyToFilename?: string | null;
   reactions?: { emoji: string; actorDirection: "inbound" | "outbound" }[];
   referral?: {
     sourceUrl?: string;
