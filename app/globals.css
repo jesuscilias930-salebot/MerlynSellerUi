@@ -8873,6 +8873,9 @@ article.inbound:hover .message-reaction-picker, .message-reaction-picker:focus-w
 .scenario-card-v2.dragging { opacity: .5; }
 .scenario-card-v2 > button { display: grid; gap: 6px; width: 100%; padding: 16px 16px 14px; border: 0; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
 .scenario-card-v2 strong { font-size: 16px; }
+.scenario-card-v2 > .scenario-card-clone { position: absolute; right: 12px; bottom: 12px; display: inline-flex; width: auto; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--app-surface, #fff); color: var(--green); font-size: 12px; font-weight: 700; }
+.scenario-card-v2 > .scenario-card-clone:hover:not(:disabled) { border-color: var(--green); background: var(--app-selected, #eef8f2); }
+.scenario-card-v2 > button:first-of-type { padding-bottom: 44px; }
 .scenario-card-v2 small { color: var(--muted); font-size: 12px; }
 .scenario-card-priority { position: absolute; top: 14px; right: 14px; color: var(--muted); font-size: 11px; font-weight: 800; cursor: grab; }
 .scenario-card-status { justify-self: start; padding: 2px 9px; border-radius: 999px; background: var(--app-subtle); color: var(--muted); font-size: 11px; font-weight: 800; }

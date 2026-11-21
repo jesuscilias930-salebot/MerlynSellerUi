@@ -1302,7 +1302,7 @@ export default function Home() {
       ) : view === "ecommerce-bundles" || view === "ecommerce-products" ? (
         <EcommerceCatalogPanel key={view} kind={view === "ecommerce-bundles" ? "bundles" : "products"} />
       ) : view === "scenarios" ? (
-        <ScenariosPanel scenarios={automationScenarios} columns={allColumns} entrepreneurPackages={entrepreneurPackages} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} />
+        <ScenariosPanel scenarios={automationScenarios} columns={allColumns} entrepreneurPackages={entrepreneurPackages} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} onDuplicate={async (id) => { const copy = await request<AutomationScenario>(`/scenarios/${id}/duplicate`, { method: "POST" }); await loadScenarios(); setNotice(`Se creó «${copy.name}» pausado. Cambia sus frases de inicio antes de activarlo.`); return copy; }} />
       ) : view === "videos" ? (
         <VideosPanel />
       ) : view === "finances" && ["owner", "admin"].includes(user.role) ? (

@@ -42,6 +42,8 @@ type Props = {
   onSave: (value: Draft, id?: string) => Promise<AutomationScenario | void>;
   onDelete: (id: string) => Promise<void>;
   onReorder: (scenarioIds: string[]) => Promise<void>;
+  /** Crea una copia pausada del escenario (versión guardada) y la devuelve. */
+  onDuplicate?: (id: string) => Promise<AutomationScenario>;
 };
 type ReusableScenarioMedia = ScenarioMedia & { source: string };
 
@@ -154,6 +156,7 @@ function FlowBuilder({
   reusableMedia,
   onSave,
   onDelete,
+  onDuplicate,
   onClose,
 }: {
   initial?: AutomationScenario;
@@ -163,6 +166,7 @@ function FlowBuilder({
   reusableMedia: ReusableScenarioMedia[];
   onSave: Props["onSave"];
   onDelete?: () => Promise<void>;
+  onDuplicate?: () => Promise<void>;
   onClose: () => void;
 }) {
   const [value, setValue] = useState<Draft>(
@@ -1140,6 +1144,17 @@ function FlowBuilder({
         >
           {theme === "dark" ? "☀" : "☾"}
         </button>
+        {onDuplicate && (
+          <button
+            type="button"
+            className="wf-icon-button"
+            aria-label="Clonar escenario"
+            title={dirty ? "Clonar la versión guardada (tus cambios sin guardar no se copian)" : "Clonar escenario"}
+            onClick={() => void onDuplicate()}
+          >
+            ⧉ <span>Clonar</span>
+          </button>
+        )}
         {onDelete && (
           <button
             type="button"
@@ -2134,6 +2149,7 @@ export function ScenariosPanel({
   onSave,
   onDelete,
   onReorder,
+  onDuplicate,
 }: Props) {
   // Escenario abierto en el espacio de trabajo a pantalla completa.
   const [openId, setOpenId] = useState<string | null>(null);
@@ -2141,6 +2157,16 @@ export function ScenariosPanel({
   const [creating, setCreating] = useState<false | "start" | Draft>(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [duplicateError, setDuplicateError] = useState("");
+  // La copia se crea pausada, debajo del original, y se abre en el lienzo para editarla.
+  const duplicate = async (scenario: AutomationScenario) => {
+    if (!onDuplicate || duplicatingId) return;
+    setDuplicatingId(scenario.id); setDuplicateError("");
+    try { const copy = await onDuplicate(scenario.id); setOpenId(copy.id); }
+    catch (error) { setDuplicateError(error instanceof Error ? error.message : "No se pudo clonar el escenario."); }
+    finally { setDuplicatingId(null); }
+  };
   const openScenario = scenarios.find((scenario) => scenario.id === openId);
   const reusableMedia: ReusableScenarioMedia[] = scenarios.flatMap((scenario) =>
     scenario.steps.flatMap((step) =>
@@ -2239,11 +2265,23 @@ export function ScenariosPanel({
                   ))}
                 </span>
               </button>
+              {onDuplicate && (
+                <button
+                  type="button"
+                  className="scenario-card-clone"
+                  disabled={Boolean(duplicatingId)}
+                  title="Crear una copia pausada para modificarla"
+                  onClick={() => void duplicate(scenario)}
+                >
+                  {duplicatingId === scenario.id ? "Clonando…" : "⧉ Clonar"}
+                </button>
+              )}
             </article>
           ))}
           {savingOrder && (
             <small className="scenario-order-saving">Guardando orden…</small>
           )}
+          {duplicateError && <p className="scenario-save-error" role="alert">{duplicateError}</p>}
         </section>
       )}
       {creating && creating !== "start" && (
@@ -2272,6 +2310,7 @@ export function ScenariosPanel({
           reusableMedia={reusableMedia}
           onClose={() => setOpenId(null)}
           onSave={onSave}
+          onDuplicate={onDuplicate ? () => duplicate(openScenario) : undefined}
           onDelete={async () => {
             if (!window.confirm(`¿Eliminar “${openScenario.name}”?`)) return;
             await onDelete(openScenario.id);
