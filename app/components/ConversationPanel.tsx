@@ -2,7 +2,7 @@
 
 import { ChannelBadge } from "./ChannelBadge";
 import { ChangeEvent, FormEvent, Fragment, type ReactNode, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
-import { api } from "../lib/api";
+import { api, request } from "../lib/api";
 import { VIDEO_ACCEPT } from "../lib/video-upload";
 import { initials } from "../lib/format";
 import { contactDetail, contactName, contactPhone, isWhatsApp } from "../lib/channels";
@@ -76,10 +76,31 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
   const outgoingActions = useContext(OutgoingContext);
   // Conjuntos de «Imágenes guardadas» abiertos en este chat (las fotos se cargan al abrirlos).
   const [openImageSets, setOpenImageSets] = useState<string[]>([]); const [showStickers, setShowStickers] = useState(false);
+  // Atajos: conjuntos marcados que se envían completos con un botón debajo del cuadro de texto.
+  const [shortcutOverrides, setShortcutOverrides] = useState<Record<string, boolean>>({}); const [sendingShortcut, setSendingShortcut] = useState<string | null>(null);
   const [toolsCollapsed, setToolsCollapsed] = useState(Boolean(props.inboxLayout)); const [tab, setTab] = useState<ToolTab>("share"); const [notice, setNotice] = useState(""); const [menuId, setMenuId] = useState<string | null>(null); const [chatMenuOpen, setChatMenuOpen] = useState(false); const [moving, setMoving] = useState(false); const [bundlePickerOpen, setBundlePickerOpen] = useState(false); const [bundleIds, setBundleIds] = useState<string[]>([]); const [selectedSavedImageIds, setSelectedSavedImageIds] = useState<string[]>([]); const [saleModalOpen, setSaleModalOpen] = useState(false); const [shippingOpen, setShippingOpen] = useState(false);
   const quickMatches = draft.trim().startsWith("/") ? quickReplies.filter((reply) => reply.shortcut.includes(draft.trim().toLowerCase()) || reply.name.toLowerCase().includes(draft.trim().slice(1).toLowerCase())).slice(0, 6) : [];
   const bundles = useMemo(() => entrepreneurPackages.filter((item) => item.controlBundleId != null), [entrepreneurPackages]);
   const images = useMemo(() => entrepreneurPackages.filter((item) => item.controlBundleId == null), [entrepreneurPackages]);
+  const isShortcut = (set: EntrepreneurPackage) => shortcutOverrides[set.id] ?? set.chatShortcut ?? false;
+  const shortcutSets = images.filter((set) => set.images.length > 0 && isShortcut(set));
+  const toggleShortcut = async (set: EntrepreneurPackage, value: boolean) => {
+    setShortcutOverrides((current) => ({ ...current, [set.id]: value }));
+    try { await request(`/settings/entrepreneur-packages/${set.id}`, { method: "PATCH", body: JSON.stringify({ chatShortcut: value }) }); }
+    catch (error) { setShortcutOverrides((current) => ({ ...current, [set.id]: !value })); setNotice(error instanceof Error ? error.message : "No se pudo guardar el atajo."); }
+  };
+  const sendShortcut = async (set: EntrepreneurPackage) => {
+    if (!chat || sendingShortcut) return;
+    const ids = set.images.map((image) => image.id);
+    if (!window.confirm(`¿Enviar las ${ids.length} ${ids.length === 1 ? "foto" : "fotos"} de «${set.name}» a ${contactName(chat)}?`)) return;
+    setSendingShortcut(set.id);
+    try {
+      // El servidor acepta hasta 50 por envío: los conjuntos grandes van en partes, en orden.
+      for (let start = 0; start < ids.length; start += 50) await onSendEntrepreneurPackages({ imageIds: ids.slice(start, start + 50) });
+      setNotice(`Se enviaron las ${ids.length} ${ids.length === 1 ? "foto" : "fotos"} de «${set.name}».`);
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar el conjunto."); }
+    finally { setSendingShortcut(null); }
+  };
   useEffect(() => { if (!chat?.id || !messages.length || lastChatId.current === chat.id) return; const frame = requestAnimationFrame(() => { threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight }); lastChatId.current = chat.id; }); return () => cancelAnimationFrame(frame); }, [chat?.id, messages.length]);
   useEffect(() => { let active = true; queueMicrotask(() => { if (!active) return; setSelectedSavedImageIds([]); setChatMenuOpen(false); setOptionsOpen(false); setInventoryOpen(false); setToolsOpen(false); setMenuId(null); setShippingOpen(false); setSaleModalOpen(false); setBundlePickerOpen(false); setQuoteOpen(false); }); return () => { active = false; }; }, [chat?.id]);
   useEffect(() => { let active = true; queueMicrotask(() => { if (active && (shippingOpen || saleModalOpen || bundlePickerOpen)) setToolsOpen(false); }); return () => { active = false; }; }, [shippingOpen, saleModalOpen, bundlePickerOpen]);
@@ -138,7 +159,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
       <ToolAccordion icon="▦" title="Imágenes guardadas" description="Selecciona una o varias imágenes y envíalas juntas.">
         {selectedSavedImageIds.length > 0 && <div className="saved-image-selection-actions"><span>{selectedSavedImageIds.length} seleccionada{selectedSavedImageIds.length === 1 ? "" : "s"}</span><button className="tool-primary-button" type="button" disabled={!chat} onClick={() => void submitImages(selectedSavedImageIds)}>Enviar selección</button><button className="plain-button" type="button" onClick={() => setSelectedSavedImageIds([])}>Limpiar</button></div>}
         {/* Las fotos se piden al servidor solo al abrir su conjunto: abrir la herramienta no descarga nada. */}
-        {images.map((set) => { const setImageIds = set.images.map((image) => image.id); const allSelected = setImageIds.length > 0 && setImageIds.every((id) => selectedSavedImageIds.includes(id)); const selectedInSet = setImageIds.filter((id) => selectedSavedImageIds.includes(id)).length; const expanded = openImageSets.includes(set.id); return <article className="saved-image-set" key={set.id}><div className="saved-image-set-header"><button type="button" className="saved-image-set-toggle" aria-expanded={expanded} onClick={() => setOpenImageSets((current) => current.includes(set.id) ? current.filter((id) => id !== set.id) : [...current, set.id])}><b>{set.name}</b><small>{set.images.length} {set.images.length === 1 ? "foto" : "fotos"}{selectedInSet ? ` · ${selectedInSet} seleccionada${selectedInSet === 1 ? "" : "s"}` : ""} · {expanded ? "Ocultar" : "Ver fotos"}</small></button>{set.images.length > 0 && <button className="plain-button" type="button" onClick={() => toggleSavedImageSet(setImageIds)}>{allSelected ? "Quitar todas" : "Seleccionar todas"}</button>}</div>{expanded && <div className="tool-gallery-grid">{set.images.map((image) => <button className={selectedSavedImageIds.includes(image.id) ? "selected" : ""} type="button" key={image.id} aria-pressed={selectedSavedImageIds.includes(image.id)} onClick={() => toggleSavedImage(image.id)}><img src={`${api}/settings/entrepreneur-packages/images/${image.id}/media`} alt={image.filename || set.name} loading="lazy" decoding="async" /><span>✓</span></button>)}</div>}</article>; })}
+        {images.map((set) => { const setImageIds = set.images.map((image) => image.id); const allSelected = setImageIds.length > 0 && setImageIds.every((id) => selectedSavedImageIds.includes(id)); const selectedInSet = setImageIds.filter((id) => selectedSavedImageIds.includes(id)).length; const expanded = openImageSets.includes(set.id); return <article className="saved-image-set" key={set.id}><div className="saved-image-set-header"><button type="button" className="saved-image-set-toggle" aria-expanded={expanded} onClick={() => setOpenImageSets((current) => current.includes(set.id) ? current.filter((id) => id !== set.id) : [...current, set.id])}><b>{set.name}</b><small>{set.images.length} {set.images.length === 1 ? "foto" : "fotos"}{selectedInSet ? ` · ${selectedInSet} seleccionada${selectedInSet === 1 ? "" : "s"}` : ""} · {expanded ? "Ocultar" : "Ver fotos"}</small></button>{set.images.length > 0 && <button className="plain-button" type="button" onClick={() => toggleSavedImageSet(setImageIds)}>{allSelected ? "Quitar todas" : "Seleccionar todas"}</button>}</div>{set.images.length > 0 && <label className="saved-image-shortcut"><input type="checkbox" checked={isShortcut(set)} onChange={(event) => void toggleShortcut(set, event.target.checked)} /> Botón de atajo en el chat <small>(envía todo el conjunto)</small></label>}{expanded && <div className="tool-gallery-grid">{set.images.map((image) => <button className={selectedSavedImageIds.includes(image.id) ? "selected" : ""} type="button" key={image.id} aria-pressed={selectedSavedImageIds.includes(image.id)} onClick={() => toggleSavedImage(image.id)}><img src={`${api}/settings/entrepreneur-packages/images/${image.id}/media`} alt={image.filename || set.name} loading="lazy" decoding="async" /><span>✓</span></button>)}</div>}</article>; })}
         {stickers.length > 0 && (showStickers ? <div className="tool-stickers">{stickers.map((sticker) => <button key={sticker.id} type="button" onClick={() => void onSendSticker(sticker.id)}><img src={`${api}/settings/stickers/${sticker.id}/media`} alt={sticker.name} loading="lazy" decoding="async" /></button>)}</div> : <button type="button" className="plain-button saved-stickers-toggle" onClick={() => setShowStickers(true)}>Ver stickers ({stickers.length})</button>)}
       </ToolAccordion>
     </>
@@ -246,6 +267,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
           <label className={uploadingAudio ? "audio-upload loading" : "audio-upload"} title={uploadingAudio ? "Subiendo audio" : "Adjuntar audio"}>{uploadingAudio ? <span aria-label="Subiendo audio">…</span> : <ChatIcon name="audio" />}<input type="file" aria-label="Adjuntar audio" accept="audio/aac,audio/mp4,audio/mpeg,audio/amr,audio/ogg,audio/opus" onChange={onUploadAudio} disabled={!chat || uploadingAudio} /></label>
           <button disabled={!chat || (!draft.trim() && !pendingImages.length)} className="send" aria-label="Enviar mensaje"><ChatIcon name="send" /></button>
         </form>
+        {chat && shortcutSets.length > 0 && <div className="composer-shortcuts" role="group" aria-label="Atajos de imágenes guardadas">{shortcutSets.map((set) => <button key={set.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar las ${set.images.length} fotos de «${set.name}»`} onClick={() => void sendShortcut(set)}>{sendingShortcut === set.id ? "Enviando…" : <>▦ {set.name} <small>{set.images.length}</small></>}</button>)}</div>}
         <AudioRecorder disabled={!chat || uploadingAudio} onSend={onRecordAudio} />
       </div>
     </section>

@@ -350,3 +350,12 @@
 .local-outgoing-failed button:first-child { border-color: #1f8f5a; color: #1f8f5a; font-weight: 600; }
 @keyframes local-outgoing-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .local-outgoing .chat-image-spinner { animation-duration: 2.4s; } }
+
+/* Atajos de conjuntos de imágenes debajo del cuadro de texto (un toque envía todo el conjunto). */
+.composer-shortcuts { display: flex; gap: 6px; overflow-x: auto; padding: 6px 2px 2px; scrollbar-width: thin; }
+.composer-shortcuts button { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border: 1px solid #b9dcc6; border-radius: 999px; background: #fff; color: #1f6f48; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.composer-shortcuts button:hover:not(:disabled) { background: #eaf7ef; border-color: #1f8f5a; }
+.composer-shortcuts button:disabled { opacity: .6; cursor: default; }
+.composer-shortcuts small { padding: 0 6px; border-radius: 999px; background: #e3f2e9; color: #1f6f48; font-size: 11px; }
+.saved-image-shortcut { display: flex; align-items: center; gap: 6px; margin-top: 6px; color: #344054; font-size: 12px; cursor: pointer; }
+.saved-image-shortcut small { color: #667085; }
