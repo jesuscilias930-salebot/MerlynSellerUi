@@ -1,5 +1,5 @@
 "use client";
-import { MAX_VIDEO_UPLOAD_BYTES, videoContentType } from "./lib/video-upload";
+import { fileSha256, MAX_VIDEO_UPLOAD_BYTES, videoContentType } from "./lib/video-upload";
 import { mediaUploadRequest } from "./lib/media-upload-request";
 import { refreshAfterAcceptedUpload, refreshIndependently } from "./lib/chat-refresh";
 
@@ -630,12 +630,18 @@ export default function Home() {
     if (file.size > maxSize) throw new Error(type === "image" ? "La imagen no puede superar 20 MB." : type === "document" ? "El PDF no puede superar 25 MB." : "El video no puede superar 250 MB.");
     setUploadingMedia(true);
     try {
+      // Mismo video enviado antes (cualquier chat, últimos 25 días): se reutiliza sin subirlo ni convertirlo.
+      const sha256 = type === "video" ? await fileSha256(file) : null;
+      if (sha256) {
+        const cached = await request<{ cached: boolean }>(`/conversations/${target.id}/messages/video/cached`, { method: "POST", body: JSON.stringify({ sha256, caption: caption || undefined }) }).catch(() => ({ cached: false }));
+        if (cached.cached) { await refreshData(); setNotice("Video enviado al instante: ya se había subido antes."); return; }
+      }
       const endpoint = type === "document" ? "document/upload" : type;
       const uploadId = crypto.randomUUID();
       const response = await mediaUploadRequest(`${api}/conversations/${target.id}/messages/${endpoint}`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": videoMime || (isPdf ? "application/pdf" : file.type), "X-Upload-Filename": encodeURIComponent(file.name), ...(caption ? { "X-Message-Caption": encodeURIComponent(caption) } : {}) },
+        headers: { "Content-Type": videoMime || (isPdf ? "application/pdf" : file.type), "X-Upload-Filename": encodeURIComponent(file.name), ...(caption ? { "X-Message-Caption": encodeURIComponent(caption) } : {}), ...(sha256 ? { "X-Content-Sha256": sha256 } : {}) },
         body: file,
       }, uploadId);
       const result = (await response.json().catch(() => ({}))) as UploadResponse;

@@ -370,3 +370,17 @@ button.quoted-message { width: 100%; max-width: 280px; border-top: 0; border-rig
 article.message-highlight { animation: message-highlight 1.6s ease-out; }
 @keyframes message-highlight { 0%, 35% { box-shadow: 0 0 0 3px #f5c542; } 100% { box-shadow: 0 0 0 3px transparent; } }
 @media (prefers-reduced-motion: reduce) { article.message-highlight { animation: none; outline: 3px solid #f5c542; } }
+
+/* Videos guardados (Herramientas): subir una vez y enviar con un clic. */
+.saved-videos { display: grid; gap: 10px; }
+.saved-videos-upload { display: grid; gap: 7px; padding: 10px; border: 1px dashed #b9dcc6; border-radius: 10px; background: #f8fbf9; }
+.saved-videos-upload small, .saved-videos-empty { color: #667085; font-size: 12px; }
+.saved-videos-file { display: block; padding: 8px 10px; border: 1px solid #d0d5dd; border-radius: 8px; background: #fff; color: #1f6f48; font-size: 12px; font-weight: 600; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.saved-videos-file input { display: none; }
+.saved-video { display: grid; gap: 6px; padding: 10px; border: 1px solid #e1e6e3; border-radius: 10px; background: #fff; }
+.saved-video-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.saved-video-head b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.saved-video-head small { flex: 0 0 auto; color: #667085; font-size: 11px; }
+.saved-video video { width: 100%; max-height: 260px; border-radius: 8px; background: #000; }
+.saved-video-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.saved-video-actions button { min-height: 32px; padding: 4px 10px; font-size: 12px; }

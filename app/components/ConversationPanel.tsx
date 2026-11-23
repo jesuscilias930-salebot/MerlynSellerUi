@@ -29,6 +29,7 @@ import { LocationQuickCards, LocationSender } from "./LocationSender";
 import { LocationMapCard } from "./LocationMapCard";
 import { OutgoingContext, isLocalMessage, LOCAL_PREFIX } from "../lib/outgoing";
 import { quotedLabel, quotedThumbnailKind } from "../lib/quoted";
+import { SavedVideosPanel, sendSavedVideo, useSavedVideos, type SavedVideo } from "./SavedVideos";
 import { QuoteBundlePicker } from "./QuoteBundlePicker";
 import { chatQuoteBundle } from "../lib/quote";
 import type { QuoteBundleRef } from "../lib/types";
@@ -89,6 +90,16 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
     setShortcutOverrides((current) => ({ ...current, [set.id]: value }));
     try { await request(`/settings/entrepreneur-packages/${set.id}`, { method: "PATCH", body: JSON.stringify({ chatShortcut: value }) }); }
     catch (error) { setShortcutOverrides((current) => ({ ...current, [set.id]: !value })); setNotice(error instanceof Error ? error.message : "No se pudo guardar el atajo."); }
+  };
+  const savedVideos = useSavedVideos();
+  const videoShortcuts = savedVideos.videos.filter((video) => video.chatShortcut);
+  const sendVideoShortcut = async (video: SavedVideo) => {
+    if (!chat || sendingShortcut) return;
+    if (!window.confirm(`¿Enviar el video «${video.name}» a ${contactName(chat)}?`)) return;
+    setSendingShortcut(video.id);
+    try { await sendSavedVideo(chat.id, video.id); setNotice(`Video «${video.name}» enviado.`); }
+    catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar el video."); }
+    finally { setSendingShortcut(null); }
   };
   const sendShortcut = async (set: EntrepreneurPackage) => {
     if (!chat || sendingShortcut) return;
@@ -165,6 +176,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
       <InteractiveOptionsCard conversationId={chat?.id} disabled={!chat} />
       <>{chat && <StoreOrders key={chat.id} conversationId={chat.id}/>}</>{isWhatsApp(chat) ? <WhatsAppTemplateCard conversationId={chat?.id} disabled={!chat} /> : <p className="tool-notice">Las plantillas oficiales son solo para WhatsApp. En {contactDetail(chat!).split(" · ")[0]} puedes responder hasta 24 h después del último mensaje del cliente (7 días si vino de un anuncio o respondes como persona del equipo).</p>}
       <ToolAccordion icon="＋" title="Adjuntar archivos" description="Las imágenes se muestran antes de enviarse.">{attachTools}</ToolAccordion>
+      <ToolAccordion icon="🎬" title="Videos guardados" description="Súbelos una vez y envíalos al instante.">{chat && <SavedVideosPanel chatId={chat.id} store={savedVideos} />}</ToolAccordion>
       <ToolAccordion icon="▦" title="Imágenes guardadas" description="Selecciona una o varias imágenes y envíalas juntas.">
         {selectedSavedImageIds.length > 0 && <div className="saved-image-selection-actions"><span>{selectedSavedImageIds.length} seleccionada{selectedSavedImageIds.length === 1 ? "" : "s"}</span><button className="tool-primary-button" type="button" disabled={!chat} onClick={() => void submitImages(selectedSavedImageIds)}>Enviar selección</button><button className="plain-button" type="button" onClick={() => setSelectedSavedImageIds([])}>Limpiar</button></div>}
         {/* Las fotos se piden al servidor solo al abrir su conjunto: abrir la herramienta no descarga nada. */}
@@ -276,7 +288,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
           <label className={uploadingAudio ? "audio-upload loading" : "audio-upload"} title={uploadingAudio ? "Subiendo audio" : "Adjuntar audio"}>{uploadingAudio ? <span aria-label="Subiendo audio">…</span> : <ChatIcon name="audio" />}<input type="file" aria-label="Adjuntar audio" accept="audio/aac,audio/mp4,audio/mpeg,audio/amr,audio/ogg,audio/opus" onChange={onUploadAudio} disabled={!chat || uploadingAudio} /></label>
           <button disabled={!chat || (!draft.trim() && !pendingImages.length)} className="send" aria-label="Enviar mensaje"><ChatIcon name="send" /></button>
         </form>
-        {chat && shortcutSets.length > 0 && <div className="composer-shortcuts" role="group" aria-label="Atajos de imágenes guardadas">{shortcutSets.map((set) => <button key={set.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar las ${set.images.length} fotos de «${set.name}»`} onClick={() => void sendShortcut(set)}>{sendingShortcut === set.id ? "Enviando…" : <>▦ {set.name} <small>{set.images.length}</small></>}</button>)}</div>}
+        {chat && (shortcutSets.length > 0 || videoShortcuts.length > 0) && <div className="composer-shortcuts" role="group" aria-label="Atajos de imágenes y videos guardados">{videoShortcuts.map((video) => <button key={video.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar el video «${video.name}»`} onClick={() => void sendVideoShortcut(video)}>{sendingShortcut === video.id ? "Enviando…" : <>🎬 {video.name}</>}</button>)}{shortcutSets.map((set) => <button key={set.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar las ${set.images.length} fotos de «${set.name}»`} onClick={() => void sendShortcut(set)}>{sendingShortcut === set.id ? "Enviando…" : <>▦ {set.name} <small>{set.images.length}</small></>}</button>)}</div>}
         <AudioRecorder disabled={!chat || uploadingAudio} onSend={onRecordAudio} />
       </div>
     </section>
