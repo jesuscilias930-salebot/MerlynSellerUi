@@ -29,6 +29,7 @@ import { LocationQuickCards, LocationSender } from "./LocationSender";
 import { LocationMapCard } from "./LocationMapCard";
 import { OutgoingContext, isLocalMessage, LOCAL_PREFIX } from "../lib/outgoing";
 import { quotedLabel, quotedThumbnailKind } from "../lib/quoted";
+import { progressLabel } from "../lib/media-upload-request";
 import { SavedVideosPanel, sendSavedVideo, useSavedVideos, type SavedVideo } from "./SavedVideos";
 import { QuoteBundlePicker } from "./QuoteBundlePicker";
 import { chatQuoteBundle } from "../lib/quote";
@@ -141,6 +142,7 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
     if (message.deletedForEveryone) return <p className="deleted-message">🚫 Este mensaje fue eliminado.</p>;
     if (message.type === "audio" && message.media_id) return <audio controls src={mediaUrl(message)} />;
     if (message.type === "sticker" && message.media_id) return <img className="sticker" src={mediaUrl(message)} alt="Sticker" />;
+    if (message.type === "video" && message.localPreviewUrl) { const percent = Math.round((message.localProgress?.fraction || 0) * 100); const phase = message.localProgress?.phase; return <span className="chat-video-sending"><video className="chat-video" src={message.localPreviewUrl} muted playsInline preload="metadata" />{message.status === "pending" && <span className="chat-upload-overlay" role="progressbar" aria-label="Avance del envío del video" aria-valuemin={0} aria-valuemax={100} aria-valuenow={phase === "uploading" ? percent : undefined}><b>{phase === "uploading" ? `${percent}%` : phase === "processing" ? "✓ 100%" : "…"}</b><span className="chat-upload-bar"><span style={{ width: `${phase === "processing" ? 100 : phase === "uploading" ? percent : 0}%` }} className={phase === "processing" || phase === "checking" || !phase ? "indeterminate" : ""} /></span><small>{progressLabel(message.localProgress)}</small></span>}</span>; }
     if (message.type === "image" && message.localPreviewUrl) return <><span className="chat-image-sending"><img className="chat-image" src={message.localPreviewUrl} alt="Imagen en envío" />{message.status === "pending" && <span className="chat-image-spinner" aria-hidden="true" />}</span>{message.body && <p className="media-caption">{message.body}</p>}</>;
     if (message.type === "image" && message.media_id) return <><img className="chat-image" src={mediaUrl(message)} alt="Imagen" />{message.body && <p className="media-caption">{message.body}</p>}</>;
     if (message.type === "video" && message.media_id) return <video className="chat-video" playsInline preload="metadata" controls src={mediaUrl(message)} />;
@@ -240,7 +242,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
             <div className="message-meta">
               {message.status === "failed"
                 ? <span className="local-outgoing-failed" role="alert"><b>! No se envió</b>{message.error_code && <small>{message.error_code}</small>}<span><button type="button" onClick={() => outgoingActions?.retry(message.id.slice(LOCAL_PREFIX.length))}>Reintentar</button><button type="button" onClick={() => outgoingActions?.discard(message.id.slice(LOCAL_PREFIX.length))}>Descartar</button></span></span>
-                : <small className="local-outgoing-status"><span className="delivery pending" aria-hidden="true">◷</span> {message.type === "image" ? "Enviando foto…" : "Enviando…"}</small>}
+                : <small className="local-outgoing-status"><span className="delivery pending" aria-hidden="true">◷</span> {message.type === "image" ? "Enviando foto…" : message.type === "video" ? progressLabel(message.localProgress) : "Enviando…"}</small>}
             </div>
           </article> : <article className={message.direction} id={`message-${message.id}`}>
             {message.direction === "inbound" && <AdReferralCard referral={message.referral} />}

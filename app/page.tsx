@@ -1,6 +1,6 @@
 "use client";
 import { fileSha256, MAX_VIDEO_UPLOAD_BYTES, videoContentType } from "./lib/video-upload";
-import { mediaUploadRequest } from "./lib/media-upload-request";
+import { mediaUploadRequest, type UploadProgress } from "./lib/media-upload-request";
 import { refreshAfterAcceptedUpload, refreshIndependently } from "./lib/chat-refresh";
 
 import { createClient } from "@supabase/supabase-js";
@@ -516,6 +516,8 @@ export default function Home() {
     if (!target) return;
     try {
       if (item.kind === "image" && item.file) await uploadMedia(target, "image", item.file, item.body);
+      else if (item.kind === "video" && item.file) await uploadMedia(target, "video", item.file, item.body, (progress) =>
+        setOutgoing((current) => current.map((value) => value.id === item.id ? { ...value, progress } : value)));
       else {
         await request(`/conversations/${target.id}/messages/text`, { method: "POST", body: JSON.stringify({ body: item.body, replyToMessageId: item.replyToMessageId }) });
         await refreshData();
@@ -535,11 +537,18 @@ export default function Home() {
     retry: (id: string) => {
       const item = outgoing.find((value) => value.id === id && value.status === "failed");
       if (!item) return;
-      const retried = { ...item, status: "sending" as const, error: undefined };
+      const retried = { ...item, status: "sending" as const, error: undefined, ...(item.kind === "video" ? { progress: { phase: "checking" as const, fraction: 0 } } : {}) };
       setOutgoing((current) => current.map((value) => value.id === id ? retried : value));
       enqueueOutgoing([retried]);
     },
     discard: (id: string) => { const item = outgoing.find((value) => value.id === id && value.status === "failed"); if (item) finishOutgoing(item); },
+  };
+
+  const queueOutgoingVideo = (target: Chat, file: File) => {
+    const item: OutgoingItem = { id: crypto.randomUUID(), chatId: target.id, kind: "video", createdAt: new Date().toISOString(), status: "sending", file, previewUrl: URL.createObjectURL(file), progress: { phase: "checking", fraction: 0 } };
+    outgoingTargets.current.set(item.id, target);
+    setOutgoing((current) => [...current, item]);
+    enqueueOutgoing([item]);
   };
 
   const sendText = async (
@@ -620,7 +629,7 @@ export default function Home() {
       }
     };
 
-  const uploadMedia = async (target: Chat | null, type: "image" | "video" | "document", file: File, caption?: string) => {
+  const uploadMedia = async (target: Chat | null, type: "image" | "video" | "document", file: File, caption?: string, onProgress?: UploadProgress) => {
     if (!target) return;
     const allowedTypes = type === "image" ? ["image/jpeg", "image/png", "image/webp"] : type === "document" ? ["application/pdf"] : ["video/mp4", "video/3gpp"];
     const maxSize = type === "image" ? 20 * 1024 * 1024 : type === "document" ? 25 * 1024 * 1024 : MAX_VIDEO_UPLOAD_BYTES;
@@ -643,7 +652,7 @@ export default function Home() {
         credentials: "include",
         headers: { "Content-Type": videoMime || (isPdf ? "application/pdf" : file.type), "X-Upload-Filename": encodeURIComponent(file.name), ...(caption ? { "X-Message-Caption": encodeURIComponent(caption) } : {}), ...(sha256 ? { "X-Content-Sha256": sha256 } : {}) },
         body: file,
-      }, uploadId);
+      }, uploadId, onProgress);
       const result = (await response.json().catch(() => ({}))) as UploadResponse;
       if (!response.ok) throw new Error(result.error || `No fue posible enviar el ${type === "document" ? "PDF" : type === "image" ? "archivo" : "video"}.`);
       const refreshNotice = await refreshAfterAcceptedUpload(async () => {
@@ -663,6 +672,14 @@ export default function Home() {
       const valid = files.filter((file) => ["image/jpeg", "image/png", "image/webp"].includes(file.type) && file.size <= 20 * 1024 * 1024);
       if (valid.length !== files.length) { setNotice("Selecciona imágenes JPEG, PNG o WebP de máximo 20 MB."); return; }
       setPendingImages((current) => [...current, ...valid.map((file) => ({ id: `${file.name}-${file.lastModified}-${crypto.randomUUID()}`, file, previewUrl: URL.createObjectURL(file) }))]);
+      return;
+    }
+    // Videos: aparecen al instante en el chat con su porcentaje de subida (como WhatsApp).
+    if (type === "video" && target) {
+      const file = files[0];
+      if (!videoContentType(file)) { setNotice("Selecciona un video MP4, MOV, M4V o 3GPP."); return; }
+      if (file.size > MAX_VIDEO_UPLOAD_BYTES) { setNotice("El video no puede superar 250 MB."); return; }
+      queueOutgoingVideo(target, file);
       return;
     }
     try { await uploadMedia(target, type, files[0]); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar el archivo."); }
@@ -1192,9 +1209,9 @@ export default function Home() {
           replyToMessage={replyToMessage}
           onReplyToChange={setReplyToMessage}
           onUploadAudio={uploadSelectedAudio(chat)}
-          onUploadImage={uploadSelectedMedia(chat, "image")}
-          onUploadVideo={uploadSelectedMedia(chat, "video")}
-          onUploadDocument={uploadSelectedMedia(chat, "document")}
+          onUploadImage={(event) => uploadSelectedMedia(chat, "image")(event)}
+          onUploadVideo={(event) => uploadSelectedMedia(chat, "video")(event)}
+          onUploadDocument={(event) => uploadSelectedMedia(chat, "document")(event)}
           onRemovePendingImage={removePendingImage}
           onDocumentChange={(mediaId) => {
             setSelectedDocumentId(mediaId);
@@ -1341,9 +1358,9 @@ export default function Home() {
         onSendText={(event) => sendText(event, modalChat, modalDraft, () => setModalDraft(""))}
         onReplyToChange={setReplyToMessage}
         onUploadAudio={uploadSelectedAudio(modalChat)}
-        onUploadImage={uploadSelectedMedia(modalChat, "image")}
-        onUploadVideo={uploadSelectedMedia(modalChat, "video")}
-        onUploadDocument={uploadSelectedMedia(modalChat, "document")}
+        onUploadImage={(event) => uploadSelectedMedia(modalChat, "image")(event)}
+        onUploadVideo={(event) => uploadSelectedMedia(modalChat, "video")(event)}
+        onUploadDocument={(event) => uploadSelectedMedia(modalChat, "document")(event)}
         onRemovePendingImage={removePendingImage}
         onDocumentChange={(mediaId) => {
           setSelectedDocumentId(mediaId);

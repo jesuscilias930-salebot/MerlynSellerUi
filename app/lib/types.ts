@@ -39,6 +39,8 @@ export type Message = {
   created_at: string;
   /** Vista previa local de una foto que todavía se está enviando. */
   localPreviewUrl?: string;
+  /** Avance de subida de un video que todavía se está enviando. */
+  localProgress?: { phase: string; fraction: number };
   replyToMessageId?: string | null;
   replyToBody?: string | null;
   replyToType?: string | null;

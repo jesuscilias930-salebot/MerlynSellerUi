@@ -5,7 +5,7 @@ import type { Message } from "./types";
 export type OutgoingItem = {
   id: string;
   chatId: string;
-  kind: "image" | "text";
+  kind: "image" | "text" | "video";
   createdAt: string;
   status: "sending" | "failed";
   file?: File;
@@ -13,6 +13,8 @@ export type OutgoingItem = {
   body?: string;
   replyToMessageId?: string;
   error?: string;
+  /** Videos: avance de la subida (checking → uploading % → processing). */
+  progress?: { phase: "checking" | "uploading" | "processing"; fraction: number };
 };
 
 export type OutgoingActions = { retry: (id: string) => void; discard: (id: string) => void };
@@ -34,6 +36,7 @@ export function outgoingMessages(items: OutgoingItem[], chatId: string | undefin
     error_code: item.error || null,
     created_at: item.createdAt,
     localPreviewUrl: item.previewUrl,
+    ...(item.progress ? { localProgress: item.progress } : {}),
   }));
 }
 

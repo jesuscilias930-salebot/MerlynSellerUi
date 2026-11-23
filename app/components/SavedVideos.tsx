@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, request } from "../lib/api";
 import { MAX_VIDEO_UPLOAD_BYTES, VIDEO_ACCEPT, videoContentType } from "../lib/video-upload";
+import { mediaUploadRequest, progressLabel } from "../lib/media-upload-request";
 
 export type SavedVideo = { id: string; name: string; filename: string | null; bytes: number; chatShortcut: boolean; position: number };
 
@@ -40,6 +41,7 @@ export function SavedVideosPanel({ chatId, store }: { chatId?: string; store: St
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{ phase: "uploading" | "processing"; fraction: number } | null>(null);
 
   const upload = async () => {
     if (!file || busy) return;
@@ -48,16 +50,16 @@ export function SavedVideosPanel({ chatId, store }: { chatId?: string; store: St
     if (file.size > MAX_VIDEO_UPLOAD_BYTES) return setNotice("El video no puede superar 250 MB.");
     setBusy("upload"); setNotice("");
     try {
-      const response = await fetch(`${api}/settings/saved-videos/upload`, {
+      const response = await mediaUploadRequest(`${api}/settings/saved-videos/upload`, {
         method: "POST", credentials: "include", body: file,
         headers: { "Content-Type": mime, "X-Upload-Filename": encodeURIComponent(file.name), "X-Video-Name": encodeURIComponent(name.trim() || file.name.replace(/\.[^.]+$/, "")) },
-      });
+      }, crypto.randomUUID(), setProgress);
       const body = await response.json().catch(() => ({})) as SavedVideo & { error?: string };
       if (!response.ok) throw new Error(body.error || "No se pudo guardar el video.");
       replace([...videos, body]); setName(""); setFile(null);
       setNotice(`«${body.name}» guardado (${megabytes(body.bytes)}). Ya puedes enviarlo con un clic.`);
     } catch (reason) { setNotice(reason instanceof Error ? reason.message : "No se pudo guardar el video."); }
-    finally { setBusy(""); }
+    finally { setBusy(""); setProgress(null); }
   };
   const send = async (video: SavedVideo) => {
     if (!chatId || busy) return;
@@ -81,7 +83,8 @@ export function SavedVideosPanel({ chatId, store }: { chatId?: string; store: St
     <div className="saved-videos-upload">
       <input value={name} maxLength={120} onChange={event => setName(event.target.value)} placeholder="Nombre, p. ej. Recorrido de la bodega" />
       <label className="saved-videos-file">{file ? `🎬 ${file.name} · ${megabytes(file.size)}` : "Elegir video (hasta 250 MB)"}<input type="file" accept={VIDEO_ACCEPT} onChange={event => { setFile(event.target.files?.[0] || null); event.target.value = ""; }} /></label>
-      <button type="button" className="tool-primary-button" disabled={!file || Boolean(busy)} onClick={() => void upload()}>{busy === "upload" ? "Subiendo y preparando…" : "Guardar video"}</button>
+      <button type="button" className="tool-primary-button" disabled={!file || Boolean(busy)} onClick={() => void upload()}>{busy === "upload" ? progressLabel(progress || undefined) : "Guardar video"}</button>
+      {busy === "upload" && progress && <span className="chat-upload-bar saved-videos-progress" role="progressbar" aria-label="Avance de la subida" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress.fraction * 100)}><span style={{ width: `${Math.round(progress.fraction * 100)}%` }} className={progress.phase === "processing" ? "indeterminate" : ""} /></span>}
       <small>Se sube y prepara una sola vez; después se envía al instante a cualquier chat.</small>
     </div>
     {error && <p className="tool-notice">{error} <button type="button" className="plain-button" onClick={() => void reload(true)}>Reintentar</button></p>}
