@@ -434,3 +434,4 @@ article.message-highlight { animation: message-highlight 1.6s ease-out; }
 .video-processing-card .chat-upload-bar { background: #dfe8e2; }
 .video-processing-card small { color: #667085; font-size: 12px; }
 .video-processing-card.failed b { color: #b42318; }
+.composer-shortcuts .quick-button.unconfigured { border-style: dashed; background: #fff; color: #1f6f48; }

@@ -28,12 +28,13 @@ export function useQuickButtons() {
 type Store = ReturnType<typeof useQuickButtons>;
 
 /** Fila debajo del cuadro de texto: un clic envía (sin confirmación); el botón se bloquea mientras sale para no duplicar. */
-export function QuickButtonsRow({ chatId, store, imageSets, onSendSet, onNotice }: { chatId: string; store: Store; imageSets: EntrepreneurPackage[]; onSendSet: (packageId: string) => Promise<void>; onNotice: (text: string) => void }) {
+export function QuickButtonsRow({ chatId, store, imageSets, onSendSet, onNotice, onConfigure }: { chatId: string; store: Store; imageSets: EntrepreneurPackage[]; onSendSet: (packageId: string) => Promise<void>; onNotice: (text: string) => void; onConfigure?: () => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const { invitation, imageButtons } = store.config;
   const buttons = imageButtons.map((button, index) => ({ ...button, key: `set-${index}`, set: imageSets.find(item => item.id === button.packageId) })).filter(button => button.set && button.set.images.length > 0);
-  if (!invitation && !buttons.length) return null;
+  // Sin configurar: el botón se ve igual y lleva a «⚡ Botones rápidos» para darlo de alta.
+  if (!invitation && !buttons.length) return onConfigure ? <button type="button" className="quick-button invitation unconfigured" title="Configura el enlace de tu grupo en Botones rápidos" onClick={onConfigure}>👥 Invitar al grupo <small>configurar</small></button> : null;
   const run = async (key: string, action: () => Promise<unknown>, sent: string) => {
     if (busy) return;
     setBusy(key);
@@ -43,6 +44,7 @@ export function QuickButtonsRow({ chatId, store, imageSets, onSendSet, onNotice 
   };
   const label = (key: string, text: string) => busy === key ? "Enviando…" : done === key ? "✓ Enviado" : text;
   return <>
+    {!invitation && onConfigure && <button type="button" className="quick-button invitation unconfigured" title="Configura el enlace de tu grupo en Botones rápidos" onClick={onConfigure}>👥 Invitar al grupo <small>configurar</small></button>}
     {invitation && <button type="button" className="quick-button invitation" disabled={Boolean(busy)} title={invitation.text} onClick={() => void run("invitation", () => request(`/conversations/${chatId}/messages/invitation`, { method: "POST" }), `Invitación «${invitation.label}» enviada.`)}>{label("invitation", `👥 ${invitation.label}`)}</button>}
     {buttons.map(button => <button key={button.key} type="button" className="quick-button" disabled={Boolean(busy)} title={`Envía las ${button.set!.images.length} fotos de «${button.set!.name}»`} onClick={() => void run(button.key, () => onSendSet(button.packageId), `Se enviaron las fotos de «${button.set!.name}».`)}>{label(button.key, `▦ ${button.label}`)} {busy !== button.key && done !== button.key && <small>{button.set!.images.length}</small>}</button>)}
   </>;
