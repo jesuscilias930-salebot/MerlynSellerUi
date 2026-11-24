@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { request } from "../lib/api";
-import type { EntrepreneurPackage } from "../lib/types";
+import type { CtaUrlTemplate, EntrepreneurPackage } from "../lib/types";
 
-export type QuickButtonsConfig = { invitation: { label: string; text: string } | null; imageButtons: { label: string; packageId: string }[] };
+export type QuickButtonsConfig = { invitation: { label: string; text?: string; ctaUrlTemplateId?: string } | null; imageButtons: { label: string; packageId: string }[] };
 const EMPTY: QuickButtonsConfig = { invitation: null, imageButtons: [] };
 export const QUICK_IMAGE_SLOTS = 5;
 
@@ -45,7 +45,7 @@ export function QuickButtonsRow({ chatId, store, imageSets, onSendSet, onNotice,
   const label = (key: string, text: string) => busy === key ? "Enviando…" : done === key ? "✓ Enviado" : text;
   return <>
     {!invitation && onConfigure && <button type="button" className="quick-button invitation unconfigured" title="Configura el enlace de tu grupo en Botones rápidos" onClick={onConfigure}>👥 Invitar al grupo <small>configurar</small></button>}
-    {invitation && <button type="button" className="quick-button invitation" disabled={Boolean(busy)} title={invitation.text} onClick={() => void run("invitation", () => request(`/conversations/${chatId}/messages/invitation`, { method: "POST" }), `Invitación «${invitation.label}» enviada.`)}>{label("invitation", `👥 ${invitation.label}`)}</button>}
+    {invitation && <button type="button" className="quick-button invitation" disabled={Boolean(busy)} title={invitation.text || "Invitación con botón"} onClick={() => void run("invitation", () => request(`/conversations/${chatId}/messages/invitation`, { method: "POST" }), `Invitación «${invitation.label}» enviada.`)}>{label("invitation", `👥 ${invitation.label}`)}</button>}
     {buttons.map(button => <button key={button.key} type="button" className="quick-button" disabled={Boolean(busy)} title={`Envía las ${button.set!.images.length} fotos de «${button.set!.name}»`} onClick={() => void run(button.key, () => onSendSet(button.packageId), `Se enviaron las fotos de «${button.set!.name}».`)}>{label(button.key, `▦ ${button.label}`)} {busy !== button.key && done !== button.key && <small>{button.set!.images.length}</small>}</button>)}
   </>;
 }
@@ -53,6 +53,9 @@ export function QuickButtonsRow({ chatId, store, imageSets, onSendSet, onNotice,
 /** Herramientas → Botones rápidos: invitación con enlace y 5 botones de conjuntos de imágenes. */
 export function QuickButtonsSettings({ store, imageSets }: { store: Store; imageSets: EntrepreneurPackage[] }) {
   const [draft, setDraft] = useState<QuickButtonsConfig | null>(null);
+  // «Invitaciones con botón» ya guardadas (sección Invitaciones con botón).
+  const [ctaTemplates, setCtaTemplates] = useState<CtaUrlTemplate[]>([]);
+  useEffect(() => { let active = true; request<CtaUrlTemplate[]>("/settings/cta-url-templates").then(items => { if (active) setCtaTemplates(items); }).catch(() => {}); return () => { active = false; }; }, []);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const value = draft || store.config;
@@ -69,7 +72,11 @@ export function QuickButtonsSettings({ store, imageSets }: { store: Store; image
   };
   const save = async () => {
     const config: QuickButtonsConfig = {
-      invitation: value.invitation && (value.invitation.label.trim() || value.invitation.text.trim()) ? { label: value.invitation.label.trim(), text: value.invitation.text.trim() } : null,
+      invitation: value.invitation && (value.invitation.label.trim() || value.invitation.text?.trim() || value.invitation.ctaUrlTemplateId)
+        ? value.invitation.ctaUrlTemplateId
+          ? { label: (value.invitation.label.trim() || ctaTemplates.find(item => item.id === value.invitation?.ctaUrlTemplateId)?.name || "Invitación").slice(0, 24), ctaUrlTemplateId: value.invitation.ctaUrlTemplateId }
+          : { label: value.invitation.label.trim(), text: (value.invitation.text || "").trim() }
+        : null,
       imageButtons: slots.filter(slot => slot.packageId).map(slot => ({ label: (slot.label.trim() || sets.find(item => item.id === slot.packageId)?.name || "Fotos").slice(0, 24), packageId: slot.packageId })),
     };
     setSaving(true); setNotice("");
@@ -81,9 +88,15 @@ export function QuickButtonsSettings({ store, imageSets }: { store: Store; image
     {store.error && <p className="tool-notice">{store.error}</p>}
     <fieldset>
       <legend>👥 Invitación con enlace</legend>
-      <small>Por ejemplo, la invitación a tu grupo de WhatsApp: el cliente ve la tarjeta del grupo con «Unirse».</small>
-      <input value={value.invitation?.label || ""} maxLength={24} placeholder="Nombre del botón, p. ej. Grupo VIP" onChange={event => update({ ...value, invitation: { label: event.target.value, text: value.invitation?.text || "" } })} />
-      <textarea rows={3} maxLength={4096} value={value.invitation?.text || ""} placeholder={"Mensaje con el enlace, p. ej.\n¡Únete a nuestro grupo de ofertas! https://chat.whatsapp.com/…"} onChange={event => update({ ...value, invitation: { label: value.invitation?.label || "", text: event.target.value } })} />
+      <small>Elige una de tus «Invitaciones con botón» o escribe un mensaje con el enlace (el cliente ve la tarjeta del grupo con «Unirse»).</small>
+      <select aria-label="Invitación guardada" value={value.invitation?.ctaUrlTemplateId || ""} onChange={event => { const template = ctaTemplates.find(item => item.id === event.target.value); update({ ...value, invitation: event.target.value ? { label: value.invitation?.label || template?.name.slice(0, 24) || "", ctaUrlTemplateId: event.target.value } : { label: value.invitation?.label || "", text: value.invitation?.text || "" } }); }}>
+        <option value="">✏️ Escribir mensaje con enlace</option>
+        {ctaTemplates.map(template => <option key={template.id} value={template.id}>↗ {template.name} · botón «{template.buttonText}»</option>)}
+      </select>
+      <input value={value.invitation?.label || ""} maxLength={24} placeholder="Nombre del botón, p. ej. Grupo VIP" onChange={event => update({ ...value, invitation: { ...(value.invitation || {}), label: event.target.value } })} />
+      {value.invitation?.ctaUrlTemplateId
+        ? (() => { const template = ctaTemplates.find(item => item.id === value.invitation?.ctaUrlTemplateId); return template ? <div className="quick-reply-cta-preview"><b>{template.buttonText}</b><span>{template.body}</span></div> : <small>Cargando invitación…</small>; })()
+        : <textarea rows={3} maxLength={4096} value={value.invitation?.text || ""} placeholder={"Mensaje con el enlace, p. ej.\n¡Únete a nuestro grupo de ofertas! https://chat.whatsapp.com/…"} onChange={event => update({ ...value, invitation: { label: value.invitation?.label || "", text: event.target.value } })} />}
       {value.invitation && <button type="button" className="plain-button" onClick={() => update({ ...value, invitation: null })}>Quitar invitación</button>}
     </fieldset>
     <fieldset>
