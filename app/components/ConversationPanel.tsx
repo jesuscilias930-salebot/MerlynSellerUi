@@ -30,6 +30,7 @@ import { LocationMapCard } from "./LocationMapCard";
 import { OutgoingContext, isLocalMessage, LOCAL_PREFIX } from "../lib/outgoing";
 import { quotedLabel, quotedThumbnailKind } from "../lib/quoted";
 import { progressLabel } from "../lib/media-upload-request";
+import { unsupportedMessageInfo } from "../lib/unsupported-message";
 import { SavedVideosPanel, sendSavedVideo, useSavedVideos, type SavedVideo } from "./SavedVideos";
 import { QuoteBundlePicker } from "./QuoteBundlePicker";
 import { chatQuoteBundle } from "../lib/quote";
@@ -152,7 +153,7 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
     if (message.type === "interactive" && message.direction === "inbound" && message.messageMetadata?.interactive) return <div className="whatsapp-content-card reply-card"><span className="whatsapp-content-kicker">Respuesta interactiva</span><b>{message.messageMetadata.interactive.title || message.messageMetadata.interactive.body || "Respuesta seleccionada"}</b></div>;
     if (message.type === "interactive") { try { const data = JSON.parse(message.body || "{}") as CtaUrlMessage & Partial<InteractiveOptionsMessage> & { kind?: string }; if (data.kind === "options") return <div className={optionStyles.chatPreview}>{data.header && <b>{data.header}</b>}<p>{data.body}</p><ul>{(data.options || []).map(option => <li key={option.id || option.title}>{option.title}{option.description && <small> · {option.description}</small>}</li>)}</ul><small>{data.format === "buttons" ? "Botones de respuesta" : `Lista · «${data.buttonText || "Ver opciones"}»`}</small></div>; return <div className="interactive-cta-preview"><p>{data.body}</p><span>{data.buttonText || "Abrir enlace"} ↗</span></div>; } catch { return <p>[Mensaje interactivo]</p>; } }
     if (message.type === "template") { try { const data = JSON.parse(message.body || "{}") as { templateName?: string }; return <div className="interactive-cta-preview"><p>Plantilla: {data.templateName || "WhatsApp"}</p><span>Enviada mediante plantilla oficial</span></div>; } catch { return <p>[Plantilla oficial]</p>; } }
-    if (message.type === "unsupported" || message.type === "unknown") return <div className="whatsapp-content-card system-card"><b>Este tipo de mensaje aún no puede mostrarse aquí.</b><small>La conversación continúa con normalidad.</small></div>;
+    if (message.type === "unsupported" || message.type === "unknown") { const info = unsupportedMessageInfo(message.messageMetadata?.unsupported); return <div className="whatsapp-content-card system-card"><b>{info.title}</b><small>{info.hint}</small></div>; }
     return <p>{message.body || `[${message.type}]`}</p>;
   };
   const deleteMessage = async (message: Message, scope: "for_me" | "for_everyone") => { setMenuId(null); try { await onDeleteMessage(message.id, scope); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible eliminar el mensaje."); } };

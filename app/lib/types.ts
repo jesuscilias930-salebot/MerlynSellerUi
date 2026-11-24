@@ -64,6 +64,8 @@ export type Message = {
   messageMetadata?: {
     contacts?: { name?: string; phones?: { phone?: string; waId?: string; type?: string }[]; emails?: string[] }[];
     location?: { latitude: number; longitude: number; name?: string; address?: string };
+    /** Mensaje cuyo contenido WhatsApp no comparte con apps de empresa (encuesta, mensaje editado, álbum…). */
+    unsupported?: { type?: string; code?: number; title?: string; details?: string };
     order?: { catalogId?: string; items?: { retailerId?: string; quantity?: number; itemPrice?: number; currency?: string }[] };
     button?: { text?: string; payload?: string };
     interactive?: { kind?: "button" | "list" | "flow"; id?: string; title?: string; description?: string; name?: string; body?: string; responseJson?: string };
