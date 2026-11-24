@@ -62,3 +62,21 @@ export function trackingMessage(shipment: Pick<QuoteShipment, "carrier" | "servi
     ? `Tu pedido va por ${shipment.carrier.toUpperCase()} (${shipment.service}). Número de guía: ${shipment.trackingNumber}.`
     : `Tu guía de ${shipment.carrier.toUpperCase()} (${shipment.service}) ya está generada; te comparto el número de rastreo en cuanto esté disponible.`;
 }
+
+const CARRIERS: Record<string, string> = { dhl: "DHL", fedex: "FedEx", ups: "UPS", estafeta: "Estafeta", redpack: "Redpack", paquetexpress: "Paquetexpress", sendex: "Sendex", "99minutos": "99minutos", jtexpress: "J&T Express", ampm: "AMPM", tresguerras: "Tresguerras", quiken: "Quiken", noventa9minutos: "99minutos", dostavista: "Dostavista" };
+export const carrierName = (carrier: string) => CARRIERS[carrier.trim().toLowerCase()] || (carrier.length <= 4 ? carrier.toUpperCase() : carrier.charAt(0).toUpperCase() + carrier.slice(1).toLowerCase());
+
+/** Mensaje para ofrecer al cliente la opción más económica. */
+export function bestPriceMessage(rates: QuoteRate[]): string | null {
+  const best = ratesByPrice(rates).find(rate => ratePrice(rate) !== "Precio no disponible");
+  if (!best) return null;
+  return `El envío con mejor precio es con ${carrierName(best.carrier)} en ${ratePrice(best)}. ¿Le gustaría que seleccionemos esta paquetería para enviar su pedido?`;
+}
+
+/** «hace 5 min», «hace 2 h». */
+export function quoteAge(savedAt: number, now = Date.now()): string {
+  const minutes = Math.max(0, Math.round((now - savedAt) / 60000));
+  if (minutes < 1) return "hace un momento";
+  if (minutes < 60) return `hace ${minutes} min`;
+  return `hace ${Math.floor(minutes / 60)} h${minutes % 60 ? ` ${minutes % 60} min` : ""}`;
+}

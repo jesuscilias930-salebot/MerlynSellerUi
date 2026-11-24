@@ -3,8 +3,9 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { request } from "../lib/api";
 import { contactPhone } from "../lib/channels";
-import { readChatShippingDraft, writeChatShippingDraft, type ShippingAddress, type ShippingParcel } from "../lib/chat-shipping-draft";
-import { chatQuoteBundle, missingDestinationFields, quoteBundleRef, rateDelivery, rateMessage, ratePrice, ratesByPrice, storedParcel, trackingMessage, type QuoteRate, type QuoteShipment } from "../lib/quote";
+import { chatShippingDraftKey, readChatShippingDraft, writeChatShippingDraft, type ShippingAddress, type ShippingParcel } from "../lib/chat-shipping-draft";
+import { chatShippingQuoteKey, QUOTE_FRESH_MS, readShippingQuote, writeShippingQuote } from "../lib/chat-shipping-quote";
+import { bestPriceMessage, chatQuoteBundle, missingDestinationFields, quoteAge, quoteBundleRef, rateDelivery, rateMessage, ratePrice, ratesByPrice, storedParcel, trackingMessage, type QuoteRate, type QuoteShipment } from "../lib/quote";
 import { bundleShippingPackage, type StoredShippingPackage } from "../lib/shipping-package";
 import type { Chat, QuoteBundleRef } from "../lib/types";
 import { EnviaPostalFields } from "./EnviaPostalFields";
@@ -28,19 +29,23 @@ const money = (value: string) => new Intl.NumberFormat("es-MX", { style: "curren
 /** Cotizador del chat: datos del cliente → (ajustar producto) → opciones de envío de las paqueterías. */
 export function QuoteDrawer({ chat, onInsert, onQuoteBundleChange }: { chat: Chat; onInsert: (text: string) => void; onQuoteBundleChange?: (bundle: QuoteBundleRef | null) => Promise<void> }) {
   const [saved] = useState(() => readChatShippingDraft(chat.id));
-  const [view, setView] = useState<View>("form");
+  // Última cotización de este chat (se conserva 12 h en este navegador y se comparte entre ventanas).
+  const [storedQuote] = useState(() => readShippingQuote(chat.id));
+  const [view, setView] = useState<View>(storedQuote?.rates.length ? "rates" : "form");
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loadError, setLoadError] = useState("");
   const [presets, setPresets] = useState<SavedAddress[]>([]);
   const [destination, setDestination] = useState<ShippingAddress>(() => ({ ...emptyAddress(), ...(saved?.destination || { name: chat.name || "", phone: contactPhone(chat) }) }));
   const [parcel, setParcel] = useState<ShippingParcel | null>(null);
   const [bundleId, setBundleId] = useState("");
-  const [rates, setRates] = useState<QuoteRate[]>([]);
+  const [rates, setRates] = useState<QuoteRate[]>(storedQuote?.rates || []);
+  const [savedAt, setSavedAt] = useState<number | null>(storedQuote?.savedAt ?? null);
+  const [now, setNow] = useState(() => storedQuote?.savedAt ?? 0);
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState(storedQuote?.notice || "");
   const [inserted, setInserted] = useState("");
   // Lo cotizado tal cual: la guía se genera con la misma dirección y paquete que se cotizaron.
-  const [quoted, setQuoted] = useState<{ body: Record<string, unknown>; environment: string } | null>(null);
+  const [quoted, setQuoted] = useState<{ body: Record<string, unknown>; environment: string } | null>(storedQuote?.quoted || null);
   const [confirmKey, setConfirmKey] = useState("");
   const [generating, setGenerating] = useState(false);
   const [shipment, setShipment] = useState<QuoteShipment | null>(null);
@@ -74,6 +79,32 @@ export function QuoteDrawer({ chat, onInsert, onQuoteBundleChange }: { chat: Cha
     writeChatShippingDraft({ version: 1, conversationId: chat.id, pastedInfo: saved?.pastedInfo || "", destination, ...(saved?.origin ? { origin: saved.origin } : {}), parcel });
   }, [chat.id, destination, parcel, saved]);
 
+  // Otra ventana con este mismo chat: lo que se captura o cotiza allá aparece aquí al instante.
+  useEffect(() => {
+    const sync = (event: StorageEvent) => {
+      if (event.key === chatShippingDraftKey(chat.id)) {
+        const draft = readChatShippingDraft(chat.id);
+        if (!draft) return;
+        setDestination(current => JSON.stringify(current) === JSON.stringify({ ...emptyAddress(), ...draft.destination }) ? current : { ...emptyAddress(), ...draft.destination });
+        if (draft.parcel) { const next = draft.parcel; setParcel(current => current && JSON.stringify(current) === JSON.stringify(next) ? current : next); }
+      }
+      if (event.key === chatShippingQuoteKey(chat.id)) {
+        const next = readShippingQuote(chat.id);
+        setRates(next?.rates || []); setQuoted(next?.quoted || null); setSavedAt(next?.savedAt ?? null); setShipment(null); setConfirmKey("");
+      }
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, [chat.id]);
+  // Reloj para «Cotizado hace 5 min».
+  useEffect(() => {
+    if (!savedAt) return;
+    const tick = () => setNow(Date.now());
+    const first = window.setTimeout(tick, 0);
+    const timer = window.setInterval(tick, 30000);
+    return () => { window.clearTimeout(first); window.clearInterval(timer); };
+  }, [savedAt]);
+
   const selectedBundle = bundles.find(item => String(item.id) === bundleId);
   const productName = selectedBundle?.name || parcel?.content || "Productos";
   const sortedRates = useMemo(() => ratesByPrice(rates), [rates]);
@@ -83,8 +114,8 @@ export function QuoteDrawer({ chat, onInsert, onQuoteBundleChange }: { chat: Cha
   const parcelField = (key: keyof ShippingParcel, label: string, unit?: string) =>
     <label>{label}{unit && <span> {unit}</span>}<input type="number" min={key === "declaredValue" ? "0" : key === "amount" ? "1" : "0.1"} step={key === "amount" ? "1" : "any"} required value={parcel?.[key] || ""} onChange={event => { const value = event.target.value; setParcel(current => current && { ...current, [key]: value }); }} /></label>;
 
-  const quote = async (event: FormEvent) => {
-    event.preventDefault();
+  const quote = async (event?: FormEvent) => {
+    event?.preventDefault();
     if (!parcel) return;
     const missing = missingDestinationFields(destination);
     if (missing.length) { setNotice(`Falta: ${missing.join(", ")}.`); return; }
@@ -96,8 +127,11 @@ export function QuoteDrawer({ chat, onInsert, onQuoteBundleChange }: { chat: Cha
       setQuoted({ body, environment: result.environment });
       setRates(result.rates || []);
       setView("rates");
-      if (!result.rates?.length) setNotice("No hubo tarifas disponibles para esta ruta y paquete.");
-      else if (result.unavailableCarriers?.length) setNotice(`${result.unavailableCarriers.length} paquetería(s) no respondió(ieron) para esta ruta.`);
+      const resultNotice = !result.rates?.length ? "No hubo tarifas disponibles para esta ruta y paquete." : result.unavailableCarriers?.length ? `${result.unavailableCarriers.length} paquetería(s) no respondió(ieron) para esta ruta.` : "";
+      if (resultNotice) setNotice(resultNotice);
+      const stamp = Date.now();
+      setSavedAt(stamp); setNow(stamp);
+      writeShippingQuote({ version: 1, conversationId: chat.id, savedAt: stamp, rates: result.rates || [], quoted: { body, environment: result.environment }, productName, place: [destination.city, destination.postalCode && `CP ${destination.postalCode}`].filter(Boolean).join(", "), ...(resultNotice ? { notice: resultNotice } : {}) });
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible cotizar."); }
     finally { setBusy(false); }
   };
@@ -119,6 +153,14 @@ export function QuoteDrawer({ chat, onInsert, onQuoteBundleChange }: { chat: Cha
     } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible generar la guía."); }
     finally { setGenerating(false); }
   };
+
+  const bestMessage = bestPriceMessage(rates);
+  const age = savedAt && now ? quoteAge(savedAt, Math.max(now, savedAt)) : "";
+  const stale = Boolean(savedAt && now - savedAt > QUOTE_FRESH_MS);
+  // La cotización se hizo con otros datos: se avisa para volver a cotizar antes de generar la guía.
+  const changedSinceQuote = Boolean(quoted && parcel && (JSON.stringify(quoted.body.destination) !== JSON.stringify(addressPayload(destination)) || JSON.stringify(quoted.body.packages) !== JSON.stringify([packagePayload(parcel)])));
+  const popOut = () => { window.open(`${window.location.origin}${window.location.pathname}?chat=${encodeURIComponent(chat.id)}&quote=1`, `merlyn-quote-${chat.id}`, "popup,width=560,height=900"); };
+  const popOutButton = <button type="button" className="quote-link-button quote-popout" title="Abre este chat con el cotizador en otra ventana; ambas se mantienen sincronizadas" onClick={popOut}>↗ Abrir en otra ventana</button>;
 
   if (loadError) return <div className="quote-drawer-body"><p className="quote-notice" role="alert">{loadError}</p></div>;
   if (!settings || !parcel) return <div className="quote-drawer-body"><p className="quote-loading" role="status">Cargando cotizador…</p></div>;
@@ -143,6 +185,8 @@ export function QuoteDrawer({ chat, onInsert, onQuoteBundleChange }: { chat: Cha
 
   if (view === "rates") return <div className="quote-drawer-body">
     <div className="quote-step-header"><button type="button" className="quote-back" aria-label="Regresar al formulario" onClick={() => setView("form")}>←</button><div><b>Opciones de envío</b><small>{productName} · {[destination.city, destination.postalCode && `CP ${destination.postalCode}`].filter(Boolean).join(", ")}</small></div></div>
+    <div className="quote-saved-bar">{age && <small>Cotizado {age}{stale ? " · los precios pueden haber cambiado" : ""}</small>}<button type="button" className="quote-link-button" disabled={busy} onClick={() => void quote()}>{busy ? "Cotizando…" : "↻ Volver a cotizar"}</button>{popOutButton}</div>
+    {changedSinceQuote && <p className="quote-notice" role="status">Los datos del cliente o del paquete cambiaron desde esta cotización. Vuelve a cotizar antes de generar la guía.</p>}
     {notice && <p className="quote-notice" role="status">{notice}</p>}
     {shipment && <section className="quote-shipment" aria-label="Guía generada">
       <b>✓ Guía generada</b>
@@ -150,18 +194,21 @@ export function QuoteDrawer({ chat, onInsert, onQuoteBundleChange }: { chat: Cha
       <div>{shipment.labelUrl && <a href={shipment.labelUrl} target="_blank" rel="noreferrer">Descargar guía (PDF)</a>}<button type="button" onClick={() => insert(trackingMessage(shipment), "tracking")}>{inserted === "tracking" ? "✓ Agregado al mensaje" : "Agregar número de guía al mensaje"}</button></div>
     </section>}
     {!shipment && previous.length > 0 && <p className="quote-notice" role="status">Este chat ya tiene {previous.length === 1 ? "una guía generada" : `${previous.length} guías generadas`} ({previous.slice(0, 2).map(item => `${item.carrier.toUpperCase()}${item.trackingNumber ? ` ${item.trackingNumber}` : ""}`).join(", ")}). Revisa antes de generar otra.</p>}
+    {bestMessage && <button type="button" className="quote-primary quote-best" onClick={() => insert(bestMessage, "best")}>{inserted === "best" ? "✓ Escrito en el mensaje" : "💬 Ofrecer la más económica al cliente"}</button>}
     {sortedRates.length > 0 && <button type="button" className="quote-link-button" onClick={() => insert(sortedRates.slice(0, 3).map(rate => rateMessage(rate, destination, productName)).join("\n"), "top")}>{inserted === "top" ? "✓ Agregadas al mensaje" : "Agregar las 3 más económicas al mensaje"}</button>}
     <ul className="quote-rates">{sortedRates.map((rate, index) => {
       const key = `${rate.carrier}-${rate.service}-${index}`;
       const delivery = rateDelivery(rate);
       return <li key={key} className={confirmKey === key ? "confirming" : ""}><div><b>{rate.carrier.toUpperCase()}</b><small>{rate.serviceDescription || rate.service}{delivery ? ` · ${delivery}` : ""}</small></div><strong>{ratePrice(rate)}</strong>
         <div className="quote-rate-actions"><button type="button" onClick={() => insert(rateMessage(rate, destination, productName), key)}>{inserted === key ? "✓ Agregada" : "Al mensaje"}</button>{!shipment && <button type="button" disabled={generating} onClick={() => setConfirmKey(current => current === key ? "" : key)}>Generar guía</button>}</div>
-        {confirmKey === key && !shipment && <div className="quote-confirm" role="alertdialog" aria-label="Confirmar guía"><p>Se generará la guía con <b>{rate.carrier.toUpperCase()} {rate.serviceDescription || rate.service}</b> por <b>{ratePrice(rate)}</b> a {[destination.name, destination.city].filter(Boolean).join(", ")}. Puede generar un cargo en tu cuenta de Envia.</p><div><button type="button" disabled={generating} onClick={() => setConfirmKey("")}>Cancelar</button><button type="button" className="quote-primary" disabled={generating} onClick={() => void generate(rate)}>{generating ? "Generando…" : "Confirmar y generar"}</button></div></div>}
+        {confirmKey === key && !shipment && <div className="quote-confirm" role="alertdialog" aria-label="Confirmar guía"><p>Se generará la guía con <b>{rate.carrier.toUpperCase()} {rate.serviceDescription || rate.service}</b> por <b>{ratePrice(rate)}</b> a {[destination.name, destination.city].filter(Boolean).join(", ")}. Puede generar un cargo en tu cuenta de Envia.{stale ? " Esta cotización tiene más de 2 h: el precio final puede ser distinto." : ""}{changedSinceQuote ? " Ojo: se usará la dirección y el paquete con los que se cotizó." : ""}</p><div><button type="button" disabled={generating} onClick={() => setConfirmKey("")}>Cancelar</button><button type="button" className="quote-primary" disabled={generating} onClick={() => void generate(rate)}>{generating ? "Generando…" : "Confirmar y generar"}</button></div></div>}
       </li>;
     })}</ul>
   </div>;
 
   return <form className="quote-drawer-body" onSubmit={quote}>
+    <div className="quote-saved-bar">{popOutButton}</div>
+    {rates.length > 0 && <button type="button" className="quote-last" onClick={() => setView("rates")}><b>Última cotización{age ? ` · ${age}` : ""}</b><span>{rates.length} {rates.length === 1 ? "opción" : "opciones"} · desde {ratePrice(sortedRates[0])} · Ver opciones →</span></button>}
     {notice && <p className="quote-notice" role="status">{notice}</p>}
     <section className="quote-product-card" aria-label="Producto a enviar">
       <div><small>PRODUCTO A ENVIAR</small><b>{productName}</b><span>{parcel.length} × {parcel.width} × {parcel.height} cm · {parcel.weight} kg{Number(parcel.amount) > 1 ? ` · ${parcel.amount} cajas` : ""} · Valor {money(parcel.declaredValue)}</span></div>

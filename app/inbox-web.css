@@ -397,3 +397,13 @@ article.message-highlight { animation: message-highlight 1.6s ease-out; }
 @keyframes upload-indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
 @media (prefers-reduced-motion: reduce) { .chat-upload-bar > span.indeterminate { animation: none; width: 100% !important; opacity: .6; } }
 .saved-videos-progress { background: #dfe8e2; }
+
+/* Cotizador: cotización guardada, ventana aparte y mensaje de la opción más económica. */
+.quote-saved-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+.quote-saved-bar small { margin-right: auto; color: #667085; font-size: 12px; }
+.quote-popout { border-color: #d0d5dd; color: #344054; }
+.quote-best { width: 100%; height: auto; min-height: 42px; padding: 9px 12px; }
+.quote-last { display: grid; gap: 2px; width: 100%; padding: 10px 12px; border: 1px solid #b9dcc6; border-radius: 10px; background: #f1faf4; color: #1f2937; font: inherit; text-align: left; cursor: pointer; }
+.quote-last b { font-size: 13px; }
+.quote-last span { color: #087f5b; font-size: 12px; font-weight: 600; }
+.quote-last:hover { border-color: #087f5b; }

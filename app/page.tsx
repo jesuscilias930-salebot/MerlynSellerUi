@@ -419,7 +419,10 @@ export default function Home() {
     if (!user) return;
     const handler = (event: Event) => { const id = (event as CustomEvent<string>).detail; if (id) void openChatById(id); };
     window.addEventListener(OPEN_CHAT_EVENT, handler);
-    const pending = new URLSearchParams(window.location.search).get("chat");
+    const params = new URLSearchParams(window.location.search);
+    const pending = params.get("chat");
+    // «Abrir en otra ventana» del cotizador: abre el chat con el cotizador ya desplegado.
+    if (pending && params.get("quote") === "1") { try { window.sessionStorage.setItem("merlynseller:open-quote", pending); } catch { /* opcional */ } }
     if (pending) { window.history.replaceState(null, "", window.location.pathname); void Promise.resolve().then(() => openChatById(pending)); }
     return () => window.removeEventListener(OPEN_CHAT_EVENT, handler);
   }, [user]);
