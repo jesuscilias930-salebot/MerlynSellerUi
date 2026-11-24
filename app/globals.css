@@ -9407,3 +9407,20 @@ a.ad-referral:hover { background: #00000014; }
 .product-stock-warn { margin: 0; color: #8a4b00; font-size: 12px; }
 .product-stock-send { min-height: 42px; border: 0; border-radius: 10px; background: var(--green, #008069); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
 .product-stock-send:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Seguimientos automáticos (⏱ en cada columna y aviso en el chat). */
+.column-follow-up-trigger.active { border-color: var(--green); background: #eef9f1; box-shadow: inset 0 0 0 1px var(--green); }
+.follow-up-card { display: grid; gap: 12px; }
+.follow-up-card header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.follow-up-step { display: grid; gap: 8px; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; min-width: 0; }
+.follow-up-step legend { padding: 0 4px; font-weight: 800; font-size: 13px; }
+.follow-up-wait { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; }
+.follow-up-wait input { width: 70px; padding: 6px 8px; border: 1px solid #cfe0d5; border-radius: 7px; }
+.follow-up-wait select, .follow-up-media select { padding: 6px 8px; border: 1px solid #cfe0d5; border-radius: 7px; background: #fff; }
+.follow-up-wait small { color: var(--muted); }
+.follow-up-media { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.follow-up-badge { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 12px 0; padding: 6px 10px; border: 1px solid #b9dcc6; border-radius: 10px; background: #f1faf4; color: #1f6f48; font-size: 12px; font-weight: 600; }
+.follow-up-badge.stopped { border-color: #f0c9c4; background: #fff6f5; color: #8a3d39; }
+.follow-up-badge.completed { border-color: #e1e6e3; background: #f7f8fa; color: #667085; }
+.follow-up-badge button { padding: 3px 10px; border: 1px solid currentColor; border-radius: 999px; background: #fff; color: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+@media (max-width: 580px) { .follow-up-media { grid-template-columns: 1fr; } }

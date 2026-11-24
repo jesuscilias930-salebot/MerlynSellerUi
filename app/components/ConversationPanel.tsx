@@ -34,6 +34,7 @@ import { unsupportedMessageInfo } from "../lib/unsupported-message";
 import { useAutoDismiss } from "../lib/use-auto-dismiss";
 import { SavedVideosPanel, sendSavedVideo, useSavedVideos, type SavedVideo } from "./SavedVideos";
 import { QuickButtonsRow, QuickButtonsSettings, useQuickButtons } from "./QuickButtons";
+import { FollowUpBadge } from "./FollowUpBadge";
 import { QuoteBundlePicker } from "./QuoteBundlePicker";
 import { chatQuoteBundle } from "../lib/quote";
 import type { QuoteBundleRef } from "../lib/types";
@@ -261,6 +262,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
         {onClose && <button className="close-conversation" type="button" aria-label="Cerrar conversación" onClick={onClose}><ChatIcon name="close" /></button>}
       </header>
       {notice && <p className="inbox-chat-notice" role="status" {...noticeHover}>{notice}<button type="button" aria-label="Cerrar aviso" onClick={() => setNotice("")}><ChatIcon name="close" /></button></p>}
+      {chat && <FollowUpBadge conversationId={chat.id} refreshKey={`${messages.length}:${messages[messages.length - 1]?.id || ""}:${chat.leadColumnId || ""}`} />}
       <div className="thread" ref={threadRef} role="log" aria-label="Mensajes de la conversación" aria-live="polite" aria-relevant="additions">
         {!chat && <div className="empty inbox-chat-empty"><div className="inbox-empty-illustration"><ChatIcon name="chat" /></div><h2>Tu próximo cliente está a un mensaje</h2><p>Selecciona un chat para conversar, compartir tu catálogo y preparar la venta.</p><span>Mensajes · Catálogos · Ventas · Envíos</span></div>}
         {chat && messages.length === 0 && <div className="inbox-thread-empty"><p>Inicia la conversación</p><small>Escribe un mensaje o comparte un catálogo desde las herramientas.</small></div>}
