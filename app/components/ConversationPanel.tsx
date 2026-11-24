@@ -31,6 +31,7 @@ import { OutgoingContext, isLocalMessage, LOCAL_PREFIX } from "../lib/outgoing";
 import { quotedLabel, quotedThumbnailKind } from "../lib/quoted";
 import { progressLabel } from "../lib/media-upload-request";
 import { unsupportedMessageInfo } from "../lib/unsupported-message";
+import { useAutoDismiss } from "../lib/use-auto-dismiss";
 import { SavedVideosPanel, sendSavedVideo, useSavedVideos, type SavedVideo } from "./SavedVideos";
 import { QuickButtonsRow, QuickButtonsSettings, useQuickButtons } from "./QuickButtons";
 import { QuoteBundlePicker } from "./QuoteBundlePicker";
@@ -84,6 +85,8 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
   // Atajos: conjuntos marcados que se envían completos con un botón debajo del cuadro de texto.
   const [shortcutOverrides, setShortcutOverrides] = useState<Record<string, boolean>>({}); const [sendingShortcut, setSendingShortcut] = useState<string | null>(null);
   const [toolsCollapsed, setToolsCollapsed] = useState(Boolean(props.inboxLayout)); const [tab, setTab] = useState<ToolTab>("share"); const [notice, setNotice] = useState(""); const [menuId, setMenuId] = useState<string | null>(null); const [chatMenuOpen, setChatMenuOpen] = useState(false); const [moving, setMoving] = useState(false); const [bundlePickerOpen, setBundlePickerOpen] = useState(false); const [bundleIds, setBundleIds] = useState<string[]>([]); const [selectedSavedImageIds, setSelectedSavedImageIds] = useState<string[]>([]); const [saleModalOpen, setSaleModalOpen] = useState(false); const [shippingOpen, setShippingOpen] = useState(false);
+  // El aviso del chat se cierra solo a los 2 s (se mantiene mientras el puntero está encima).
+  const noticeHover = useAutoDismiss(notice, () => setNotice(""));
   const quickMatches = draft.trim().startsWith("/") ? quickReplies.filter((reply) => reply.shortcut.includes(draft.trim().toLowerCase()) || reply.name.toLowerCase().includes(draft.trim().slice(1).toLowerCase())).slice(0, 6) : [];
   const bundles = useMemo(() => entrepreneurPackages.filter((item) => item.controlBundleId != null), [entrepreneurPackages]);
   const images = useMemo(() => entrepreneurPackages.filter((item) => item.controlBundleId == null), [entrepreneurPackages]);
@@ -255,7 +258,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
         </div>}
         {onClose && <button className="close-conversation" type="button" aria-label="Cerrar conversación" onClick={onClose}><ChatIcon name="close" /></button>}
       </header>
-      {notice && <p className="inbox-chat-notice" role="status">{notice}<button type="button" aria-label="Cerrar aviso" onClick={() => setNotice("")}><ChatIcon name="close" /></button></p>}
+      {notice && <p className="inbox-chat-notice" role="status" {...noticeHover}>{notice}<button type="button" aria-label="Cerrar aviso" onClick={() => setNotice("")}><ChatIcon name="close" /></button></p>}
       <div className="thread" ref={threadRef} role="log" aria-label="Mensajes de la conversación" aria-live="polite" aria-relevant="additions">
         {!chat && <div className="empty inbox-chat-empty"><div className="inbox-empty-illustration"><ChatIcon name="chat" /></div><h2>Tu próximo cliente está a un mensaje</h2><p>Selecciona un chat para conversar, compartir tu catálogo y preparar la venta.</p><span>Mensajes · Catálogos · Ventas · Envíos</span></div>}
         {chat && messages.length === 0 && <div className="inbox-thread-empty"><p>Inicia la conversación</p><small>Escribe un mensaje o comparte un catálogo desde las herramientas.</small></div>}

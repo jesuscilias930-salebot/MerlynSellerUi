@@ -46,6 +46,7 @@ import { FinancesPanel } from "./components/FinancesPanel";
 import { ConversationAnalysisPanel } from "./components/ConversationAnalysisPanel";
 import type { PendingChatImage } from "./components/ConversationPanel";
 import { rangeLabel, type DateRange } from "./lib/lead-move";
+import { useAutoDismiss } from "./lib/use-auto-dismiss";
 import { OutgoingContext, outgoingFromComposer, withOutgoing, type OutgoingItem } from "./lib/outgoing";
 
 type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "column-rules" | "ecommerce-categories" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
@@ -111,6 +112,8 @@ export default function Home() {
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [documentCaption, setDocumentCaption] = useState("");
   const [notice, setNotice] = useState("");
+  // Los avisos (snackbar) se cierran solos a los 2 s.
+  const noticeHover = useAutoDismiss(notice, () => setNotice(""));
   const [busy, setBusy] = useState(false);
   const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null);
   const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null);
@@ -1395,7 +1398,7 @@ export default function Home() {
         }}
       />
       {notice && (
-        <div className="toast">
+        <div className="toast" {...noticeHover}>
           {notice}
           <button onClick={() => setNotice("")}>×</button>
         </div>
