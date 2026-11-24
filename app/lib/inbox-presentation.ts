@@ -47,5 +47,5 @@ export function messageTime(value: string): string {
 }
 
 export function deliveryLabel(status: string): string {
-  return ({ read: "Leído", delivered: "Entregado", sent: "Enviado", failed: "No se pudo enviar" } as Record<string, string>)[status] || "En proceso de envío";
+  return ({ read: "Leído", delivered: "Entregado", sent: "Enviado", failed: "No se pudo enviar", processing: "Preparando video para WhatsApp" } as Record<string, string>)[status] || "En proceso de envío";
 }

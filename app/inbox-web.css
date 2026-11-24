@@ -428,3 +428,9 @@ article.message-highlight { animation: message-highlight 1.6s ease-out; }
 .quick-reply-image-grid button span { position: absolute; top: 3px; right: 3px; display: none; width: 18px; height: 18px; border-radius: 50%; background: #1f8f5a; color: #fff; font-size: 11px; line-height: 18px; }
 .quick-reply-image-grid button.selected span { display: block; }
 .quick-reply-image-grid button:disabled { opacity: .4; cursor: default; }
+
+/* Video que el servidor prepara en segundo plano. */
+.video-processing-card { display: grid; gap: 6px; min-width: 220px; }
+.video-processing-card .chat-upload-bar { background: #dfe8e2; }
+.video-processing-card small { color: #667085; font-size: 12px; }
+.video-processing-card.failed b { color: #b42318; }
