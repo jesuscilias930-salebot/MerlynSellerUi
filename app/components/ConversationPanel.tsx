@@ -32,6 +32,7 @@ import { quotedLabel, quotedThumbnailKind } from "../lib/quoted";
 import { progressLabel } from "../lib/media-upload-request";
 import { unsupportedMessageInfo } from "../lib/unsupported-message";
 import { SavedVideosPanel, sendSavedVideo, useSavedVideos, type SavedVideo } from "./SavedVideos";
+import { QuickButtonsRow, QuickButtonsSettings, useQuickButtons } from "./QuickButtons";
 import { QuoteBundlePicker } from "./QuoteBundlePicker";
 import { chatQuoteBundle } from "../lib/quote";
 import type { QuoteBundleRef } from "../lib/types";
@@ -44,7 +45,7 @@ type Props = {
   onDraftChange: (value: string) => void; onSendQuickReplyCta: (templateId: string) => Promise<void>; onSendText: (event: FormEvent) => void; replyToMessage: Message | null; onReplyToChange: (message: Message | null) => void;
   onUploadAudio: (event: ChangeEvent<HTMLInputElement>) => void; onUploadImage: (event: ChangeEvent<HTMLInputElement>) => void; onUploadVideo: (event: ChangeEvent<HTMLInputElement>) => void; onUploadDocument: (event: ChangeEvent<HTMLInputElement>) => void; onRemovePendingImage: (id: string) => void;
   onDocumentChange: (mediaId: string) => void; onDocumentCaptionChange: (caption: string) => void; onSendDocument: () => void; onSendCtaUrl: (data: CtaUrlMessage) => Promise<void>;
-  onSendEntrepreneurPackages: (selection: { packageIds?: string[]; imageIds?: string[] }) => Promise<void>; onSendSticker: (id: string) => Promise<void>; onRecordAudio: (audio: Blob, filename: string) => Promise<void>;
+  onSendEntrepreneurPackages: (selection: { packageIds?: string[]; imageIds?: string[]; caption?: string }) => Promise<void>; onSendSticker: (id: string) => Promise<void>; onRecordAudio: (audio: Blob, filename: string) => Promise<void>;
   onAutoReplyChange: (enabled: boolean) => void; onScenarioChange: (enabled: boolean) => void; automationIntents: AutomationIntent[]; onLearnIntent: (messageId: string, intentId: string) => Promise<void>; onReact: (messageId: string, emoji: string) => Promise<void>; onDeleteMessage: (messageId: string, scope: "for_me" | "for_everyone") => Promise<void>;
   columns: LeadColumn[]; onMoveLead: (columnId: string) => Promise<void>; onOpenShipping: () => void; onDeleteConversation: () => void; onQuoteBundleChange?: (bundle: QuoteBundleRef | null) => Promise<void>; onClose?: () => void; onMobileBack?: () => void; inboxLayout?: boolean;
 };
@@ -94,6 +95,27 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
     catch (error) { setShortcutOverrides((current) => ({ ...current, [set.id]: !value })); setNotice(error instanceof Error ? error.message : "No se pudo guardar el atajo."); }
   };
   const savedVideos = useSavedVideos();
+  const quickButtons = useQuickButtons();
+  // Fotos de una respuesta rápida: se envían con el texto del cuadro como pie de la primera.
+  const [replyImageIds, setReplyImageIds] = useState<string[]>([]);
+  const savedImage = (id: string) => entrepreneurPackages.flatMap((set) => set.images.map((image) => ({ ...image, setName: set.name }))).find((image) => image.id === id);
+  const chooseQuickReply = (reply: QuickReply) => {
+    if (reply.kind === "cta_url" && reply.ctaUrlTemplateId) { void onSendQuickReplyCta(reply.ctaUrlTemplateId); return; }
+    onDraftChange(reply.body);
+    setReplyImageIds((reply.imageIds || []).filter((id) => savedImage(id)));
+  };
+  const submitComposer = async (event: FormEvent) => {
+    if (!replyImageIds.length || !chat) { onSendText(event); return; }
+    event.preventDefault();
+    const text = draft.trim(); const ids = replyImageIds;
+    // El cuadro se libera al instante para no enviar dos veces.
+    setReplyImageIds([]); onDraftChange("");
+    try {
+      // WhatsApp admite pies de foto de hasta 1,024 caracteres: si es más largo, el texto va antes como mensaje.
+      if (text.length > 1024) { await request(`/conversations/${chat.id}/messages/text`, { method: "POST", body: JSON.stringify({ body: text }) }); await onSendEntrepreneurPackages({ imageIds: ids }); }
+      else await onSendEntrepreneurPackages({ imageIds: ids, ...(text ? { caption: text } : {}) });
+    } catch (error) { setReplyImageIds(ids); onDraftChange(text); setNotice(error instanceof Error ? error.message : "No fue posible enviar la respuesta rápida."); }
+  };
   const videoShortcuts = savedVideos.videos.filter((video) => video.chatShortcut);
   const sendVideoShortcut = async (video: SavedVideo) => {
     if (!chat || sendingShortcut) return;
@@ -116,7 +138,7 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
     finally { setSendingShortcut(null); }
   };
   useEffect(() => { if (!chat?.id || !messages.length || lastChatId.current === chat.id) return; const frame = requestAnimationFrame(() => { threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight }); lastChatId.current = chat.id; }); return () => cancelAnimationFrame(frame); }, [chat?.id, messages.length]);
-  useEffect(() => { let active = true; queueMicrotask(() => { if (!active) return; setSelectedSavedImageIds([]); setChatMenuOpen(false); setOptionsOpen(false); setInventoryOpen(false); setToolsOpen(false); setMenuId(null); setShippingOpen(false); setSaleModalOpen(false); setBundlePickerOpen(false); let openQuote = false; try { openQuote = Boolean(chat?.id) && window.sessionStorage.getItem("merlynseller:open-quote") === chat?.id; if (openQuote) window.sessionStorage.removeItem("merlynseller:open-quote"); } catch { /* opcional */ } setQuoteOpen(openQuote); if (openQuote) setToolsCollapsed(true); }); return () => { active = false; }; }, [chat?.id]);
+  useEffect(() => { let active = true; queueMicrotask(() => { if (!active) return; setSelectedSavedImageIds([]); setChatMenuOpen(false); setOptionsOpen(false); setInventoryOpen(false); setToolsOpen(false); setMenuId(null); setShippingOpen(false); setSaleModalOpen(false); setBundlePickerOpen(false); setReplyImageIds([]); let openQuote = false; try { openQuote = Boolean(chat?.id) && window.sessionStorage.getItem("merlynseller:open-quote") === chat?.id; if (openQuote) window.sessionStorage.removeItem("merlynseller:open-quote"); } catch { /* opcional */ } setQuoteOpen(openQuote); if (openQuote) setToolsCollapsed(true); }); return () => { active = false; }; }, [chat?.id]);
   useEffect(() => { let active = true; queueMicrotask(() => { if (active && (shippingOpen || saleModalOpen || bundlePickerOpen)) setToolsOpen(false); }); return () => { active = false; }; }, [shippingOpen, saleModalOpen, bundlePickerOpen]);
   useEffect(() => {
     if (!inventoryOpen || mobile) return;
@@ -179,6 +201,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
       <InteractiveOptionsCard conversationId={chat?.id} disabled={!chat} />
       <>{chat && <StoreOrders key={chat.id} conversationId={chat.id}/>}</>{isWhatsApp(chat) ? <WhatsAppTemplateCard conversationId={chat?.id} disabled={!chat} /> : <p className="tool-notice">Las plantillas oficiales son solo para WhatsApp. En {contactDetail(chat!).split(" · ")[0]} puedes responder hasta 24 h después del último mensaje del cliente (7 días si vino de un anuncio o respondes como persona del equipo).</p>}
       <ToolAccordion icon="＋" title="Adjuntar archivos" description="Las imágenes se muestran antes de enviarse.">{attachTools}</ToolAccordion>
+      <ToolAccordion icon="⚡" title="Botones rápidos" description="Invitación con enlace y 5 conjuntos de imágenes con un clic."><QuickButtonsSettings store={quickButtons} imageSets={entrepreneurPackages} /></ToolAccordion>
       <ToolAccordion icon="🎬" title="Videos guardados" description="Súbelos una vez y envíalos al instante.">{chat && <SavedVideosPanel chatId={chat.id} store={savedVideos} />}</ToolAccordion>
       <ToolAccordion icon="▦" title="Imágenes guardadas" description="Selecciona una o varias imágenes y envíalas juntas.">
         {selectedSavedImageIds.length > 0 && <div className="saved-image-selection-actions"><span>{selectedSavedImageIds.length} seleccionada{selectedSavedImageIds.length === 1 ? "" : "s"}</span><button className="tool-primary-button" type="button" disabled={!chat} onClick={() => void submitImages(selectedSavedImageIds)}>Enviar selección</button><button className="plain-button" type="button" onClick={() => setSelectedSavedImageIds([])}>Limpiar</button></div>}
@@ -276,8 +299,9 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
       {inventoryOpen && mobile && <MobileChatSheet title="Disponibilidad" onClose={() => setInventoryOpen(false)}><InventoryQuickSearch autoFocus={false} onInsert={text => { onDraftChange(draft.trim() ? `${draft.trimEnd()}\n${text}` : text); setInventoryOpen(false); }} /></MobileChatSheet>}
       {bundlePickerOpen && <div className="bundle-picker-backdrop" onMouseDown={() => setBundlePickerOpen(false)}><section className="bundle-picker-modal" role="dialog" aria-modal="true" aria-label="Enviar bundle" onMouseDown={event => event.stopPropagation()}><header><h2>Enviar bundle</h2><button type="button" aria-label="Cerrar selección de bundles" onClick={() => setBundlePickerOpen(false)}>×</button></header>{bundles.map(item => <label key={item.id}><input type="checkbox" checked={bundleIds.includes(item.id)} onChange={() => setBundleIds(current => current.includes(item.id) ? current.filter(id => id !== item.id) : [...current, item.id])} /> {item.name} · {item.images.length} fotografías</label>)}<footer><button type="button" className="plain-button" onClick={() => setBundlePickerOpen(false)}>Cancelar</button><button type="button" disabled={!bundleIds.length} onClick={() => void submitBundles()}>Enviar fotografías</button></footer></section></div>}
       <div className="chat-compose-area">
-        <form className="composer compact-composer" onSubmit={onSendText}>
+        <form className="composer compact-composer" onSubmit={(event) => void submitComposer(event)}>
           {replyToMessage && <div className="reply-preview"><div><b>Respondiendo a {replyToMessage.direction === "inbound" ? chat?.name || "cliente" : "ti"}</b><span>{quotedLabel(replyToMessage.type, replyToMessage.body, replyToMessage.filename)}</span></div>{replyToMessage.media_id && (replyToMessage.type === "image" || replyToMessage.type === "sticker") && <img className="quoted-thumb" src={mediaUrl(replyToMessage)} alt="Foto a la que respondes" />}{replyToMessage.media_id && replyToMessage.type === "video" && <video className="quoted-thumb" src={mediaUrl(replyToMessage)} muted playsInline preload="metadata" />}<button type="button" aria-label="Cancelar respuesta" onClick={() => onReplyToChange(null)}>×</button></div>}
+          {replyImageIds.length > 0 && <div className="composer-image-previews reply-image-previews">{replyImageIds.map(id => { const image = savedImage(id); return <figure key={id}><img src={`${api}/settings/entrepreneur-packages/images/${id}/media`} alt={image?.filename || image?.setName || "Imagen guardada"} /><button type="button" aria-label="Quitar imagen" onClick={() => setReplyImageIds(current => current.filter(value => value !== id))}>×</button><figcaption>{image?.setName || "Imagen guardada"}</figcaption></figure>; })}</div>}
           {pendingImages.length > 0 && <div className="composer-image-previews">{pendingImages.map(image => <figure key={image.id}><img src={image.previewUrl} alt={image.file.name} /><button type="button" aria-label={`Quitar imagen ${image.file.name}`} onClick={() => onRemovePendingImage(image.id)}>×</button><figcaption>{image.file.name}</figcaption></figure>)}</div>}
           <div className="composer-tools">
             <button className="composer-tools-button" aria-label="Adjuntar archivos y abrir herramientas" aria-expanded={toolsOpen} type="button" disabled={!chat} onClick={() => setToolsOpen(value => !value)}><ChatIcon name="attach" /></button>
@@ -286,12 +310,12 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
               <div className="composer-emoji-picker">{composerEmojis.map(emoji => <button key={emoji} type="button" aria-label={`Agregar ${emoji}`} onClick={() => { onDraftChange(`${draft}${emoji}`); setToolsOpen(false); }}>{emoji}</button>)}</div>{attachTools}
             </div>}
           </div>
-          <textarea aria-label="Mensaje" rows={1} disabled={!chat} value={draft} onChange={event => { onDraftChange(event.target.value); event.currentTarget.style.height = "44px"; event.currentTarget.style.height = `${Math.min(event.currentTarget.scrollHeight, 120)}px`; }} onKeyDown={event => { if (!mobile && event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && (draft.trim() || pendingImages.length)) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={chat ? pendingImages.length ? "Agrega un texto para las imágenes (opcional)…" : "Escribe un mensaje…" : "Selecciona una conversación"} />
-          {quickMatches.length > 0 && <div className="quick-reply-suggestions">{quickMatches.map(reply => <button key={reply.id} type="button" onClick={() => { if (reply.kind === "cta_url" && reply.ctaUrlTemplateId) void onSendQuickReplyCta(reply.ctaUrlTemplateId); else onDraftChange(reply.body); }}><code>{reply.shortcut}</code><span><b>{reply.name}</b><small>{reply.body}</small></span></button>)}</div>}
+          <textarea aria-label="Mensaje" rows={1} disabled={!chat} value={draft} onChange={event => { onDraftChange(event.target.value); event.currentTarget.style.height = "44px"; event.currentTarget.style.height = `${Math.min(event.currentTarget.scrollHeight, 120)}px`; }} onKeyDown={event => { if (!mobile && event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && (draft.trim() || pendingImages.length || replyImageIds.length)) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={chat ? pendingImages.length ? "Agrega un texto para las imágenes (opcional)…" : "Escribe un mensaje…" : "Selecciona una conversación"} />
+          {quickMatches.length > 0 && <div className="quick-reply-suggestions">{quickMatches.map(reply => <button key={reply.id} type="button" onClick={() => chooseQuickReply(reply)}><code>{reply.shortcut}</code><span><b>{reply.name}</b><small>{reply.imageIds?.length ? `📷 ${reply.imageIds.length} · ` : ""}{reply.body}</small></span></button>)}</div>}
           <label className={uploadingAudio ? "audio-upload loading" : "audio-upload"} title={uploadingAudio ? "Subiendo audio" : "Adjuntar audio"}>{uploadingAudio ? <span aria-label="Subiendo audio">…</span> : <ChatIcon name="audio" />}<input type="file" aria-label="Adjuntar audio" accept="audio/aac,audio/mp4,audio/mpeg,audio/amr,audio/ogg,audio/opus" onChange={onUploadAudio} disabled={!chat || uploadingAudio} /></label>
-          <button disabled={!chat || (!draft.trim() && !pendingImages.length)} className="send" aria-label="Enviar mensaje"><ChatIcon name="send" /></button>
+          <button disabled={!chat || (!draft.trim() && !pendingImages.length && !replyImageIds.length)} className="send" aria-label="Enviar mensaje"><ChatIcon name="send" /></button>
         </form>
-        {chat && (shortcutSets.length > 0 || videoShortcuts.length > 0) && <div className="composer-shortcuts" role="group" aria-label="Atajos de imágenes y videos guardados">{videoShortcuts.map((video) => <button key={video.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar el video «${video.name}»`} onClick={() => void sendVideoShortcut(video)}>{sendingShortcut === video.id ? "Enviando…" : <>🎬 {video.name}</>}</button>)}{shortcutSets.map((set) => <button key={set.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar las ${set.images.length} fotos de «${set.name}»`} onClick={() => void sendShortcut(set)}>{sendingShortcut === set.id ? "Enviando…" : <>▦ {set.name} <small>{set.images.length}</small></>}</button>)}</div>}
+        {chat && (shortcutSets.length > 0 || videoShortcuts.length > 0 || quickButtons.config.invitation || quickButtons.config.imageButtons.length > 0) && <div className="composer-shortcuts" role="group" aria-label="Botones rápidos y atajos"><QuickButtonsRow chatId={chat.id} store={quickButtons} imageSets={images} onSendSet={(packageId) => onSendEntrepreneurPackages({ packageIds: [packageId] })} onNotice={setNotice} />{videoShortcuts.map((video) => <button key={video.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar el video «${video.name}»`} onClick={() => void sendVideoShortcut(video)}>{sendingShortcut === video.id ? "Enviando…" : <>🎬 {video.name}</>}</button>)}{shortcutSets.map((set) => <button key={set.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar las ${set.images.length} fotos de «${set.name}»`} onClick={() => void sendShortcut(set)}>{sendingShortcut === set.id ? "Enviando…" : <>▦ {set.name} <small>{set.images.length}</small></>}</button>)}</div>}
         <AudioRecorder disabled={!chat || uploadingAudio} onSend={onRecordAudio} />
       </div>
     </section>

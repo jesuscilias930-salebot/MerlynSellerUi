@@ -1,16 +1,24 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import type { CtaUrlTemplate, QuickReply } from "../lib/types";
+import { api } from "../lib/api";
+import type { CtaUrlTemplate, EntrepreneurPackage, QuickReply } from "../lib/types";
 
 type Draft = Omit<QuickReply, "id" | "created_at" | "updated_at">;
-const empty = (): Draft => ({ shortcut: "/", name: "", body: "", kind: "text", ctaUrlTemplateId: null });
+const empty = (): Draft => ({ shortcut: "/", name: "", body: "", kind: "text", ctaUrlTemplateId: null, imageIds: [] });
+const MAX_IMAGES = 10;
 
-export function QuickRepliesPanel({ replies, ctaTemplates, onSave, onDelete }: { replies: QuickReply[]; ctaTemplates: CtaUrlTemplate[]; onSave: (value: Draft, id?: string) => Promise<void>; onDelete: (id: string) => Promise<void> }) {
+export function QuickRepliesPanel({ replies, ctaTemplates, imageSets = [], onSave, onDelete }: { replies: QuickReply[]; ctaTemplates: CtaUrlTemplate[]; imageSets?: EntrepreneurPackage[]; onSave: (value: Draft, id?: string) => Promise<void>; onDelete: (id: string) => Promise<void> }) {
   const [draft, setDraft] = useState<Draft>(empty());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
+  // Conjunto abierto para elegir fotos (solo se cargan las de ese conjunto).
+  const [pickSetId, setPickSetId] = useState("");
+  const sets = imageSets.filter((set) => set.controlBundleId == null && set.images.length > 0);
+  const allImages = sets.flatMap((set) => set.images.map((image) => ({ ...image, setName: set.name })));
+  const chosen = (draft.imageIds || []).map((id) => allImages.find((image) => image.id === id)).filter((image): image is (typeof allImages)[number] => Boolean(image));
+  const toggleImage = (id: string) => setDraft(current => { const ids = current.imageIds || []; return { ...current, imageIds: ids.includes(id) ? ids.filter((value) => value !== id) : ids.length >= MAX_IMAGES ? ids : [...ids, id] }; });
   const selectedCta = ctaTemplates.find((template) => template.id === draft.ctaUrlTemplateId);
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setSaving(true); setNotice("");
@@ -18,8 +26,8 @@ export function QuickRepliesPanel({ replies, ctaTemplates, onSave, onDelete }: {
     catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible guardar la respuesta rápida."); }
     finally { setSaving(false); }
   };
-  const edit = (reply: QuickReply) => { setEditingId(reply.id); setDraft({ shortcut: reply.shortcut, name: reply.name, body: reply.body, kind: reply.kind || "text", ctaUrlTemplateId: reply.ctaUrlTemplateId || null }); setNotice(""); };
-  const setKind = (kind: Draft["kind"]) => setDraft(current => ({ ...current, kind, ctaUrlTemplateId: kind === "text" ? null : current.ctaUrlTemplateId, body: kind === "text" ? current.body : selectedCta?.body || current.body }));
+  const edit = (reply: QuickReply) => { setEditingId(reply.id); setDraft({ shortcut: reply.shortcut, name: reply.name, body: reply.body, kind: reply.kind || "text", ctaUrlTemplateId: reply.ctaUrlTemplateId || null, imageIds: reply.imageIds || [] }); setPickSetId(""); setNotice(""); };
+  const setKind = (kind: Draft["kind"]) => setDraft(current => ({ ...current, kind, ctaUrlTemplateId: kind === "text" ? null : current.ctaUrlTemplateId, imageIds: kind === "text" ? current.imageIds : [], body: kind === "text" ? current.body : selectedCta?.body || current.body }));
   const chooseCtaTemplate = (ctaUrlTemplateId: string) => {
     const template = ctaTemplates.find((item) => item.id === ctaUrlTemplateId);
     setDraft(current => ({ ...current, ctaUrlTemplateId: ctaUrlTemplateId || null, body: template?.body || current.body }));
@@ -32,8 +40,15 @@ export function QuickRepliesPanel({ replies, ctaTemplates, onSave, onDelete }: {
       <input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Nombre, ej. Invitación grupo VIP" required maxLength={80} />
       <label className="quick-reply-kind">Tipo de respuesta<select value={draft.kind} onChange={(event) => setKind(event.target.value as Draft["kind"])}><option value="text">Mensaje de texto</option><option value="cta_url">Invitación con botón</option></select></label>
       {draft.kind === "text" ? <textarea value={draft.body} onChange={(event) => setDraft({ ...draft, body: event.target.value })} placeholder="Mensaje que se insertará en el chat" required maxLength={4096} /> : <><label className="quick-reply-kind">Invitación guardada<select value={draft.ctaUrlTemplateId || ""} onChange={(event) => chooseCtaTemplate(event.target.value)} required><option value="">Selecciona una invitación</option>{ctaTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></label>{selectedCta ? <div className="quick-reply-cta-preview"><b>{selectedCta.buttonText}</b><span>{selectedCta.body}</span></div> : <p className="quick-reply-cta-empty">Primero crea una invitación en “Invitaciones con botón”.</p>}</>}
+      {draft.kind === "text" && <div className="quick-reply-images">
+        <b>Imágenes (opcional, hasta {MAX_IMAGES})</b>
+        <small>Se envían junto con el texto: el texto va como pie de la primera foto.</small>
+        {chosen.length > 0 && <div className="quick-reply-image-grid">{chosen.map((image) => <button key={image.id} type="button" className="selected" title="Quitar" onClick={() => toggleImage(image.id)}><img src={`${api}/settings/entrepreneur-packages/images/${image.id}/media`} alt={image.filename || image.setName} loading="lazy" /><span>×</span></button>)}</div>}
+        <select value={pickSetId} onChange={(event) => setPickSetId(event.target.value)} aria-label="Elegir fotos de un conjunto"><option value="">{sets.length ? "Agregar fotos de un conjunto…" : "No hay imágenes guardadas"}</option>{sets.map((set) => <option key={set.id} value={set.id}>{set.name} · {set.images.length} foto{set.images.length === 1 ? "" : "s"}</option>)}</select>
+        {pickSetId && <div className="quick-reply-image-grid">{sets.find((set) => set.id === pickSetId)?.images.map((image) => { const selected = (draft.imageIds || []).includes(image.id); return <button key={image.id} type="button" className={selected ? "selected" : ""} aria-pressed={selected} disabled={!selected && (draft.imageIds || []).length >= MAX_IMAGES} onClick={() => toggleImage(image.id)}><img src={`${api}/settings/entrepreneur-packages/images/${image.id}/media`} alt={image.filename || "Imagen"} loading="lazy" /><span>✓</span></button>; })}</div>}
+      </div>}
       <button disabled={saving || (draft.kind === "cta_url" && !draft.ctaUrlTemplateId)}>{saving ? "Guardando…" : editingId ? "Actualizar atajo" : "Guardar atajo"}</button>
     </form>
-    <div className="quick-replies-table"><header><b>Atajo</b><b>Nombre</b><b>Contenido</b><span /></header>{replies.length === 0 && <p>Aún no tienes respuestas rápidas.</p>}{replies.map((reply) => <article key={reply.id}><code>{reply.shortcut}</code><strong>{reply.name}</strong><span>{reply.kind === "cta_url" ? "↗ Invitación con botón" : reply.body}</span><div><button className="plain-button" type="button" onClick={() => edit(reply)}>Editar</button><button className="danger-link" type="button" onClick={() => void onDelete(reply.id)}>Eliminar</button></div></article>)}</div>
+    <div className="quick-replies-table"><header><b>Atajo</b><b>Nombre</b><b>Contenido</b><span /></header>{replies.length === 0 && <p>Aún no tienes respuestas rápidas.</p>}{replies.map((reply) => <article key={reply.id}><code>{reply.shortcut}</code><strong>{reply.name}</strong><span>{reply.kind === "cta_url" ? "↗ Invitación con botón" : `${reply.imageIds?.length ? `📷 ${reply.imageIds.length} · ` : ""}${reply.body}`}</span><div><button className="plain-button" type="button" onClick={() => edit(reply)}>Editar</button><button className="danger-link" type="button" onClick={() => void onDelete(reply.id)}>Eliminar</button></div></article>)}</div>
   </section>;
 }

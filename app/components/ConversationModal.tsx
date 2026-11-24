@@ -15,7 +15,7 @@ type Props = {
   onUploadVideo: (event: ChangeEvent<HTMLInputElement>) => void; onUploadDocument: (event: ChangeEvent<HTMLInputElement>) => void;
   onRemovePendingImage: (id: string) => void;
   onDocumentChange: (mediaId: string) => void; onDocumentCaptionChange: (caption: string) => void; onSendDocument: () => void;
-  onSendCtaUrl: (data: CtaUrlMessage) => Promise<void>; onSendEntrepreneurPackages: (selection: { packageIds?: string[]; imageIds?: string[] }) => Promise<void>;
+  onSendCtaUrl: (data: CtaUrlMessage) => Promise<void>; onSendEntrepreneurPackages: (selection: { packageIds?: string[]; imageIds?: string[]; caption?: string }) => Promise<void>;
   onSendSticker: (stickerId: string) => Promise<void>; onRecordAudio: (audio: Blob, filename: string) => Promise<void>;
   onAutoReplyChange: (enabled: boolean) => void; onScenarioChange: (enabled: boolean) => void; onQuoteBundleChange?: (bundle: QuoteBundleRef | null) => Promise<void>;
   automationIntents: AutomationIntent[]; onLearnIntent: (messageId: string, intentId: string) => Promise<void>;

@@ -1079,7 +1079,7 @@ export default function Home() {
     try { await request(`/settings/entrepreneur-packages/${item.id}`, { method: "DELETE" }); await loadEntrepreneurPackages(); setNotice("Paquete eliminado."); }
     catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible eliminar el paquete."); }
   };
-  const sendEntrepreneurPackages = async (target: Chat | null, selection: { packageIds?: string[]; imageIds?: string[] }) => {
+  const sendEntrepreneurPackages = async (target: Chat | null, selection: { packageIds?: string[]; imageIds?: string[]; caption?: string }) => {
     const selectedIds = selection.imageIds || selection.packageIds || [];
     if (!target || !selectedIds.length) return;
     try {
@@ -1296,7 +1296,7 @@ export default function Home() {
       ) : view === "automations" ? (
         <div className="automation-workspace"><AutomationsPanel intents={automationIntents} onSave={saveAutomation} onDelete={deleteAutomation} /></div>
       ) : view === "quick-replies" ? (
-        <div className="automation-workspace"><QuickRepliesPanel replies={quickReplies} ctaTemplates={ctaUrlTemplates} onSave={saveQuickReply} onDelete={deleteQuickReply} /></div>
+        <div className="automation-workspace"><QuickRepliesPanel replies={quickReplies} ctaTemplates={ctaUrlTemplates} imageSets={entrepreneurPackages} onSave={saveQuickReply} onDelete={deleteQuickReply} /></div>
       ) : view === "stickers" ? (
         <div className="automation-workspace"><StickersPanel stickers={stickers} onUpload={uploadSticker} onDelete={deleteSticker} /></div>
       ) : view === "documents" ? (
