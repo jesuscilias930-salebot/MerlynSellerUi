@@ -18,3 +18,14 @@ test('las columnas de selectores llevan el dashboard solo si hay varios', () => 
   assert.equal(boardSubtitle({ product: 'Calcetas', zone: 'Orizaba' }), 'Calcetas · Orizaba');
   assert.equal(boardSubtitle({ product: null, zone: 'Orizaba' }), 'Orizaba');
 });
+
+test('en el chat solo se ven las columnas de su dashboard, en orden', async () => {
+  const { chatBoardColumns } = await import('../app/lib/lead-boards.ts');
+  const columns = [
+    { id: 'a2', boardId: 'A', position: 2 }, { id: 'b1', boardId: 'B', position: 1 },
+    { id: 'a1', boardId: 'A', position: 1 }, { id: 'b2', boardId: 'B', position: 2 },
+  ];
+  assert.deepEqual(chatBoardColumns(columns, 'b2').map(c => c.id), ['b1', 'b2']);
+  assert.deepEqual(chatBoardColumns(columns, 'a2').map(c => c.id), ['a1', 'a2']);
+  assert.deepEqual(chatBoardColumns(columns, null).map(c => c.id), ['a1', 'a2'], 'sin columna: el primer dashboard');
+});

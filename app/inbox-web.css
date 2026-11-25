@@ -435,3 +435,11 @@ article.message-highlight { animation: message-highlight 1.6s ease-out; }
 .video-processing-card small { color: #667085; font-size: 12px; }
 .video-processing-card.failed b { color: #b42318; }
 .composer-shortcuts .quick-button.unconfigured { border-style: dashed; background: #fff; color: #1f6f48; }
+
+/* Columnas del dashboard del chat, una tras otra, para asignar el lead con un toque. */
+.chat-column-strip { display: flex; gap: 6px; overflow-x: auto; padding: 6px 2px 4px; scrollbar-width: thin; }
+.chat-column-strip button { flex: 0 0 auto; padding: 5px 12px; border: 1px solid #d0d5dd; border-radius: 999px; background: #fff; color: #344054; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.chat-column-strip button:hover:not(:disabled) { border-color: #1f8f5a; color: #1f6f48; background: #f1faf4; }
+.chat-column-strip button.current { border-color: #1f8f5a; background: #1f8f5a; color: #fff; cursor: default; }
+.chat-column-strip button:disabled:not(.current) { opacity: .6; }
+.chat-column-strip small { font-size: 11px; }

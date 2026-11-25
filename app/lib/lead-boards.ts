@@ -18,3 +18,10 @@ export const columnsFromBoards = (boards: LeadBoardSummary[]): LeadColumn[] => {
   })));
 };
 export const boardSubtitle = (board: Pick<LeadBoardSummary, "product" | "zone">) => [board.product, board.zone].filter(Boolean).join(" · ");
+
+/** Columnas del dashboard al que pertenece el chat (el de la columna asignada con su primer mensaje), en orden. */
+export function chatBoardColumns<T extends { id: string; boardId?: string; position: number }>(columns: T[], leadColumnId: string | null | undefined): T[] {
+  const current = columns.find(column => column.id === leadColumnId);
+  const boardId = current?.boardId ?? columns[0]?.boardId;
+  return columns.filter(column => column.boardId === boardId).sort((a, b) => a.position - b.position);
+}

@@ -15,7 +15,8 @@ const load = (fresh = false) => {
 };
 const publish = (items: FollowUpSequence[]) => { cached = Promise.resolve(items); listeners.forEach(listener => listener(items)); };
 
-function useFollowUps() {
+/** Seguimientos de todas las columnas (lista compartida). */
+export function useFollowUps() {
   const [items, setItems] = useState<FollowUpSequence[]>([]);
   useEffect(() => {
     listeners.add(setItems);

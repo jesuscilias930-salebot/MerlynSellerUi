@@ -35,6 +35,9 @@ import { useAutoDismiss } from "../lib/use-auto-dismiss";
 import { SavedVideosPanel, sendSavedVideo, useSavedVideos, type SavedVideo } from "./SavedVideos";
 import { QuickButtonsRow, QuickButtonsSettings, useQuickButtons } from "./QuickButtons";
 import { FollowUpBadge } from "./FollowUpBadge";
+import { useFollowUps } from "./ColumnFollowUp";
+import { chatBoardColumns } from "../lib/lead-boards";
+import { waitLabel } from "../lib/follow-ups";
 import { QuoteBundlePicker } from "./QuoteBundlePicker";
 import { chatQuoteBundle } from "../lib/quote";
 import type { QuoteBundleRef } from "../lib/types";
@@ -192,6 +195,10 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
   const toggleSavedImage = (imageId: string) => setSelectedSavedImageIds((current) => current.includes(imageId) ? current.filter((id) => id !== imageId) : [...current, imageId]);
   const toggleSavedImageSet = (imageIds: string[]) => setSelectedSavedImageIds((current) => imageIds.every((id) => current.includes(id)) ? current.filter((id) => !imageIds.includes(id)) : [...new Set([...current, ...imageIds])]);
   const submitBundles = async () => { if (!bundleIds.length) return; try { await onSendEntrepreneurPackages({ packageIds: bundleIds }); setBundleIds([]); setBundlePickerOpen(false); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible enviar el bundle."); } };
+  // Solo las columnas del dashboard del chat (el de la columna que recibió su primer mensaje).
+  const chatColumns = useMemo(() => chatBoardColumns(columns, chat?.leadColumnId), [columns, chat?.leadColumnId]);
+  const followUps = useFollowUps();
+  const columnLabel = (column: LeadColumn) => column.shortName || column.name;
   const moveLead = async (columnId: string) => { if (!chat || !columnId || columnId === chat.leadColumnId) return; setMoving(true); try { await onMoveLead(columnId); } finally { setMoving(false); } };
 const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Documento</small><input type="file" accept="application/pdf,.pdf" onChange={event => { onUploadDocument(event); if (mobile && event.target.files?.length) setToolsOpen(false); }} disabled={!chat || uploadingMedia} /></label><label><b>▧</b><small>Imágenes</small><input type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={event => { onUploadImage(event); if (mobile && event.target.files?.length) setToolsOpen(false); }} disabled={!chat || uploadingMedia} /></label><label><b>▶</b><small>Video</small><input type="file" accept={VIDEO_ACCEPT} onChange={event => { onUploadVideo(event); if (mobile && event.target.files?.length) setToolsOpen(false); }} disabled={!chat || uploadingMedia} /></label><LocationQuickCards chatId={chat?.id} onNotice={setNotice} onDone={() => setToolsOpen(false)} onConfigure={() => { setToolsOpen(false); setTab("share"); setToolsCollapsed(false); }} /></div>;
   const shareTools = (
@@ -238,7 +245,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
   const conversationOptions = <div className="mobile-chat-options inbox-conversation-options">
     <p className="inbox-options-title">Automatizaciones</p>
     {chat && <div className="chat-statuses"><button className={`status-badge ${chat.autoReplyEnabled !== false ? "on" : ""}`} type="button" aria-pressed={chat.autoReplyEnabled !== false} onClick={() => onAutoReplyChange(chat.autoReplyEnabled === false)}>Bot <span>{chat.autoReplyEnabled !== false ? "Activo" : "Pausado"}</span></button><button className={`status-badge ${chat.scenarioEnabled !== false ? "on" : ""}`} type="button" aria-pressed={chat.scenarioEnabled !== false} onClick={() => onScenarioChange(chat.scenarioEnabled === false)}>Escenarios <span>{chat.scenarioEnabled !== false ? "Activos" : "Pausados"}</span></button></div>}
-    {chat && <label className="chat-column-select"><span>Columna de venta</span><select aria-label="Columna de venta" value={chat.leadColumnId || ""} disabled={moving} onChange={event => void moveLead(event.target.value)}><option value="" disabled>Selecciona columna</option>{columns.map(column => <option key={column.id} value={column.id}>{column.name}</option>)}</select></label>}
+    {chat && <label className="chat-column-select"><span>Columna de venta</span><select aria-label="Columna de venta" value={chat.leadColumnId || ""} disabled={moving} onChange={event => void moveLead(event.target.value)}><option value="" disabled>Selecciona columna</option>{chatColumns.map(column => <option key={column.id} value={column.id}>{columnLabel(column)}</option>)}</select></label>}
     {chat && <div className="chat-overflow"><button className="delete-chat-button" type="button" aria-expanded={chatMenuOpen} onClick={() => setChatMenuOpen(value => !value)}>Eliminar conversación</button>{chatMenuOpen && <div><button type="button" onClick={() => { setChatMenuOpen(false); onDeleteConversation(); }}>Confirmar borrar conversación</button></div>}</div>}
   </div>;
   return <>
@@ -327,6 +334,14 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
         </form>
         {chat && <div className="composer-shortcuts" role="group" aria-label="Botones rápidos y atajos"><QuickButtonsRow chatId={chat.id} store={quickButtons} imageSets={images} onSendSet={(packageId) => onSendEntrepreneurPackages({ packageIds: [packageId] })} onNotice={setNotice} onConfigure={openQuickButtonsSettings} />{videoShortcuts.map((video) => <button key={video.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar el video «${video.name}»`} onClick={() => void sendVideoShortcut(video)}>{sendingShortcut === video.id ? "Enviando…" : <>🎬 {video.name}</>}</button>)}{shortcutSets.map((set) => <button key={set.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar las ${set.images.length} fotos de «${set.name}»`} onClick={() => void sendShortcut(set)}>{sendingShortcut === set.id ? "Enviando…" : <>▦ {set.name} <small>{set.images.length}</small></>}</button>)}</div>}
         <AudioRecorder disabled={!chat || uploadingAudio} onSend={onRecordAudio} />
+        {/* Columnas del dashboard del chat, en orden: un toque asigna el lead. ⏱ = tiene seguimiento automático. */}
+        {chat && chatColumns.length > 0 && <nav className="chat-column-strip" aria-label={`Columnas${chatColumns[0]?.boardName ? ` de ${chatColumns[0].boardName}` : ""}`}>
+          {chatColumns.map(column => {
+            const followUp = followUps.find(item => item.columnId === column.id && item.isActive);
+            const current = column.id === chat.leadColumnId;
+            return <button key={column.id} type="button" className={current ? "current" : ""} aria-current={current ? "true" : undefined} disabled={moving} title={followUp ? `Seguimiento automático: ${followUp.steps.map(step => waitLabel(step.waitMinutes)).join(" → ")}` : `Mover a ${columnLabel(column)}`} onClick={() => void moveLead(column.id)}>{columnLabel(column)}{followUp && <small aria-label="con seguimiento automático"> ⏱</small>}</button>;
+          })}
+        </nav>}
       </div>
     </section>
     {!mobile && !onClose && !toolsCollapsed && props.inboxLayout && <button className="inbox-tools-scrim" type="button" aria-label="Cerrar herramientas del chat" onClick={() => setToolsCollapsed(true)} />}
