@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { bundleShippingPackage } from '../app/lib/shipping-package.ts';
-import { storedParcel, chatQuoteBundle, missingDestinationFields, quoteBundleRef, rateMessage, ratesByPrice } from '../app/lib/quote.ts';
+import { storedParcel, chatQuoteBundle, missingDestinationFields, quoteBundleRef, rateMessage, ratesByPrice, ratesMessage } from '../app/lib/quote.ts';
 
 test('el paquete del chat solo existe con id y nombre', () => {
   assert.deepEqual(chatQuoteBundle({ quoteBundleId: '7', quoteBundleName: 'Paquete 100' }), { id: '7', name: 'Paquete 100' });
@@ -25,8 +25,10 @@ test('avisa qué datos del cliente faltan para cotizar', () => {
 test('ordena por precio y arma el mensaje para el cliente', () => {
   const rates = [{ carrier: 'fedex', service: 'express', totalPrice: 320 }, { carrier: 'dhl', service: 'x' }, { carrier: 'estafeta', service: 'ground', serviceDescription: 'Terrestre', totalPrice: '189.5', deliveryDays: 3 }];
   assert.deepEqual(ratesByPrice(rates).map(rate => rate.carrier), ['estafeta', 'fedex', 'dhl']);
-  assert.equal(rateMessage(rates[2], { city: 'Orizaba', postalCode: '94300' }, 'Paquete 100'), 'Envío de Paquete 100 a Orizaba, CP 94300 por ESTAFETA (Terrestre): $189.50 · entrega en 3 días hábiles.');
-  assert.equal(rateMessage(rates[1], { city: '', postalCode: '' }), 'Envío por DHL (x): Precio no disponible.');
+  assert.equal(rateMessage(rates[2], { city: 'Orizaba', postalCode: '94300' }, 'Paquete 100'), 'Envío de Paquete 100 a Orizaba, CP 94300 por ESTAFETA: $189.50. ¿Le gustaría que seleccionemos esta paquetería para enviar su mercancía?');
+  assert.equal(rateMessage(rates[1], { city: '', postalCode: '' }), 'Envío por DHL: Precio no disponible. ¿Le gustaría que seleccionemos esta paquetería para enviar su mercancía?');
+  assert.equal(ratesMessage([rates[2]], { city: 'Orizaba', postalCode: '94300' }), rateMessage(rates[2], { city: 'Orizaba', postalCode: '94300' }));
+  assert.match(ratesMessage([rates[2], rates[0]], { city: 'Orizaba', postalCode: '94300' }), /^Envío a Orizaba, CP 94300 por ESTAFETA: \$189\.50\.\nEnvío .*\n¿Cuál de estas paqueterías/);
 });
 
 test('mensaje con el número de guía para el cliente', async () => {

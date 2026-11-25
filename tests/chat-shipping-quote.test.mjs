@@ -26,8 +26,9 @@ test('la cotización se guarda por chat y vence a las 12 h', () => {
 });
 
 test('mensaje con la paquetería más económica', () => {
-  assert.equal(bestPriceMessage(rates), 'El envío con mejor precio es con Estafeta en $180.00. ¿Le gustaría que seleccionemos esta paquetería para enviar su pedido?');
-  assert.equal(bestPriceMessage([{ carrier: 'dhl', service: 'x' }]), null);
+  const destination = { city: 'Ecatepec de Morelos', postalCode: '55128' };
+  assert.equal(bestPriceMessage(rates, destination, 'Calcetines · 120 pares'), 'Envío de Calcetines · 120 pares a Ecatepec de Morelos, CP 55128 por ESTAFETA: $180.00. ¿Le gustaría que seleccionemos esta paquetería para enviar su mercancía?');
+  assert.equal(bestPriceMessage([{ carrier: 'dhl', service: 'x' }], destination), null);
   assert.equal(carrierName('fedex'), 'FedEx'); assert.equal(carrierName('dhl'), 'DHL'); assert.equal(carrierName('nuevapaq'), 'Nuevapaq');
   assert.equal(quoteAge(0, 30 * 60000), 'hace 30 min'); assert.equal(quoteAge(0, 125 * 60000), 'hace 2 h 5 min');
 });

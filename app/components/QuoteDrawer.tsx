@@ -5,7 +5,7 @@ import { request } from "../lib/api";
 import { contactPhone } from "../lib/channels";
 import { chatShippingDraftKey, readChatShippingDraft, writeChatShippingDraft, type ShippingAddress, type ShippingParcel } from "../lib/chat-shipping-draft";
 import { chatShippingQuoteKey, QUOTE_FRESH_MS, readShippingQuote, writeShippingQuote } from "../lib/chat-shipping-quote";
-import { bestPriceMessage, chatQuoteBundle, missingDestinationFields, quoteAge, quoteBundleRef, rateDelivery, rateMessage, ratePrice, ratesByPrice, storedParcel, trackingMessage, type QuoteRate, type QuoteShipment } from "../lib/quote";
+import { bestPriceMessage, chatQuoteBundle, missingDestinationFields, quoteAge, quoteBundleRef, rateDelivery, rateMessage, ratePrice, ratesMessage, ratesByPrice, storedParcel, trackingMessage, type QuoteRate, type QuoteShipment } from "../lib/quote";
 import { bundleShippingPackage, type StoredShippingPackage } from "../lib/shipping-package";
 import type { Chat, QuoteBundleRef } from "../lib/types";
 import { EnviaPostalFields } from "./EnviaPostalFields";
@@ -154,7 +154,7 @@ export function QuoteDrawer({ chat, onInsert, onQuoteBundleChange }: { chat: Cha
     finally { setGenerating(false); }
   };
 
-  const bestMessage = bestPriceMessage(rates);
+  const bestMessage = bestPriceMessage(rates, destination, productName);
   const age = savedAt && now ? quoteAge(savedAt, Math.max(now, savedAt)) : "";
   const stale = Boolean(savedAt && now - savedAt > QUOTE_FRESH_MS);
   // La cotización se hizo con otros datos: se avisa para volver a cotizar antes de generar la guía.
@@ -195,7 +195,7 @@ export function QuoteDrawer({ chat, onInsert, onQuoteBundleChange }: { chat: Cha
     </section>}
     {!shipment && previous.length > 0 && <p className="quote-notice" role="status">Este chat ya tiene {previous.length === 1 ? "una guía generada" : `${previous.length} guías generadas`} ({previous.slice(0, 2).map(item => `${item.carrier.toUpperCase()}${item.trackingNumber ? ` ${item.trackingNumber}` : ""}`).join(", ")}). Revisa antes de generar otra.</p>}
     {bestMessage && <button type="button" className="quote-primary quote-best" onClick={() => insert(bestMessage, "best")}>{inserted === "best" ? "✓ Escrito en el mensaje" : "💬 Ofrecer la más económica al cliente"}</button>}
-    {sortedRates.length > 0 && <button type="button" className="quote-link-button" onClick={() => insert(sortedRates.slice(0, 3).map(rate => rateMessage(rate, destination, productName)).join("\n"), "top")}>{inserted === "top" ? "✓ Agregadas al mensaje" : "Agregar las 3 más económicas al mensaje"}</button>}
+    {sortedRates.length > 0 && <button type="button" className="quote-link-button" onClick={() => insert(ratesMessage(sortedRates.slice(0, 3), destination, productName), "top")}>{inserted === "top" ? "✓ Agregadas al mensaje" : "Agregar las 3 más económicas al mensaje"}</button>}
     <ul className="quote-rates">{sortedRates.map((rate, index) => {
       const key = `${rate.carrier}-${rate.service}-${index}`;
       const delivery = rateDelivery(rate);

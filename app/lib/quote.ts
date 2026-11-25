@@ -48,12 +48,18 @@ export function ratePrice(rate: QuoteRate): string {
   if (value === null) return "Precio no disponible";
   return `${new Intl.NumberFormat("es-MX", { style: "currency", currency: rate.currency || "MXN" }).format(value)}${rate.currency && rate.currency !== "MXN" ? ` ${rate.currency}` : ""}`;
 }
-/** Texto listo para el chat con una opción de envío. */
-export function rateMessage(rate: QuoteRate, destination: Pick<ShippingAddress, "city" | "postalCode">, bundleName?: string): string {
-  const place = [destination.city, destination.postalCode && `CP ${destination.postalCode}`].filter(Boolean).join(", ");
-  const delivery = rateDelivery(rate);
-  return `Envío${bundleName ? ` de ${bundleName}` : ""}${place ? ` a ${place}` : ""} por ${rate.carrier.toUpperCase()} (${rate.serviceDescription || rate.service}): ${ratePrice(rate)}${delivery ? ` · entrega en ${delivery}` : ""}.`;
+const OFFER_QUESTION = "¿Le gustaría que seleccionemos esta paquetería para enviar su mercancía?";
+type Destination = Pick<ShippingAddress, "city" | "postalCode">;
+/** «Envío de Calcetines · 120 pares a Ecatepec de Morelos, CP 55128 por ESTAFETA: $200.00.» */
+export function rateLine(rate: QuoteRate, destination: Destination, productName?: string): string {
+  const place = [destination.city.trim(), destination.postalCode.trim() && `CP ${destination.postalCode.trim()}`].filter(Boolean).join(", ");
+  return `Envío${productName ? ` de ${productName}` : ""}${place ? ` a ${place}` : ""} por ${rate.carrier.toUpperCase()}: ${ratePrice(rate)}.`;
 }
+/** Texto listo para el chat con una opción de envío y la pregunta para que el cliente confirme. */
+export const rateMessage = (rate: QuoteRate, destination: Destination, productName?: string) => `${rateLine(rate, destination, productName)} ${OFFER_QUESTION}`;
+/** Varias opciones, una por línea, y una sola pregunta al final. */
+export const ratesMessage = (rates: QuoteRate[], destination: Destination, productName?: string) =>
+  rates.length === 1 ? rateMessage(rates[0], destination, productName) : `${rates.map(rate => rateLine(rate, destination, productName)).join("\n")}\n¿Cuál de estas paqueterías le gustaría que seleccionemos para enviar su mercancía?`;
 
 export type QuoteShipment = { id: string; carrier: string; service: string; trackingNumber?: string | null; labelUrl?: string | null; status?: string; price?: string | number | null; currency?: string | null; createdAt?: string };
 /** Texto para avisar al cliente su número de guía. */
@@ -67,10 +73,9 @@ const CARRIERS: Record<string, string> = { dhl: "DHL", fedex: "FedEx", ups: "UPS
 export const carrierName = (carrier: string) => CARRIERS[carrier.trim().toLowerCase()] || (carrier.length <= 4 ? carrier.toUpperCase() : carrier.charAt(0).toUpperCase() + carrier.slice(1).toLowerCase());
 
 /** Mensaje para ofrecer al cliente la opción más económica. */
-export function bestPriceMessage(rates: QuoteRate[]): string | null {
+export function bestPriceMessage(rates: QuoteRate[], destination: Destination, productName?: string): string | null {
   const best = ratesByPrice(rates).find(rate => ratePrice(rate) !== "Precio no disponible");
-  if (!best) return null;
-  return `El envío con mejor precio es con ${carrierName(best.carrier)} en ${ratePrice(best)}. ¿Le gustaría que seleccionemos esta paquetería para enviar su pedido?`;
+  return best ? rateMessage(best, destination, productName) : null;
 }
 
 /** «hace 5 min», «hace 2 h». */
