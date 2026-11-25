@@ -1,6 +1,7 @@
 "use client";
 
 import { ChannelBadge } from "./ChannelBadge";
+import { ChipCarousel } from "./ChipCarousel";
 import { ChangeEvent, FormEvent, Fragment, type ReactNode, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { api, request } from "../lib/api";
 import { VIDEO_ACCEPT } from "../lib/video-upload";
@@ -335,13 +336,13 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
         {chat && <div className="composer-shortcuts" role="group" aria-label="Botones rápidos y atajos"><QuickButtonsRow chatId={chat.id} store={quickButtons} imageSets={images} onSendSet={(packageId) => onSendEntrepreneurPackages({ packageIds: [packageId] })} onNotice={setNotice} onConfigure={openQuickButtonsSettings} />{videoShortcuts.map((video) => <button key={video.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar el video «${video.name}»`} onClick={() => void sendVideoShortcut(video)}>{sendingShortcut === video.id ? "Enviando…" : <>🎬 {video.name}</>}</button>)}{shortcutSets.map((set) => <button key={set.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar las ${set.images.length} fotos de «${set.name}»`} onClick={() => void sendShortcut(set)}>{sendingShortcut === set.id ? "Enviando…" : <>▦ {set.name} <small>{set.images.length}</small></>}</button>)}</div>}
         <AudioRecorder disabled={!chat || uploadingAudio} onSend={onRecordAudio} />
         {/* Columnas del dashboard del chat, en orden: un toque asigna el lead. ⏱ = tiene seguimiento automático. */}
-        {chat && chatColumns.length > 0 && <nav className="chat-column-strip" aria-label={`Columnas${chatColumns[0]?.boardName ? ` de ${chatColumns[0].boardName}` : ""}`}>
+        {chat && chatColumns.length > 0 && <ChipCarousel className="chat-column-strip" label={`Columnas${chatColumns[0]?.boardName ? ` de ${chatColumns[0].boardName}` : ""}`}>
           {chatColumns.map(column => {
             const followUp = followUps.find(item => item.columnId === column.id && item.isActive);
             const current = column.id === chat.leadColumnId;
             return <button key={column.id} type="button" className={current ? "current" : ""} aria-current={current ? "true" : undefined} disabled={moving} title={followUp ? `Seguimiento automático: ${followUp.steps.map(step => waitLabel(step.waitMinutes)).join(" → ")}` : `Mover a ${columnLabel(column)}`} onClick={() => void moveLead(column.id)}>{columnLabel(column)}{followUp && <small aria-label="con seguimiento automático"> ⏱</small>}</button>;
           })}
-        </nav>}
+        </ChipCarousel>}
       </div>
     </section>
     {!mobile && !onClose && !toolsCollapsed && props.inboxLayout && <button className="inbox-tools-scrim" type="button" aria-label="Cerrar herramientas del chat" onClick={() => setToolsCollapsed(true)} />}
