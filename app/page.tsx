@@ -1334,7 +1334,7 @@ export default function Home() {
       ) : view === "chat-ads" ? (
         <div className="automation-workspace"><ChatAdsPanel imageSets={entrepreneurPackages} /></div>
       ) : view === "scenarios" ? (
-        <ScenariosPanel scenarios={automationScenarios} columns={allColumns} entrepreneurPackages={entrepreneurPackages} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} onDuplicate={async (id) => { const copy = await request<AutomationScenario>(`/scenarios/${id}/duplicate`, { method: "POST" }); await loadScenarios(); setNotice(`Se creó «${copy.name}» pausado. Cambia sus frases de inicio antes de activarlo.`); return copy; }} />
+        <ScenariosPanel scenarios={automationScenarios} columns={allColumns} entrepreneurPackages={entrepreneurPackages} whatsAppTemplates={whatsAppTemplates} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} onDuplicate={async (id) => { const copy = await request<AutomationScenario>(`/scenarios/${id}/duplicate`, { method: "POST" }); await loadScenarios(); setNotice(`Se creó «${copy.name}» pausado. Cambia sus frases de inicio antes de activarlo.`); return copy; }} />
       ) : view === "videos" ? (
         <VideosPanel />
       ) : view === "finances" && ["owner", "admin"].includes(user.role) ? (

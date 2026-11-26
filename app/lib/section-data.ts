@@ -9,7 +9,8 @@ export function crmResources(view: string, controlTab: string, conversationOpen 
   if (view === "quick-replies") { resources.add("quickReplies"); resources.add("ctaTemplates"); }
   if (view === "stickers") resources.add("stickers");
   if (view === "cta-buttons") resources.add("ctaTemplates");
-  if (view === "templates") resources.add("templates");
+  // Escenarios: las plantillas se eligen en los que inician con la respuesta a una plantilla.
+  if (view === "templates" || view === "scenarios") resources.add("templates");
   if (view === "documents") resources.add("documents");
   if (view === "collections" || view === "scenarios" || view === "chat-ads" || (view === "control" && controlTab === "bundles")) resources.add("collections");
   if (view === "scenarios") resources.add("scenarios");

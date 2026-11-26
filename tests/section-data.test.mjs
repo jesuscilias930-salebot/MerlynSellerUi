@@ -18,7 +18,7 @@ test("management sections request only their own dependencies", () => {
     automations: ["automations"], "quick-replies": ["ctaTemplates", "quickReplies"],
     stickers: ["stickers"], "cta-buttons": ["ctaTemplates"], templates: ["templates"],
     documents: ["documents"], collections: ["collections"],
-    scenarios: ["collections", "pipeline", "scenarios"],
+    scenarios: ["collections", "pipeline", "scenarios", "templates"],
   };
   for (const [view, resources] of Object.entries(expected)) assert.deepEqual(crmResources(view, "summary"), resources, view);
 });

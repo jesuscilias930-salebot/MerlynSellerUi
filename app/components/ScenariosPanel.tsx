@@ -18,6 +18,7 @@ import ScenarioCodexConnection from "./ScenarioCodexConnection";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { StepTypePicker } from "./StepTypePicker";
 import { ScenarioQuoteBundleField } from "./QuoteBundlePicker";
+import { ScenarioTemplateTriggerField } from "./ScenarioTemplateTriggerField";
 import { ScenarioProductImages } from "./ProductStockImages";
 import { useSavedVideos } from "./SavedVideos";
 import { NewScenarioStart, type NewScenarioChoice } from "./NewScenarioStart";
@@ -33,6 +34,7 @@ import type {
   ScenarioBudgetOption,
   ScenarioMedia,
   ScenarioStep,
+  WhatsAppTemplate,
 } from "../lib/types";
 
 type Draft = Omit<AutomationScenario, "id" | "key" | "updatedAt" | "position">;
@@ -40,6 +42,8 @@ type Props = {
   scenarios: AutomationScenario[];
   columns: LeadColumn[];
   entrepreneurPackages: EntrepreneurPackage[];
+  /** Plantillas de WhatsApp para los escenarios que inician con la respuesta a una plantilla. */
+  whatsAppTemplates?: WhatsAppTemplate[];
   onSave: (value: Draft, id?: string) => Promise<AutomationScenario | void>;
   onDelete: (id: string) => Promise<void>;
   onReorder: (scenarioIds: string[]) => Promise<void>;
@@ -130,6 +134,7 @@ const emptyScenario = (): Draft => {
     priority: 0,
     canInterrupt: true,
     quoteBundle: null,
+    templateTrigger: null,
     steps: [message, end],
   };
 };
@@ -154,6 +159,7 @@ function FlowBuilder({
   initialDraft,
   columns,
   entrepreneurPackages,
+  whatsAppTemplates = [],
   reusableMedia,
   onSave,
   onDelete,
@@ -164,6 +170,7 @@ function FlowBuilder({
   initialDraft?: Draft;
   columns: LeadColumn[];
   entrepreneurPackages: EntrepreneurPackage[];
+  whatsAppTemplates?: WhatsAppTemplate[];
   reusableMedia: ReusableScenarioMedia[];
   onSave: Props["onSave"];
   onDelete?: () => Promise<void>;
@@ -182,6 +189,7 @@ function FlowBuilder({
           priority: initial.priority || 0,
           canInterrupt: initial.canInterrupt !== false,
           quoteBundle: initial.quoteBundle ?? null,
+          templateTrigger: initial.templateTrigger ?? null,
           steps: initial.steps,
         }
       : initialDraft || emptyScenario(),
@@ -587,6 +595,11 @@ function FlowBuilder({
     });
   };
   const saveScenario = async (closeSettings = false) => {
+    if (value.templateTrigger && !value.templateTrigger.templateId) {
+      setSaveError("Elige la plantilla que inicia este escenario.");
+      setSettingsOpen(true);
+      return false;
+    }
     setSaving(true);
     setSaveError("");
     try {
@@ -1218,13 +1231,20 @@ function FlowBuilder({
                   required
                 />
               </label>
+              <ScenarioTemplateTriggerField
+                templates={whatsAppTemplates}
+                value={value.templateTrigger ?? null}
+                onChange={(templateTrigger) => setValue({ ...value, templateTrigger })}
+                triggerText={triggerText}
+                onTriggerTextChange={setTriggerText}
+              />
               <label>
-                Frases que inician el flujo
+                {value.templateTrigger ? "Respuestas que lo inician (opcional)" : "Frases que inician el flujo"}
                 <textarea
                   value={triggerText}
                   onChange={(event) => setTriggerText(event.target.value)}
-                  placeholder={"Hacen envíos\nEnvían a Veracruz"}
-                  required
+                  placeholder={value.templateTrigger ? "Sí, la quiero\n(vacío = cualquier respuesta a la plantilla)" : "Hacen envíos\nEnvían a Veracruz"}
+                  required={!value.templateTrigger}
                 />
               </label>
               <label>
@@ -1440,12 +1460,12 @@ function FlowBuilder({
               }}
             >
               <span className="wf-start-icon" aria-hidden="true">⚡</span>
-              <b>Cuando el cliente escribe</b>
+              <b>{value.templateTrigger ? `Responde a la plantilla «${value.templateTrigger.templateName || "sin elegir"}»` : "Cuando el cliente escribe"}</b>
               <div>
                 {triggerPreview.length ? (
                   triggerPreview.slice(0, 2).map((item) => <q key={item}>{item}</q>)
                 ) : (
-                  <em>Sin frases de inicio</em>
+                  <em>{value.templateTrigger ? "Cualquier respuesta" : "Sin frases de inicio"}</em>
                 )}
               </div>
               <button type="button" onClick={() => setSettingsOpen(true)}>
@@ -2192,6 +2212,7 @@ const draftFromChoice = (choice: NewScenarioChoice): Draft => ({
   aiDescription: choice.aiDescription,
   priority: 0,
   canInterrupt: true,
+  templateTrigger: null,
   steps: instantiateSteps(choice.template, stepId),
 });
 
@@ -2199,6 +2220,7 @@ export function ScenariosPanel({
   scenarios,
   columns,
   entrepreneurPackages,
+  whatsAppTemplates = [],
   onSave,
   onDelete,
   onReorder,
@@ -2313,6 +2335,7 @@ export function ScenariosPanel({
                   Abrir en el lienzo →
                 </small>
                 <span className="scenario-card-triggers">
+                  {scenario.templateTrigger && <span className="scenario-card-template" title="Solo lo inicia una respuesta a esta plantilla">📨 {scenario.templateTrigger.templateName}{scenario.triggerExamples.length ? "" : " · cualquier respuesta"}</span>}
                   {scenario.triggerExamples.slice(0, 3).map((item) => (
                     <q key={item}>{item}</q>
                   ))}
@@ -2343,6 +2366,7 @@ export function ScenariosPanel({
           initialDraft={creating}
           columns={columns}
           entrepreneurPackages={entrepreneurPackages}
+          whatsAppTemplates={whatsAppTemplates}
           reusableMedia={reusableMedia}
           onClose={() => setCreating(false)}
           onSave={async (draft) => {
@@ -2360,6 +2384,7 @@ export function ScenariosPanel({
           initial={openScenario}
           columns={columns}
           entrepreneurPackages={entrepreneurPackages}
+          whatsAppTemplates={whatsAppTemplates}
           reusableMedia={reusableMedia}
           onClose={() => setOpenId(null)}
           onSave={onSave}
