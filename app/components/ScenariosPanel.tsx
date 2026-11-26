@@ -19,6 +19,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { StepTypePicker } from "./StepTypePicker";
 import { ScenarioQuoteBundleField } from "./QuoteBundlePicker";
 import { ScenarioTemplateTriggerField } from "./ScenarioTemplateTriggerField";
+import { campaignNames, groupByCampaign, scenarioTab, type ScenarioTab } from "../lib/scenario-groups";
 import { ScenarioProductImages } from "./ProductStockImages";
 import { useSavedVideos } from "./SavedVideos";
 import { NewScenarioStart, type NewScenarioChoice } from "./NewScenarioStart";
@@ -135,6 +136,7 @@ const emptyScenario = (): Draft => {
     canInterrupt: true,
     quoteBundle: null,
     templateTrigger: null,
+    campaign: null,
     steps: [message, end],
   };
 };
@@ -160,12 +162,15 @@ function FlowBuilder({
   columns,
   entrepreneurPackages,
   whatsAppTemplates = [],
+  campaigns = [],
   reusableMedia,
   onSave,
   onDelete,
   onDuplicate,
   onClose,
 }: {
+  /** Campañas existentes para sugerirlas al escribir. */
+  campaigns?: string[];
   initial?: AutomationScenario;
   initialDraft?: Draft;
   columns: LeadColumn[];
@@ -190,6 +195,7 @@ function FlowBuilder({
           canInterrupt: initial.canInterrupt !== false,
           quoteBundle: initial.quoteBundle ?? null,
           templateTrigger: initial.templateTrigger ?? null,
+          campaign: initial.campaign ?? null,
           steps: initial.steps,
         }
       : initialDraft || emptyScenario(),
@@ -606,6 +612,7 @@ function FlowBuilder({
       await onSave(
         {
           ...value,
+          campaign: value.campaign?.trim() || null,
           aiDescription: value.aiDescription?.trim() || null,
           triggerExamples: triggerText
             .split("\n")
@@ -1230,6 +1237,21 @@ function FlowBuilder({
                   placeholder="Ej. Envíos nacionales"
                   required
                 />
+              </label>
+              <label>
+                Campaña
+                <input
+                  value={value.campaign || ""}
+                  maxLength={60}
+                  list="scenario-campaigns"
+                  onChange={(event) =>
+                    setValue({ ...value, campaign: event.target.value })
+                  }
+                  placeholder="Ej. Campaña 120 · vacío = Genérico"
+                />
+                <datalist id="scenario-campaigns">
+                  {campaigns.map((name) => <option key={name} value={name} />)}
+                </datalist>
               </label>
               <ScenarioTemplateTriggerField
                 templates={whatsAppTemplates}
@@ -2213,6 +2235,7 @@ const draftFromChoice = (choice: NewScenarioChoice): Draft => ({
   priority: 0,
   canInterrupt: true,
   templateTrigger: null,
+  campaign: null,
   steps: instantiateSteps(choice.template, stepId),
 });
 
@@ -2234,6 +2257,31 @@ export function ScenariosPanel({
   const [savingOrder, setSavingOrder] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [duplicateError, setDuplicateError] = useState("");
+  // Pestaña recordada por navegador (normales / de plantilla).
+  const [tab, setTab] = useState<ScenarioTab>(() => {
+    try { return localStorage.getItem("merlyn.scenarios.tab") === "template" ? "template" : "normal"; } catch { return "normal"; }
+  });
+  const chooseTab = (next: ScenarioTab) => { setTab(next); try { localStorage.setItem("merlyn.scenarios.tab", next); } catch { /* sin almacenamiento */ } };
+  const campaigns = campaignNames(scenarios);
+  const tabScenarios = scenarios.filter((scenario) => scenarioTab(scenario) === tab);
+  const templateCount = scenarios.filter((scenario) => scenarioTab(scenario) === "template").length;
+  const groups = groupByCampaign(tabScenarios);
+  const [movingCampaignId, setMovingCampaignId] = useState<string | null>(null);
+  // Cambia la campaña desde la tarjeta sin abrir el lienzo (guarda el escenario tal cual, solo con la campaña nueva).
+  const changeCampaign = async (scenario: AutomationScenario, choice: string) => {
+    let campaign: string | null = choice || null;
+    if (choice === "__new__") {
+      const typed = window.prompt("Nombre de la nueva campaña", "");
+      if (typed === null) return;
+      campaign = typed.trim().slice(0, 60) || null;
+    }
+    if ((campaign || null) === (scenario.campaign || null)) return;
+    setMovingCampaignId(scenario.id); setDuplicateError("");
+    try {
+      await onSave({ name: scenario.name, isActive: scenario.isActive, triggerExamples: scenario.triggerExamples, aiDescription: scenario.aiDescription || null, priority: scenario.priority, canInterrupt: scenario.canInterrupt, quoteBundle: scenario.quoteBundle ?? null, templateTrigger: scenario.templateTrigger ?? null, campaign, steps: scenario.steps }, scenario.id);
+    } catch (error) { setDuplicateError(error instanceof Error ? error.message : "No se pudo cambiar la campaña."); }
+    finally { setMovingCampaignId(null); }
+  };
   // La copia se crea pausada, debajo del original, y se abre en el lienzo para editarla.
   const duplicate = async (scenario: AutomationScenario) => {
     if (!onDuplicate || duplicatingId) return;
@@ -2305,7 +2353,24 @@ export function ScenariosPanel({
               <span>Crea el primero para responder automáticamente.</span>
             </div>
           )}
-          {scenarios.map((scenario, index) => (
+          <div className="scenario-tabs" role="tablist" aria-label="Tipo de escenario">
+            <button type="button" role="tab" aria-selected={tab === "normal"} className={tab === "normal" ? "selected" : ""} onClick={() => chooseTab("normal")}>Escenarios <em>{scenarios.length - templateCount}</em></button>
+            <button type="button" role="tab" aria-selected={tab === "template"} className={tab === "template" ? "selected" : ""} onClick={() => chooseTab("template")}>📨 De plantillas <em>{templateCount}</em></button>
+          </div>
+          {tab === "template" && scenarios.length > 0 && (
+            <p className="scenario-tab-hint">Solo los inicia la respuesta del cliente a su plantilla de WhatsApp; los mensajes normales nunca los activan.</p>
+          )}
+          {scenarios.length > 0 && tabScenarios.length === 0 && (
+            <div className="scenario-studio-empty">
+              <b>{tab === "template" ? "Aún no hay escenarios de plantilla" : "Aún no hay escenarios normales"}</b>
+              <span>{tab === "template" ? "Crea uno y en «¿Cómo inicia?» elige «Cuando el cliente responde a una plantilla»." : "Crea uno nuevo para responder automáticamente."}</span>
+            </div>
+          )}
+          {groups.map((group) => (
+            <section key={group.key} className={`scenario-campaign-group${group.campaign ? "" : " generic"}`} aria-label={`Campaña ${group.label}`}>
+              <h3>{group.campaign ? "📁" : "🗂"} {group.label} <em>{group.scenarios.length}</em></h3>
+              <div className="scenario-campaign-cards">
+          {group.scenarios.map((scenario) => (
             <article
               key={scenario.id}
               draggable
@@ -2320,7 +2385,7 @@ export function ScenariosPanel({
               onDrop={(event) => void dropScenario(event, scenario.id)}
             >
               <span className="scenario-card-priority" title="Prioridad · arrastra para reordenar">
-                ⠿ {index + 1}
+                ⠿ {scenarios.indexOf(scenario) + 1}
               </span>
               <button type="button" onClick={() => setOpenId(scenario.id)}>
                 <span className={`scenario-card-status${scenario.isActive ? " on" : ""}`}>
@@ -2341,6 +2406,19 @@ export function ScenariosPanel({
                   ))}
                 </span>
               </button>
+              <label className="scenario-card-campaign" title="Campaña del escenario">
+                <span aria-hidden="true">📁</span>
+                <select
+                  aria-label={`Campaña de ${scenario.name}`}
+                  value={scenario.campaign || ""}
+                  disabled={movingCampaignId === scenario.id}
+                  onChange={(event) => void changeCampaign(scenario, event.target.value)}
+                >
+                  <option value="">Genérico</option>
+                  {campaigns.map((name) => <option key={name} value={name}>{name}</option>)}
+                  <option value="__new__">＋ Nueva campaña…</option>
+                </select>
+              </label>
               {onDuplicate && (
                 <button
                   type="button"
@@ -2353,6 +2431,9 @@ export function ScenariosPanel({
                 </button>
               )}
             </article>
+          ))}
+              </div>
+            </section>
           ))}
           {savingOrder && (
             <small className="scenario-order-saving">Guardando orden…</small>
@@ -2367,6 +2448,7 @@ export function ScenariosPanel({
           columns={columns}
           entrepreneurPackages={entrepreneurPackages}
           whatsAppTemplates={whatsAppTemplates}
+          campaigns={campaigns}
           reusableMedia={reusableMedia}
           onClose={() => setCreating(false)}
           onSave={async (draft) => {
@@ -2385,6 +2467,7 @@ export function ScenariosPanel({
           columns={columns}
           entrepreneurPackages={entrepreneurPackages}
           whatsAppTemplates={whatsAppTemplates}
+          campaigns={campaigns}
           reusableMedia={reusableMedia}
           onClose={() => setOpenId(null)}
           onSave={onSave}
