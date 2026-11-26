@@ -35,6 +35,7 @@ import { unsupportedMessageInfo } from "../lib/unsupported-message";
 import { useAutoDismiss } from "../lib/use-auto-dismiss";
 import { SavedVideosPanel, sendSavedVideo, useSavedVideos, type SavedVideo } from "./SavedVideos";
 import { QuickButtonsRow, QuickButtonsSettings, useQuickButtons } from "./QuickButtons";
+import { ChatAdButtons, useChatAd } from "./ChatAdButtons";
 import { FollowUpBadge } from "./FollowUpBadge";
 import { useFollowUps } from "./ColumnFollowUp";
 import { chatBoardColumns } from "../lib/lead-boards";
@@ -73,6 +74,7 @@ const { chat, messages, draft, uploadingAudio, uploadingMedia, pendingImages, do
   const inventoryRef = useRef<HTMLDivElement>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   const composerInput = useRef<HTMLTextAreaElement>(null);
+  const chatAd = useChatAd(chat?.id);
   const optionsRef = useRef<HTMLDivElement>(null);
   const optionsToggle = useRef<HTMLButtonElement>(null);
   const toolsToggle = useRef<HTMLButtonElement>(null);
@@ -336,7 +338,7 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
           <label className={uploadingAudio ? "audio-upload loading" : "audio-upload"} title={uploadingAudio ? "Subiendo audio" : "Adjuntar audio"}>{uploadingAudio ? <span aria-label="Subiendo audio">…</span> : <ChatIcon name="audio" />}<input type="file" aria-label="Adjuntar audio" accept="audio/aac,audio/mp4,audio/mpeg,audio/amr,audio/ogg,audio/opus" onChange={onUploadAudio} disabled={!chat || uploadingAudio} /></label>
           <button disabled={!chat || (!draft.trim() && !pendingImages.length && !replyImageIds.length)} className="send" aria-label="Enviar mensaje"><ChatIcon name="send" /></button>
         </form>
-        {chat && <div className="composer-shortcuts" role="group" aria-label="Botones rápidos y atajos"><QuickButtonsRow chatId={chat.id} store={quickButtons} imageSets={images} onSendSet={(packageId) => onSendEntrepreneurPackages({ packageIds: [packageId] })} onNotice={setNotice} onConfigure={openQuickButtonsSettings} />{videoShortcuts.map((video) => <button key={video.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar el video «${video.name}»`} onClick={() => void sendVideoShortcut(video)}>{sendingShortcut === video.id ? "Enviando…" : <>🎬 {video.name}</>}</button>)}{shortcutSets.map((set) => <button key={set.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar las ${set.images.length} fotos de «${set.name}»`} onClick={() => void sendShortcut(set)}>{sendingShortcut === set.id ? "Enviando…" : <>▦ {set.name} <small>{set.images.length}</small></>}</button>)}</div>}
+        {chat && <div className="composer-shortcuts" role="group" aria-label="Botones rápidos y atajos"><QuickButtonsRow chatId={chat.id} store={quickButtons} imageSets={images} onSendSet={(packageId) => onSendEntrepreneurPackages({ packageIds: [packageId] })} onNotice={setNotice} onConfigure={openQuickButtonsSettings} /><ChatAdButtons chatAd={chatAd} onSend={selection => onSendEntrepreneurPackages(selection)} onNotice={setNotice} />{videoShortcuts.map((video) => <button key={video.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar el video «${video.name}»`} onClick={() => void sendVideoShortcut(video)}>{sendingShortcut === video.id ? "Enviando…" : <>🎬 {video.name}</>}</button>)}{shortcutSets.map((set) => <button key={set.id} type="button" disabled={Boolean(sendingShortcut)} title={`Enviar las ${set.images.length} fotos de «${set.name}»`} onClick={() => void sendShortcut(set)}>{sendingShortcut === set.id ? "Enviando…" : <>▦ {set.name} <small>{set.images.length}</small></>}</button>)}</div>}
         <AudioRecorder disabled={!chat || uploadingAudio} onSend={onRecordAudio} />
         {/* Columnas del dashboard del chat, en orden: un toque asigna el lead. ⏱ = tiene seguimiento automático. */}
         {chat && chatColumns.length > 0 && <ChipCarousel className="chat-column-strip" label={`Columnas${chatColumns[0]?.boardName ? ` de ${chatColumns[0].boardName}` : ""}`}>

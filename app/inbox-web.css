@@ -410,6 +410,7 @@ article.message-highlight { animation: message-highlight 1.6s ease-out; }
 
 /* Botones rápidos (invitación + conjuntos) en la fila de atajos y su configuración. */
 .composer-shortcuts .quick-button.invitation { border-color: #25d366; background: #ecfdf3; }
+.composer-shortcuts .quick-button.chat-ad { border-color: #a4bcfd; background: #eef4ff; color: #3538cd; }
 .quick-buttons-settings { display: grid; gap: 12px; }
 .quick-buttons-settings fieldset { display: grid; gap: 7px; margin: 0; padding: 10px; border: 1px solid #e1e6e3; border-radius: 10px; min-width: 0; }
 .quick-buttons-settings legend { padding: 0 4px; font-size: 13px; font-weight: 700; }

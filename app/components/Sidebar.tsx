@@ -3,7 +3,7 @@ import type { User } from "../lib/types";
 import styles from "./Sidebar.module.css";
 import { AppNavIcon, type AppNavIconName } from "./AppNavIcon";
 
-type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "column-rules" | "ecommerce-categories" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
+type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "column-rules" | "ecommerce-categories" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "chat-ads" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./ControlPanel").ControlTab;
 type Item = { label: string; view: View; tab?: ControlTab; adminOnly?: boolean };
 const groups: { id: string; label: string; icon: AppNavIconName; items: Item[] }[] = [
@@ -77,6 +77,7 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
         </div>;
       })}
       {link("Escenarios", "scenarios", "scenarios")}
+      {link("chatAd", "chat-ads", "scenarios")}
     </nav>
     <div className="profile"><b>{user.email[0].toUpperCase()}</b><span className="sidebar-label">{user.email}<small>{user.role}</small></span><button type="button" onClick={onLogout} aria-label="Cerrar sesión" title="Cerrar sesión"><AppNavIcon name="logout"/></button></div>
   </aside>
@@ -93,6 +94,7 @@ export function Sidebar({ user, view, controlTab, onViewChange, onControlTabChan
       {["owner", "admin"].includes(user.role) && <button type="button" aria-current={view === "finances" ? "page" : undefined} onClick={() => navigate({ label: "Finanzas", view: "finances" })}>Finanzas</button>}
       {groups.map(group => <details key={group.id} open={group.items.some(isActive) || undefined}><summary>{group.label}</summary><div>{visibleItems(group).map(item => <button type="button" key={item.tab || item.view} aria-current={isActive(item) ? "page" : undefined} onClick={() => navigate(item)}>{item.label}</button>)}</div></details>)}
       <button type="button" onClick={() => navigate({ label: "Escenarios", view: "scenarios" })}>Escenarios</button>
+      <button type="button" aria-current={view === "chat-ads" ? "page" : undefined} onClick={() => navigate({ label: "chatAd", view: "chat-ads" })}>chatAd</button>
     </nav>
     <button type="button" className="mobile-logout" onClick={() => { mobileDialog.current?.close(); onLogout(); }}>Cerrar sesión</button>
   </dialog></>;

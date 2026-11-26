@@ -1,0 +1,27 @@
+.panel { display: grid; gap: 14px; }
+.editor { display: grid; gap: 10px; padding: 14px; border: 1px solid #d0d5dd; border-radius: 12px; background: #fff; }
+.editor label { display: grid; gap: 5px; font-size: 13px; font-weight: 600; color: #344054; }
+.editor label small { font-weight: 400; color: #667085; }
+.editor input, .editor textarea, .editor select { width: 100%; min-width: 0; }
+.editor textarea { resize: vertical; }
+.row { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
+.grow { flex: 1 1 240px; }
+.editor .check { display: inline-flex; align-items: center; gap: 6px; padding-bottom: 8px; }
+.editor .check input { width: auto; }
+.button { display: grid; gap: 7px; margin: 0; padding: 10px; border: 1px solid #e1e6e3; border-radius: 10px; min-width: 0; }
+.button legend { padding: 0 4px; font-size: 13px; font-weight: 700; }
+.button > button { justify-self: start; }
+.warn { color: #b54708; font-size: 12px; }
+.actions { display: flex; justify-content: flex-end; gap: 8px; }
+.list { display: grid; gap: 8px; }
+.list article { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 12px 14px; border: 1px solid #e1e6e3; border-radius: 12px; background: #fff; }
+.list article > div:first-child { display: grid; gap: 4px; min-width: 0; }
+.list article.paused { opacity: .65; }
+.phrases { color: #667085; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chips span { padding: 2px 9px; border-radius: 999px; background: #eef4ff; color: #3538cd; font-size: 12px; font-weight: 600; }
+.cardActions { display: flex; gap: 6px; align-items: center; }
+.empty { color: #667085; }
+.probe { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; padding: 12px 14px; border: 1px dashed #d0d5dd; border-radius: 12px; }
+.probe label { display: grid; gap: 5px; flex: 1 1 260px; font-size: 13px; font-weight: 600; color: #344054; }
+.probe small { flex-basis: 100%; color: #344054; }

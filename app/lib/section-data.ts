@@ -11,7 +11,7 @@ export function crmResources(view: string, controlTab: string, conversationOpen 
   if (view === "cta-buttons") resources.add("ctaTemplates");
   if (view === "templates") resources.add("templates");
   if (view === "documents") resources.add("documents");
-  if (view === "collections" || view === "scenarios" || (view === "control" && controlTab === "bundles")) resources.add("collections");
+  if (view === "collections" || view === "scenarios" || view === "chat-ads" || (view === "control" && controlTab === "bundles")) resources.add("collections");
   if (view === "scenarios") resources.add("scenarios");
   if (view === "control" && controlTab === "customers") resources.add("chats");
   // These are also used by the conversation composer, not just their management pages.

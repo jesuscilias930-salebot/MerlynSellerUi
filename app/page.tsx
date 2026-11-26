@@ -29,6 +29,7 @@ import { PresentationPanel } from "./components/PresentationPanel";
 import { FeaturesPanel } from "./components/FeaturesPanel";
 import { PendingOrdersPanel } from "./components/PendingOrdersPanel";
 import { ScenariosPanel } from "./components/ScenariosPanel";
+import { ChatAdsPanel } from "./components/ChatAdsPanel";
 import { ControlPanel } from "./components/ControlPanel";
 import { EntrepreneurPackagesPanel } from "./components/EntrepreneurPackagesPanel";
 import { QuickRepliesPanel } from "./components/QuickRepliesPanel";
@@ -49,7 +50,7 @@ import { rangeLabel, type DateRange } from "./lib/lead-move";
 import { useAutoDismiss } from "./lib/use-auto-dismiss";
 import { OutgoingContext, outgoingFromComposer, withOutgoing, type OutgoingItem } from "./lib/outgoing";
 
-type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "column-rules" | "ecommerce-categories" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
+type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "column-rules" | "ecommerce-categories" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "chat-ads" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./components/ControlPanel").ControlTab;
 type UploadResponse = { error?: string; mediaId?: string; filename?: string };
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -1330,6 +1331,8 @@ export default function Home() {
         <StoreCategoriesPanel />
       ) : view === "ecommerce-bundles" || view === "ecommerce-products" ? (
         <EcommerceCatalogPanel key={view} kind={view === "ecommerce-bundles" ? "bundles" : "products"} />
+      ) : view === "chat-ads" ? (
+        <div className="automation-workspace"><ChatAdsPanel imageSets={entrepreneurPackages} /></div>
       ) : view === "scenarios" ? (
         <ScenariosPanel scenarios={automationScenarios} columns={allColumns} entrepreneurPackages={entrepreneurPackages} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} onDuplicate={async (id) => { const copy = await request<AutomationScenario>(`/scenarios/${id}/duplicate`, { method: "POST" }); await loadScenarios(); setNotice(`Se creó «${copy.name}» pausado. Cambia sus frases de inicio antes de activarlo.`); return copy; }} />
       ) : view === "videos" ? (
