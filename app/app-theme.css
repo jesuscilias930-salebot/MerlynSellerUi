@@ -162,3 +162,32 @@
 @media (prefers-reduced-motion: reduce) {
   .merlyn-app *, .merlyn-app *::before, .merlyn-app *::after { transition: none; scroll-behavior: auto; }
 }
+
+/* Dashboard de leads compacto: título, dashboards, filtros y nueva columna en una sola barra para
+   que el tablero ocupe casi toda la pantalla. */
+.merlyn-app .pipeline { display: flex; flex-direction: column; }
+.merlyn-app .pipeline > .kanban { flex: 1 1 auto; min-height: 0; padding-top: 12px; padding-bottom: 16px; }
+.merlyn-app .pipeline-header { flex: 0 0 auto; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; padding: 8px var(--workspace-padding); }
+.merlyn-app .pipeline-header h1 { margin: 0; flex: 0 0 auto; font-size: 20px; line-height: 1.2; cursor: default; }
+.merlyn-app .pipeline-header .board-tabs { flex: 1 1 300px; min-width: 0; gap: 8px; padding: 0; }
+.merlyn-app .pipeline-header .board-tabs > nav { gap: 6px; padding: 7px 8px 4px 2px; }
+.merlyn-app .pipeline-header .board-tabs > nav button { min-height: 34px; gap: 8px; padding: 3px 10px; border-radius: 8px; }
+.merlyn-app .pipeline-header .board-tabs > nav button span { display: flex; align-items: baseline; gap: 6px; }
+.merlyn-app .pipeline-header .board-tabs > nav .board-tab-edit { width: 34px; padding: 0; }
+.merlyn-app .pipeline-header .dashboard-actions { display: flex; align-items: center; gap: 8px; flex: 0 1 auto; margin-left: auto; }
+.merlyn-app .pipeline-header .filter-buttons { padding: 3px; gap: 2px; }
+.merlyn-app .pipeline-header .filter-buttons button { min-height: 0; padding: 5px 10px; font-size: 13px; }
+.merlyn-app .pipeline-header .add-column { display: flex; gap: 6px; margin: 0; }
+.merlyn-app .pipeline-header .add-column input { width: 150px; min-height: 34px; padding: 6px 10px; font-size: 13px; }
+.merlyn-app .pipeline-header .add-column button { min-height: 34px; padding: 6px 12px; font-size: 13px; white-space: nowrap; }
+.merlyn-app .lead-column > header { gap: 6px; padding: 10px 10px 8px 12px; }
+.merlyn-app .lead-column .column-title { min-width: 0; }
+.merlyn-app .lead-column .column-actions { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.merlyn-app .lead-column .column-actions :is(.column-remarketing-trigger, .bulk-move-trigger) { width: 28px; height: 28px; min-height: 0; padding: 0; font-size: 14px; line-height: 1; }
+.merlyn-app .lead-column .remove-column { width: 24px; height: 28px; min-height: 0; padding: 0; }
+@media (max-width: 760px) {
+  .merlyn-app .pipeline-header { padding: 8px 16px; }
+  .merlyn-app .pipeline-header .board-tabs { flex-basis: 100%; order: 3; }
+  .merlyn-app .pipeline-header .dashboard-actions { flex-wrap: wrap; }
+  .merlyn-app .pipeline-header .add-column input { width: 120px; }
+}
