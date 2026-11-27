@@ -31,3 +31,16 @@ export function groupByCampaign<T extends Groupable>(scenarios: T[]): CampaignGr
   }
   return [...groups.filter(group => group.scenarios.length), ...(generic.scenarios.length ? [generic] : [])];
 }
+
+// Dashboard de un escenario: el elegido explícitamente y/o los dashboards a cuyas columnas mueve leads.
+type BoardMatchable = { boardId?: string | null; steps?: { type: string; columnId?: string }[] };
+export function scenarioBoardIds(scenario: BoardMatchable, boardOfColumn: Map<string, string>): Set<string> {
+  const ids = new Set<string>();
+  if (scenario.boardId) ids.add(scenario.boardId);
+  for (const step of scenario.steps || []) {
+    const board = step.type === "move_column" && step.columnId ? boardOfColumn.get(step.columnId) : undefined;
+    if (board) ids.add(board);
+  }
+  return ids;
+}
+export const belongsToBoard = (scenario: BoardMatchable, boardId: string, boardOfColumn: Map<string, string>) => scenarioBoardIds(scenario, boardOfColumn).has(boardId);

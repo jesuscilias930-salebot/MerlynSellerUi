@@ -16,3 +16,13 @@ test('grupos por campaña en orden alfabético, «Genérico» al final y sin reo
   assert.deepEqual(groups.map(g => [g.label, g.scenarios.map(x => x.id)]), [['Campaña 20', ['6']], ['Campaña 120', ['2', '4']], ['Essentials', ['3']], ['Genérico', ['1', '5']]]);
   assert.deepEqual(groupByCampaign([]), []);
 });
+
+import { belongsToBoard, scenarioBoardIds } from '../app/lib/scenario-groups.ts';
+test('dashboard del escenario: explícito o por las columnas a las que mueve', () => {
+  const boardOf = new Map([['c-120', 'b-120'], ['c-ess', 'b-ess']]);
+  const moves120 = { steps: [{ type: 'send_text' }, { type: 'move_column', columnId: 'c-120' }] };
+  assert.deepEqual([...scenarioBoardIds(moves120, boardOf)], ['b-120']);
+  assert.ok(belongsToBoard({ boardId: 'b-ess', steps: [] }, 'b-ess', boardOf));
+  assert.ok(!belongsToBoard({ steps: [{ type: 'move_column', columnId: 'borrada' }] }, 'b-120', boardOf));
+  assert.deepEqual([...scenarioBoardIds({ boardId: 'b-ess', ...moves120 }, boardOf)].sort(), ['b-120', 'b-ess']);
+});

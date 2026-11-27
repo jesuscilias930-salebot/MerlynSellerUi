@@ -126,6 +126,8 @@ export default function Home() {
   // Inbox: dashboard elegido ("" = todos); se combina con Todos / No leídos / Pendientes.
   const [inboxBoardId, setInboxBoardId] = useState("");
   const [dashboardFilter, setDashboardFilter] = useState<ConversationFilter>("all");
+  // Escenarios abiertos desde un dashboard: solo los de ese dashboard (desde el menú lateral, todos).
+  const [scenarioBoardId, setScenarioBoardId] = useState<string | null>(null);
   const soundContext = useRef<AudioContext | null>(null);
   const [sectionLoading, setSectionLoading] = useState(false);
   const [sectionError, setSectionError] = useState("");
@@ -1210,7 +1212,7 @@ export default function Home() {
         user={user}
         view={view}
         controlTab={controlTab}
-        onViewChange={(nextView) => setView(nextView)}
+        onViewChange={(nextView) => { if (nextView === "scenarios") setScenarioBoardId(null); setView(nextView); }}
         onControlTabChange={(tab) => { setControlTab(tab); setView("control"); }}
         onLogout={logout}
       />
@@ -1282,6 +1284,7 @@ export default function Home() {
           columns={filteredPipeline}
           onLoadMore={loadMoreLeads}
           onMoveColumn={canEditPipeline ? moveColumnToBoard : undefined}
+          onOpenScenarios={activeBoardId ? () => { setScenarioBoardId(activeBoardId); setView("scenarios"); } : undefined}
           boards={boards}
           activeBoardId={activeBoardId}
           onRemarketingSent={(message) => { setNotice(message); void refreshData(); }}
@@ -1369,7 +1372,7 @@ export default function Home() {
       ) : view === "chat-ads" ? (
         <div className="automation-workspace"><ChatAdsPanel imageSets={entrepreneurPackages} /></div>
       ) : view === "scenarios" ? (
-        <ScenariosPanel scenarios={automationScenarios} columns={allColumns} entrepreneurPackages={entrepreneurPackages} whatsAppTemplates={whatsAppTemplates} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} onDuplicate={async (id) => { const copy = await request<AutomationScenario>(`/scenarios/${id}/duplicate`, { method: "POST" }); await loadScenarios(); setNotice(`Se creó «${copy.name}» pausado. Cambia sus frases de inicio antes de activarlo.`); return copy; }} />
+        <ScenariosPanel scenarios={automationScenarios} columns={allColumns} entrepreneurPackages={entrepreneurPackages} whatsAppTemplates={whatsAppTemplates} boards={boards} boardFilter={scenarioBoardId} onClearBoardFilter={() => setScenarioBoardId(null)} onSave={saveScenario} onReorder={reorderScenarios} onDelete={async (id) => { await request(`/scenarios/${id}`, { method: "DELETE" }); await loadScenarios(); setNotice("Escenario eliminado."); }} onDuplicate={async (id) => { const copy = await request<AutomationScenario>(`/scenarios/${id}/duplicate`, { method: "POST" }); await loadScenarios(); setNotice(`Se creó «${copy.name}» pausado. Cambia sus frases de inicio antes de activarlo.`); return copy; }} />
       ) : view === "videos" ? (
         <VideosPanel />
       ) : view === "finances" && ["owner", "admin"].includes(user.role) ? (

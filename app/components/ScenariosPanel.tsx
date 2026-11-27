@@ -19,7 +19,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { StepTypePicker } from "./StepTypePicker";
 import { ScenarioQuoteBundleField } from "./QuoteBundlePicker";
 import { ScenarioTemplateTriggerField } from "./ScenarioTemplateTriggerField";
-import { campaignNames, groupByCampaign, scenarioTab, type ScenarioTab } from "../lib/scenario-groups";
+import { belongsToBoard, campaignNames, groupByCampaign, scenarioTab, type ScenarioTab } from "../lib/scenario-groups";
 import { ScenarioProductImages } from "./ProductStockImages";
 import { useSavedVideos } from "./SavedVideos";
 import { NewScenarioStart, type NewScenarioChoice } from "./NewScenarioStart";
@@ -36,6 +36,7 @@ import type {
   ScenarioMedia,
   ScenarioStep,
   WhatsAppTemplate,
+  LeadBoardSummary,
 } from "../lib/types";
 
 type Draft = Omit<AutomationScenario, "id" | "key" | "updatedAt" | "position">;
@@ -45,6 +46,11 @@ type Props = {
   entrepreneurPackages: EntrepreneurPackage[];
   /** Plantillas de WhatsApp para los escenarios que inician con la respuesta a una plantilla. */
   whatsAppTemplates?: WhatsAppTemplate[];
+  /** Dashboards: para filtrar por dashboard y elegir el del escenario. */
+  boards?: LeadBoardSummary[];
+  /** Abierto desde un dashboard: solo sus escenarios, y los nuevos quedan en ese dashboard. */
+  boardFilter?: string | null;
+  onClearBoardFilter?: () => void;
   onSave: (value: Draft, id?: string) => Promise<AutomationScenario | void>;
   onDelete: (id: string) => Promise<void>;
   onReorder: (scenarioIds: string[]) => Promise<void>;
@@ -137,6 +143,7 @@ const emptyScenario = (): Draft => {
     quoteBundle: null,
     templateTrigger: null,
     campaign: null,
+    boardId: null,
     steps: [message, end],
   };
 };
@@ -163,6 +170,7 @@ function FlowBuilder({
   entrepreneurPackages,
   whatsAppTemplates = [],
   campaigns = [],
+  boards = [],
   reusableMedia,
   onSave,
   onDelete,
@@ -171,6 +179,7 @@ function FlowBuilder({
 }: {
   /** Campañas existentes para sugerirlas al escribir. */
   campaigns?: string[];
+  boards?: LeadBoardSummary[];
   initial?: AutomationScenario;
   initialDraft?: Draft;
   columns: LeadColumn[];
@@ -196,6 +205,7 @@ function FlowBuilder({
           quoteBundle: initial.quoteBundle ?? null,
           templateTrigger: initial.templateTrigger ?? null,
           campaign: initial.campaign ?? null,
+          boardId: initial.boardId ?? null,
           steps: initial.steps,
         }
       : initialDraft || emptyScenario(),
@@ -1253,6 +1263,18 @@ function FlowBuilder({
                   {campaigns.map((name) => <option key={name} value={name} />)}
                 </datalist>
               </label>
+              {boards.length > 0 && (
+                <label>
+                  Dashboard
+                  <select
+                    value={value.boardId || ""}
+                    onChange={(event) => setValue({ ...value, boardId: event.target.value || null })}
+                  >
+                    <option value="">Ninguno en particular</option>
+                    {boards.map((board) => <option key={board.id} value={board.id}>{board.name}</option>)}
+                  </select>
+                </label>
+              )}
               <ScenarioTemplateTriggerField
                 templates={whatsAppTemplates}
                 value={value.templateTrigger ?? null}
@@ -2236,6 +2258,7 @@ const draftFromChoice = (choice: NewScenarioChoice): Draft => ({
   canInterrupt: true,
   templateTrigger: null,
   campaign: null,
+  boardId: null,
   steps: instantiateSteps(choice.template, stepId),
 });
 
@@ -2244,6 +2267,9 @@ export function ScenariosPanel({
   columns,
   entrepreneurPackages,
   whatsAppTemplates = [],
+  boards = [],
+  boardFilter = null,
+  onClearBoardFilter,
   onSave,
   onDelete,
   onReorder,
@@ -2263,8 +2289,12 @@ export function ScenariosPanel({
   });
   const chooseTab = (next: ScenarioTab) => { setTab(next); try { localStorage.setItem("merlyn.scenarios.tab", next); } catch { /* sin almacenamiento */ } };
   const campaigns = campaignNames(scenarios);
-  const tabScenarios = scenarios.filter((scenario) => scenarioTab(scenario) === tab);
-  const templateCount = scenarios.filter((scenario) => scenarioTab(scenario) === "template").length;
+  const boardOfColumn = new Map(boards.flatMap((board) => board.columns.map((column) => [column.id, board.id] as const)));
+  const filterBoard = boards.find((board) => board.id === boardFilter);
+  // Desde un dashboard: solo los escenarios de ese dashboard (elegido o porque mueven leads a sus columnas).
+  const visible = filterBoard ? scenarios.filter((scenario) => belongsToBoard(scenario, filterBoard.id, boardOfColumn)) : scenarios;
+  const tabScenarios = visible.filter((scenario) => scenarioTab(scenario) === tab);
+  const templateCount = visible.filter((scenario) => scenarioTab(scenario) === "template").length;
   const groups = groupByCampaign(tabScenarios);
   const [movingCampaignId, setMovingCampaignId] = useState<string | null>(null);
   // Cambia la campaña desde la tarjeta sin abrir el lienzo (guarda el escenario tal cual, solo con la campaña nueva).
@@ -2278,7 +2308,7 @@ export function ScenariosPanel({
     if ((campaign || null) === (scenario.campaign || null)) return;
     setMovingCampaignId(scenario.id); setDuplicateError("");
     try {
-      await onSave({ name: scenario.name, isActive: scenario.isActive, triggerExamples: scenario.triggerExamples, aiDescription: scenario.aiDescription || null, priority: scenario.priority, canInterrupt: scenario.canInterrupt, quoteBundle: scenario.quoteBundle ?? null, templateTrigger: scenario.templateTrigger ?? null, campaign, steps: scenario.steps }, scenario.id);
+      await onSave({ name: scenario.name, isActive: scenario.isActive, triggerExamples: scenario.triggerExamples, aiDescription: scenario.aiDescription || null, priority: scenario.priority, canInterrupt: scenario.canInterrupt, quoteBundle: scenario.quoteBundle ?? null, templateTrigger: scenario.templateTrigger ?? null, campaign, boardId: scenario.boardId ?? null, steps: scenario.steps }, scenario.id);
     } catch (error) { setDuplicateError(error instanceof Error ? error.message : "No se pudo cambiar la campaña."); }
     finally { setMovingCampaignId(null); }
   };
@@ -2326,6 +2356,12 @@ export function ScenariosPanel({
         <div>
           <p>ESCENARIOS</p>
           <h1>Constructor de flujos</h1>
+          {filterBoard && (
+            <span className="scenario-board-filter">
+              Dashboard <b>{filterBoard.name}</b>
+              {onClearBoardFilter && <button type="button" className="plain-button" onClick={onClearBoardFilter}>Ver todos ✕</button>}
+            </span>
+          )}
           <span>
             Abre un escenario para editarlo en el lienzo. El orden de la lista
             es la prioridad cuando un mensaje coincide con varios.
@@ -2343,7 +2379,7 @@ export function ScenariosPanel({
       {creating === "start" ? (
         <NewScenarioStart
           onCancel={() => setCreating(false)}
-          onCreate={(choice) => setCreating(draftFromChoice(choice))}
+          onCreate={(choice) => setCreating({ ...draftFromChoice(choice), boardId: filterBoard?.id ?? null, campaign: filterBoard && !filterBoard.isDefault ? filterBoard.name : null })}
         />
       ) : (
         <section className="scenario-gallery" aria-label="Mis escenarios">
@@ -2354,13 +2390,19 @@ export function ScenariosPanel({
             </div>
           )}
           <div className="scenario-tabs" role="tablist" aria-label="Tipo de escenario">
-            <button type="button" role="tab" aria-selected={tab === "normal"} className={tab === "normal" ? "selected" : ""} onClick={() => chooseTab("normal")}>Escenarios <em>{scenarios.length - templateCount}</em></button>
+            <button type="button" role="tab" aria-selected={tab === "normal"} className={tab === "normal" ? "selected" : ""} onClick={() => chooseTab("normal")}>Escenarios <em>{visible.length - templateCount}</em></button>
             <button type="button" role="tab" aria-selected={tab === "template"} className={tab === "template" ? "selected" : ""} onClick={() => chooseTab("template")}>📨 De plantillas <em>{templateCount}</em></button>
           </div>
           {tab === "template" && scenarios.length > 0 && (
             <p className="scenario-tab-hint">Solo los inicia la respuesta del cliente a su plantilla de WhatsApp; los mensajes normales nunca los activan.</p>
           )}
-          {scenarios.length > 0 && tabScenarios.length === 0 && (
+          {filterBoard && visible.length === 0 && (
+            <div className="scenario-studio-empty">
+              <b>«{filterBoard.name}» aún no tiene escenarios</b>
+              <span>Crea uno con «＋ Nuevo escenario»: quedará en este dashboard. También aparecen aquí los que mueven leads a sus columnas.</span>
+            </div>
+          )}
+          {visible.length > 0 && tabScenarios.length === 0 && (
             <div className="scenario-studio-empty">
               <b>{tab === "template" ? "Aún no hay escenarios de plantilla" : "Aún no hay escenarios normales"}</b>
               <span>{tab === "template" ? "Crea uno y en «¿Cómo inicia?» elige «Cuando el cliente responde a una plantilla»." : "Crea uno nuevo para responder automáticamente."}</span>
@@ -2449,6 +2491,7 @@ export function ScenariosPanel({
           entrepreneurPackages={entrepreneurPackages}
           whatsAppTemplates={whatsAppTemplates}
           campaigns={campaigns}
+          boards={boards}
           reusableMedia={reusableMedia}
           onClose={() => setCreating(false)}
           onSave={async (draft) => {
