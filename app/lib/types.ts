@@ -37,6 +37,8 @@ export type Message = {
   deletedForEveryone?: boolean;
   error_code?: string | null;
   created_at: string;
+  /** Remarketing programado para la hora de reanudar (horario de pausa). */
+  scheduledFor?: string | null;
   /** Vista previa local de una foto que todavía se está enviando. */
   localPreviewUrl?: string;
   /** Avance de subida de un video que todavía se está enviando. */

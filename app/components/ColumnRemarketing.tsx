@@ -5,6 +5,7 @@ import { request } from "../lib/api";
 import { templateCampaignIssues, templateCampaignPreview } from "../lib/template-campaign";
 import type { LeadColumn, RemarketingPreset, WhatsAppTemplate } from "../lib/types";
 import type { MoveRule } from "./RemarketingMovesPanel";
+import { scheduledLabel } from "../lib/remarketing-schedule";
 
 type Choice = { kind: "template" | "preset"; id: string } | { kind: "temporary" };
 type Audience = { total: number; eligible: number };
@@ -72,15 +73,15 @@ export function ColumnRemarketing({ column, onSent }: { column: Pick<LeadColumn,
     setSending(true); setError("");
     try {
       if (choice.kind === "template") {
-        const result = await request<{ queued: number }>("/remarketing/template-campaigns", { method: "POST", body: JSON.stringify({ columnId: column.id, templateId: choice.id, manualValues: values, enableScenarios }) });
-        onSent?.(`Plantilla en cola para ${result.queued} ${result.queued === 1 ? "lead" : "leads"} de «${column.name}».`);
+        const result = await request<{ queued: number; scheduledFor?: string }>("/remarketing/template-campaigns", { method: "POST", body: JSON.stringify({ columnId: column.id, templateId: choice.id, manualValues: values, enableScenarios }) });
+        onSent?.(result.scheduledFor ? `Horario de pausa: la plantilla para ${result.queued} ${result.queued === 1 ? "lead" : "leads"} de «${column.name}» quedó programada para ${scheduledLabel(result.scheduledFor)}.` : `Plantilla en cola para ${result.queued} ${result.queued === 1 ? "lead" : "leads"} de «${column.name}».`);
       } else {
         const body = choice.kind === "temporary" ? text.trim() : preset?.body || undefined;
-        const result = await request<{ queued: number }>("/remarketing/campaigns", { method: "POST", body: JSON.stringify({
+        const result = await request<{ queued: number; scheduledFor?: string }>("/remarketing/campaigns", { method: "POST", body: JSON.stringify({
           columnId: column.id, enableScenarios, body,
           ...(choice.kind === "preset" ? { presetId: choice.id, mediaId: preset?.mediaId || undefined, filename: preset?.mediaId ? preset?.filename || undefined : undefined } : {}),
         }) });
-        onSent?.(`Mensaje en cola para ${result.queued} ${result.queued === 1 ? "lead" : "leads"} de «${column.name}».`);
+        onSent?.(result.scheduledFor ? `Horario de pausa: el mensaje para ${result.queued} ${result.queued === 1 ? "lead" : "leads"} de «${column.name}» quedó programado para ${scheduledLabel(result.scheduledFor)} (a quien ya no tenga la ventana de 24 h abierta no le llegará).` : `Mensaje en cola para ${result.queued} ${result.queued === 1 ? "lead" : "leads"} de «${column.name}».`);
       }
       setOpen(false);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "No se pudo enviar."); }

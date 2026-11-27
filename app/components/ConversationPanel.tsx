@@ -2,6 +2,7 @@
 
 import { ChannelBadge } from "./ChannelBadge";
 import { ChipCarousel } from "./ChipCarousel";
+import { scheduledLabel } from "../lib/remarketing-schedule";
 import { ChangeEvent, FormEvent, Fragment, type ReactNode, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { api, request } from "../lib/api";
 import { VIDEO_ACCEPT } from "../lib/video-upload";
@@ -299,7 +300,9 @@ const attachTools = <div className="tool-file-cards"><label><b>PDF</b><small>Doc
             {message.direction === "inbound" && !message.deletedForEveryone && <div className="message-reaction-picker">{reactionEmojis.map(emoji => <button key={emoji} type="button" aria-label={`Reaccionar ${emoji}`} onClick={() => void onReact(message.id, emoji)}>{emoji}</button>)}</div>}
             <div className="message-meta">
               <small><time dateTime={message.created_at}>{messageTime(message.created_at)}</time></small>
-              {message.direction === "outbound" && <span className={`delivery ${message.status}`} title={deliveryLabel(message.status)} aria-label={deliveryLabel(message.status)}>{message.status === "read" || message.status === "delivered" ? "✓✓" : message.status === "sent" ? "✓" : message.status === "failed" ? "!" : "◷"}</span>}
+              {message.direction === "outbound" && (message.status === "scheduled"
+                ? <span className="delivery scheduled" title={`Programado para ${message.scheduledFor ? scheduledLabel(message.scheduledFor) : "la hora de reanudar"} (horario de pausa del remarketing)`}>🕘 {message.scheduledFor ? scheduledLabel(message.scheduledFor) : "Programado"}</span>
+                : <span className={`delivery ${message.status}`} title={deliveryLabel(message.status)} aria-label={deliveryLabel(message.status)}>{message.status === "read" || message.status === "delivered" ? "✓✓" : message.status === "sent" ? "✓" : message.status === "failed" ? "!" : "◷"}</span>)}
               <button type="button" className="reply-button" aria-label="Responder mensaje" onClick={() => onReplyToChange(message)}>↩</button>
               <button type="button" className="message-more-button" aria-label="Opciones del mensaje" aria-expanded={menuId === message.id} onClick={() => setMenuId(value => value === message.id ? null : message.id)}>⋮</button>
               {menuId === message.id && (mobile ? <MobileChatSheet title="Opciones del mensaje" onClose={() => setMenuId(null)}>

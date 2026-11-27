@@ -126,7 +126,7 @@ export function ColumnFollowUp({ column, columns, onSaved }: { column: Pick<Lead
       <label className="column-remarketing-var">Al terminar los pasos sin respuesta, mover a
         <select value={finalColumnId} onChange={event => setFinalColumnId(event.target.value)}><option value="">No mover</option>{columns.filter(item => item.id !== column.id).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
       </label>
-      <p className="column-remarketing-empty">No se envía de 9:00 p. m. a 9:00 a. m. (hora de tu negocio). Pasadas 24 h desde el último mensaje del cliente se usa la plantilla (si llegó por un anuncio, las plantillas son gratis durante 72 h). Solo aplica a chats con actividad después de activarlo.</p>
+      <p className="column-remarketing-empty">No se envía en el horario de pausa del remarketing (configúralo en Remarketing; por defecto de 9:00 p. m. a 9:00 a. m.). Pasadas 24 h desde el último mensaje del cliente se usa la plantilla (si llegó por un anuncio, las plantillas son gratis durante 72 h). Solo aplica a chats con actividad después de activarlo.</p>
       {error && <p className="scenario-save-error" role="alert">{error}</p>}
       <footer>
         {current && <button type="button" className="danger-link" disabled={saving} onClick={() => void remove()}>Eliminar</button>}

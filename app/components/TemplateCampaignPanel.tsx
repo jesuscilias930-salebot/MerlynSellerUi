@@ -6,6 +6,7 @@ import { templateCampaignIssues, templateCampaignPreview } from "../lib/template
 import type { LeadColumn, WhatsAppTemplate } from "../lib/types";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { RemarketingMovesPanel, type MoveRule } from "./RemarketingMovesPanel";
+import { RemarketingScheduleCard } from "./RemarketingScheduleCard";
 
 type Preview = { total: number; scenariosPaused?: number; eligible: number; otherChannel: number; recent: number; overLimit: number; max: number };
 type Result = { queued: number; scenariosEnabled?: number; skipped: { otherChannel: number; recent: number; overLimit: number; missingData: number }; warning?: string };
@@ -152,6 +153,7 @@ export function TemplateRepliesPanel() {
 export function RemarketingTabs({ columns, children }: { columns: Pick<LeadColumn, "id" | "name">[]; children: React.ReactNode }) {
   const [tab, setTab] = useState<"template" | "free" | "moves">("template");
   return <div className="remarketing-tabs">
+    <RemarketingScheduleCard />
     <nav role="tablist" aria-label="Tipo de remarketing">
       <button type="button" role="tab" aria-selected={tab === "template"} className={tab === "template" ? "selected" : ""} onClick={() => setTab("template")}>Plantilla oficial <small>a toda la columna</small></button>
       <button type="button" role="tab" aria-selected={tab === "free"} className={tab === "free" ? "selected" : ""} onClick={() => setTab("free")}>Mensaje libre <small>solo chats de las últimas 24 h</small></button>

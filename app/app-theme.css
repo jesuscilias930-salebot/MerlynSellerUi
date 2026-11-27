@@ -227,3 +227,15 @@
 .merlyn-app .lead-column.child-board-column h2 { color: #3538cd; }
 .merlyn-app .lead-column .child-board-open { min-height: 0; padding: 4px 10px; border: 1px solid #a4bcfd; border-radius: 999px; background: #fff; color: #3538cd; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; }
 .lead-card .lead-stage { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 999px; background: #eef4ff; color: #3538cd; font-size: 11px; font-style: normal; font-weight: 600; }
+
+/* Horario del remarketing automático y mensajes programados. */
+.remarketing-schedule-card { display: grid; gap: 10px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.remarketing-schedule-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.remarketing-schedule-head > div { display: grid; gap: 2px; }
+.remarketing-schedule-head small, .remarketing-schedule-form > small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.remarketing-schedule-form { display: grid; gap: 10px; }
+.remarketing-schedule-times { display: flex; flex-wrap: wrap; gap: 12px; }
+.remarketing-schedule-times label { display: grid; gap: 4px; font-size: 12px; font-weight: 700; }
+.remarketing-schedule-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.remarketing-schedule-notice { color: #11573f; font-size: 12px; }
+.delivery.scheduled { width: auto; padding: 0 6px; border-radius: 999px; background: #fffaeb; color: #b54708; font-size: 11px; white-space: nowrap; }
