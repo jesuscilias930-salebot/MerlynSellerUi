@@ -202,3 +202,14 @@
 }
 .load-more-sentinel { display: grid; place-items: center; min-height: 36px; padding: 4px 0 8px; color: #667085; font-size: 12px; }
 .load-more-sentinel .plain-button { font-size: 12px; }
+
+/* Menú ⋯ de la columna y «Empezar con» al crear dashboard. */
+.column-menu { position: relative; }
+.merlyn-app .lead-column .column-menu-trigger { width: 24px; height: 28px; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; }
+.column-menu-popover { position: absolute; top: calc(100% + 4px); right: 0; z-index: 30; display: grid; gap: 10px; width: 250px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; box-shadow: 0 12px 28px rgba(16, 24, 40, .16); }
+.column-menu-move { display: grid; gap: 6px; font-size: 12px; }
+.column-menu-move b { font-size: 13px; }
+.column-menu-move small { color: var(--muted); }
+.merlyn-app .column-menu-popover .column-menu-danger { justify-self: start; min-height: 0; padding: 4px 0; border: 0; background: none; color: #b42318; font-size: 13px; cursor: pointer; }
+.board-form .board-form-start { grid-column: 1 / -1; }
+.board-form .board-form-start select { width: 100%; padding: 9px 10px; border: 1px solid var(--app-border-strong, #d0d5dd); border-radius: 8px; font: inherit; font-size: 14px; background: #fff; }

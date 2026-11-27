@@ -195,6 +195,15 @@ export default function Home() {
     const columns = await request<LeadColumn[]>(boardUrl(boardId, keep), { signal });
     if (!signal?.aborted) setPipeline(columns);
   };
+  /** Mueve una columna completa (con sus leads, ⏳ y ⏱) a otro dashboard. */
+  const moveColumnToBoard = async (column: LeadColumn, boardId: string) => {
+    try {
+      const moved = await request<{ boardName: string }>(`/leads/columns/${column.id}/board`, { method: "PATCH", body: JSON.stringify({ boardId }) });
+      setPipeline((current) => current.filter((item) => item.id !== column.id));
+      await loadPipeline();
+      setNotice(`«${column.name}» ahora está en el dashboard «${moved.boardName}».`);
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudo mover la columna."); }
+  };
   /** Scroll infinito: siguiente página de una columna (sin repetir leads si el orden cambió mientras tanto). */
   const loadMoreLeads = async (target: LeadColumn) => {
     const loaded = pipeline.find((column) => column.id === target.id);
@@ -1272,6 +1281,7 @@ export default function Home() {
           tabs={<BoardTabs boards={boards} activeBoardId={activeBoardId} canEdit={canEditPipeline} onSelect={selectBoard} onChanged={(selectId) => loadPipeline(undefined, selectId)} />}
           columns={filteredPipeline}
           onLoadMore={loadMoreLeads}
+          onMoveColumn={canEditPipeline ? moveColumnToBoard : undefined}
           boards={boards}
           activeBoardId={activeBoardId}
           onRemarketingSent={(message) => { setNotice(message); void refreshData(); }}
