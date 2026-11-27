@@ -15,7 +15,7 @@ import { ConversationModal } from "./components/ConversationModal";
 import { Inbox } from "./components/Inbox";
 import { LeadBoard } from "./components/LeadBoard";
 import { BoardTabs } from "./components/BoardTabs";
-import { boardFamily, childBoardOf, columnsFromBoards, readStoredBoard, resolveBoardId, storeBoard } from "./lib/lead-boards";
+import { boardFamily, childBoardOf, columnsFromBoards, withLeadColumnId, readStoredBoard, resolveBoardId, storeBoard } from "./lib/lead-boards";
 import { LoginScreen } from "./components/LoginScreen";
 import { RemarketingPanel } from "./components/RemarketingPanel";
 import { Sidebar } from "./components/Sidebar";
@@ -233,7 +233,10 @@ export default function Home() {
     await Promise.all([loadDocumentOptions(item), request(`/conversations/${item.id}/read`, { method: "POST" })]);
     await Promise.all([loadChats(), loadPipeline()]);
   };
-  const openModal = async (item: Chat) => {
+  const openModal = async (opened: Chat) => {
+    // Los leads del tablero traen su columna como lead_column_id; el chat la usa como leadColumnId
+    // (sin ella, las columnas del chat caían en el primer dashboard, p. ej. el padre).
+    const item = withLeadColumnId(opened);
     setModalMessages([]);
     setModalChat(item);
     setReplyToMessage(null);

@@ -39,3 +39,9 @@ export const boardFamily = (boards: Family[], boardId: string) => new Set([board
 /** Columna del padre que representa a un hijo: «board:<id>». */
 export const CHILD_COLUMN_PREFIX = "board:";
 export const childBoardOf = (columnId: string) => columnId.startsWith(CHILD_COLUMN_PREFIX) ? columnId.slice(CHILD_COLUMN_PREFIX.length) : null;
+
+/** Los leads del tablero traen su columna como lead_column_id; el chat la usa como leadColumnId. */
+export function withLeadColumnId<T extends { leadColumnId?: string | null }>(lead: T): T {
+  const column = (lead as T & { lead_column_id?: string }).lead_column_id;
+  return lead.leadColumnId || !column ? lead : { ...lead, leadColumnId: column };
+}

@@ -39,3 +39,12 @@ test('padre e hijos: orden de pestañas, familia y columnas virtuales', () => {
   assert.equal(childBoardOf('board:h1'), 'h1');
   assert.equal(childBoardOf('col-1'), null);
 });
+
+import { withLeadColumnId, chatBoardColumns as boardColumnsOfChat } from '../app/lib/lead-boards.ts';
+test('lead del tablero: su columna queda como leadColumnId (las columnas del chat son las de su dashboard)', () => {
+  assert.equal(withLeadColumnId({ id: 'l', lead_column_id: 'hijo-cierre' }).leadColumnId, 'hijo-cierre');
+  const inbox = { id: 'l', leadColumnId: 'x' };
+  assert.equal(withLeadColumnId(inbox), inbox);
+  const columns = [{ id: 'padre-1', boardId: 'padre', position: 0 }, { id: 'hijo-cierre', boardId: 'hijo', position: 5 }, { id: 'hijo-cot', boardId: 'hijo', position: 0 }];
+  assert.deepEqual(boardColumnsOfChat(columns, withLeadColumnId({ lead_column_id: 'hijo-cierre' }).leadColumnId).map(c => c.id), ['hijo-cot', 'hijo-cierre']);
+});
