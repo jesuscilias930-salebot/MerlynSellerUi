@@ -54,3 +54,29 @@ export function followUpStatusLabel(status: FollowUpStatus, now = Date.now()): s
   const when = minutes <= 0 ? "en breve" : minutes < 60 ? `en ${minutes} min` : minutes < 1440 ? `en ${Math.round(minutes / 60)} h` : `en ${Math.round(minutes / 1440)} día${Math.round(minutes / 1440) === 1 ? "" : "s"}`;
   return `Seguimiento: paso ${status.stepIndex + 1} de ${status.totalSteps} ${when}`;
 }
+
+// ⏳ Sin respuesta → mover de columna (sin enviar mensaje).
+/** ⏳ de una columna: sin respuesta a nuestro último mensaje en la espera → mover a otra columna. */
+export type ColumnTimeout = { id: string; columnId: string; targetColumnId: string; waitMinutes: number; isActive: boolean; activatedAt?: string; updatedAt?: string };
+
+export const MIN_TIMEOUT_MINUTES = 30;
+export const MAX_TIMEOUT_MINUTES = 129600; // 90 días
+
+/** Valida la espera escrita en el formulario; devuelve los minutos o el error en español. */
+export function timeoutMinutes(value: string, unit: WaitUnit): { minutes: number } | { error: string } {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return { error: "Escribe cuánto tiempo esperar." };
+  const minutes = toMinutes(number, unit);
+  if (minutes < MIN_TIMEOUT_MINUTES) return { error: "La espera mínima es de 30 minutos." };
+  if (minutes > MAX_TIMEOUT_MINUTES) return { error: "La espera máxima es de 90 días." };
+  return { minutes };
+}
+
+/** «3 días sin respuesta → R2». */
+export const timeoutSummary = (timeout: Pick<ColumnTimeout, "waitMinutes" | "targetColumnId">, columnName: (id: string) => string | undefined) =>
+  `${waitLabel(timeout.waitMinutes)} sin respuesta → ${columnName(timeout.targetColumnId) || "columna eliminada"}`;
+
+export const timeoutDraft = (timeout?: ColumnTimeout | null) => {
+  const { value, unit } = splitWait(timeout?.waitMinutes ?? 3 * 1440);
+  return { waitValue: String(value), waitUnit: unit, targetColumnId: timeout?.targetColumnId || "", isActive: timeout?.isActive ?? true };
+};
