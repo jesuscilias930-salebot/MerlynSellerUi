@@ -219,3 +219,11 @@
 .merlyn-app .pipeline-header .board-scenarios-button:hover { border-color: var(--green); background: #eef9f1; }
 .scenario-board-filter { display: inline-flex !important; align-items: center; gap: 8px; margin-top: 8px; padding: 4px 6px 4px 12px; border-radius: 999px; background: #e6f4ec; color: #11573f !important; font-size: 13px; }
 .scenario-board-filter .plain-button { min-height: 0; padding: 2px 8px; font-size: 12px; }
+
+/* Dashboards padre/hijo: pestaña del hijo, columna del hijo dentro del padre y etapa en la tarjeta. */
+.board-tabs > nav button.child { border-style: dashed; }
+.board-tabs > nav button.child b { font-weight: 700; }
+.merlyn-app .lead-column.child-board-column { background: #eef4ff; border-color: #c7d7fe; }
+.merlyn-app .lead-column.child-board-column h2 { color: #3538cd; }
+.merlyn-app .lead-column .child-board-open { min-height: 0; padding: 4px 10px; border: 1px solid #a4bcfd; border-radius: 999px; background: #fff; color: #3538cd; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.lead-card .lead-stage { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 999px; background: #eef4ff; color: #3538cd; font-size: 11px; font-style: normal; font-weight: 600; }

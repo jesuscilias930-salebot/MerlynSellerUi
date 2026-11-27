@@ -29,3 +29,13 @@ test('en el chat solo se ven las columnas de su dashboard, en orden', async () =
   assert.deepEqual(chatBoardColumns(columns, 'a2').map(c => c.id), ['a1', 'a2']);
   assert.deepEqual(chatBoardColumns(columns, null).map(c => c.id), ['a1', 'a2'], 'sin columna: el primer dashboard');
 });
+
+import { boardFamily, childBoardOf, orderBoards } from '../app/lib/lead-boards.ts';
+test('padre e hijos: orden de pestañas, familia y columnas virtuales', () => {
+  const boards = [{ id: 'p' }, { id: 'h1', parentBoardId: 'c' }, { id: 'c' }, { id: 'h2', parentBoardId: 'c' }, { id: 'huerfano', parentBoardId: 'borrado' }];
+  assert.deepEqual(orderBoards(boards).map(b => b.id), ['p', 'c', 'h1', 'h2', 'huerfano']);
+  assert.deepEqual([...boardFamily(boards, 'c')], ['c', 'h1', 'h2']);
+  assert.deepEqual([...boardFamily(boards, 'p')], ['p']);
+  assert.equal(childBoardOf('board:h1'), 'h1');
+  assert.equal(childBoardOf('col-1'), null);
+});

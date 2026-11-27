@@ -2,10 +2,10 @@
 
 import { FormEvent, useState } from "react";
 import { request } from "../lib/api";
-import { boardSubtitle } from "../lib/lead-boards";
+import { boardSubtitle, orderBoards } from "../lib/lead-boards";
 import type { LeadBoardSummary } from "../lib/types";
 
-type Draft = { name: string; product: string; zone: string };
+type Draft = { name: string; product: string; zone: string; parentBoardId: string };
 /** Cómo empieza un dashboard nuevo: vacío, copiando otro o con la plantilla de campaña. */
 type StartWith = "empty" | "template" | `clone:${string}`;
 const sourceOf = (start: StartWith) => start === "empty" ? { type: "empty" } : start === "template" ? { type: "template", template: "campaign" } : { type: "clone", boardId: start.slice("clone:".length) };
@@ -24,7 +24,7 @@ export function BoardTabs({ boards, activeBoardId, canEdit, onSelect, onChanged 
     if (!editing || !editing.draft.name.trim()) return;
     setBusy(true); setError("");
     try {
-      const body = JSON.stringify({ name: editing.draft.name, product: editing.draft.product, zone: editing.draft.zone, ...(editing.id ? {} : { source: sourceOf(startWith) }) });
+      const body = JSON.stringify({ name: editing.draft.name, product: editing.draft.product, zone: editing.draft.zone, parentBoardId: editing.draft.parentBoardId || null, ...(editing.id ? {} : { source: sourceOf(startWith) }) });
       const saved = await request<LeadBoardSummary>(editing.id ? `/leads/boards/${editing.id}` : "/leads/boards", { method: editing.id ? "PUT" : "POST", body });
       setEditing(null);
       await onChanged(saved.id);
@@ -33,7 +33,7 @@ export function BoardTabs({ boards, activeBoardId, canEdit, onSelect, onChanged 
   };
   const remove = async () => {
     if (!active || active.isDefault) return;
-    if (!window.confirm(`¿Eliminar el dashboard «${active.name}»? Sus ${active.leadCount} leads, reglas y escenarios pasan al dashboard principal, a la columna con el mismo nombre.`)) return;
+    if (!window.confirm(`¿Eliminar el dashboard «${active.name}»? Sus ${active.leadCount} leads, reglas y escenarios pasan al dashboard ${active.parentBoardId ? `padre «${boards.find(board => board.id === active.parentBoardId)?.name || ""}»` : "principal"}, a la columna con el mismo nombre.`)) return;
     setBusy(true); setError("");
     try { await request(`/leads/boards/${active.id}`, { method: "DELETE" }); setEditing(null); await onChanged(boards.find(board => board.isDefault)?.id); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "No se pudo eliminar el dashboard."); }
@@ -41,18 +41,36 @@ export function BoardTabs({ boards, activeBoardId, canEdit, onSelect, onChanged 
   };
   return <div className="board-tabs">
     <nav role="tablist" aria-label="Dashboards">
-      {boards.map(board => <button key={board.id} type="button" role="tab" aria-selected={board.id === activeBoardId} className={board.id === activeBoardId ? "selected" : ""} onClick={() => onSelect(board.id)}>
-        <span><b>{board.name}</b>{boardSubtitle(board) && <small>{boardSubtitle(board)}</small>}</span>
-        <em>{board.leadCount}</em>
-        {board.unreadLeads > 0 && <i aria-label={`${board.unreadLeads} con mensajes sin leer`}>{board.unreadLeads > 99 ? "99+" : board.unreadLeads}</i>}
-      </button>)}
-      {canEdit && <button type="button" className="board-tab-add" onClick={() => { setError(""); setStartWith("empty"); setEditing({ draft: { name: "", product: "", zone: "" } }); }}>＋ Dashboard</button>}
-      {canEdit && active && <button type="button" className="board-tab-edit" aria-label={`Editar ${active.name}`} title="Editar dashboard" onClick={() => { setError(""); setEditing({ id: active.id, draft: { name: active.name, product: active.product || "", zone: active.zone || "" } }); }}>✎</button>}
+      {orderBoards(boards).map(board => {
+        // El padre cuenta también los leads de sus hijos (todos los clientes de esa línea).
+        const children = boards.filter(item => item.parentBoardId === board.id);
+        const leadCount = board.leadCount + children.reduce((total, item) => total + item.leadCount, 0);
+        const unread = board.unreadLeads + children.reduce((total, item) => total + item.unreadLeads, 0);
+        const parent = board.parentBoardId ? boards.find(item => item.id === board.parentBoardId) : undefined;
+        return <button key={board.id} type="button" role="tab" aria-selected={board.id === activeBoardId} className={`${board.id === activeBoardId ? "selected" : ""}${parent ? " child" : ""}${children.length ? " parent" : ""}`} title={parent ? `Campaña de «${parent.name}»` : children.length ? `Incluye ${children.length} dashboard${children.length === 1 ? "" : "s"} hijo${children.length === 1 ? "" : "s"}` : undefined} onClick={() => onSelect(board.id)}>
+          <span><b>{parent ? "↳ " : ""}{board.name}</b>{boardSubtitle(board) && <small>{boardSubtitle(board)}</small>}</span>
+          <em>{leadCount}</em>
+          {unread > 0 && <i aria-label={`${unread} con mensajes sin leer`}>{unread > 99 ? "99+" : unread}</i>}
+        </button>;
+      })}
+      {canEdit && <button type="button" className="board-tab-add" onClick={() => { setError(""); setStartWith("empty"); setEditing({ draft: { name: "", product: "", zone: "", parentBoardId: active?.parentBoardId || (boards.some(board => board.parentBoardId === active?.id) ? active?.id || "" : "") } }); }}>＋ Dashboard</button>}
+      {canEdit && active && <button type="button" className="board-tab-edit" aria-label={`Editar ${active.name}`} title="Editar dashboard" onClick={() => { setError(""); setEditing({ id: active.id, draft: { name: active.name, product: active.product || "", zone: active.zone || "", parentBoardId: active.parentBoardId || "" } }); }}>✎</button>}
     </nav>
     {editing && <form className="board-form" onSubmit={save}>
       <label>Nombre<input autoFocus value={editing.draft.name} maxLength={60} placeholder="Ej. Calcetas Orizaba" onChange={event => set({ name: event.target.value })} /></label>
       <label>Producto<input value={editing.draft.product} maxLength={80} placeholder="Ej. Calcetas mayoreo" onChange={event => set({ product: event.target.value })} /></label>
       <label>Zona<input value={editing.draft.zone} maxLength={80} placeholder="Ej. Orizaba / Veracruz" onChange={event => set({ zone: event.target.value })} /></label>
+      {(() => {
+        const hasChildren = Boolean(editing.id && boards.some(board => board.parentBoardId === editing.id));
+        const parents = boards.filter(board => !board.parentBoardId && board.id !== editing.id);
+        return <label className="board-form-start">Dashboard padre
+          <select value={editing.draft.parentBoardId} disabled={hasChildren} onChange={event => set({ parentBoardId: event.target.value })}>
+            <option value="">Ninguno (dashboard principal de una línea)</option>
+            {parents.map(board => <option key={board.id} value={board.id}>{board.name}</option>)}
+          </select>
+          <small>{hasChildren ? "Este dashboard ya es padre de otros, así que no puede ser hijo." : "Si eliges uno, este dashboard es una campaña suya: el padre muestra una columna con todos sus leads."}</small>
+        </label>;
+      })()}
       {!editing.id && <label className="board-form-start">Empezar con
         <select value={startWith} onChange={event => setStartWith(event.target.value as StartWith)}>
           <option value="empty">Vacío (solo «Primer contacto»)</option>

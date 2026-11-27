@@ -15,7 +15,7 @@ import { ConversationModal } from "./components/ConversationModal";
 import { Inbox } from "./components/Inbox";
 import { LeadBoard } from "./components/LeadBoard";
 import { BoardTabs } from "./components/BoardTabs";
-import { columnsFromBoards, readStoredBoard, resolveBoardId, storeBoard } from "./lib/lead-boards";
+import { boardFamily, childBoardOf, columnsFromBoards, readStoredBoard, resolveBoardId, storeBoard } from "./lib/lead-boards";
 import { LoginScreen } from "./components/LoginScreen";
 import { RemarketingPanel } from "./components/RemarketingPanel";
 import { Sidebar } from "./components/Sidebar";
@@ -310,11 +310,17 @@ export default function Home() {
   };
   const boardOfColumn = new Map(boards.flatMap((board) => board.columns.map((column) => [column.id, board.id] as const)));
   const inboxBoard = boards.some((board) => board.id === inboxBoardId) ? inboxBoardId : "";
-  const filteredChats = chats.filter((item) => matchesFilter(item, inboxFilter) && (!inboxBoard || boardOfColumn.get(item.leadColumnId || "") === inboxBoard));
+  // Un dashboard padre incluye los chats de sus dashboards hijos.
+  const inboxFamily = inboxBoard ? boardFamily(boards, inboxBoard) : null;
+  const filteredChats = chats.filter((item) => matchesFilter(item, inboxFilter) && (!inboxFamily || inboxFamily.has(boardOfColumn.get(item.leadColumnId || "") || "")));
+  const parentOf = new Map(boards.filter((board) => board.parentBoardId).map((board) => [board.id, board.parentBoardId as string]));
   const inboxBoardUnread: Record<string, number> = {};
   for (const item of chats) {
     const owner = boardOfColumn.get(item.leadColumnId || "");
-    if (owner && item.unreadCount > 0) inboxBoardUnread[owner] = (inboxBoardUnread[owner] || 0) + 1;
+    if (!owner || item.unreadCount <= 0) continue;
+    inboxBoardUnread[owner] = (inboxBoardUnread[owner] || 0) + 1;
+    const parent = parentOf.get(owner);
+    if (parent) inboxBoardUnread[parent] = (inboxBoardUnread[parent] || 0) + 1;
   }
   const filteredPipeline = pipeline.map((column) => ({
     ...column,
@@ -861,10 +867,14 @@ export default function Home() {
       draggingLeadId;
     setDraggingLeadId(null);
     if (!leadId) return;
+    // Soltar en la columna de un dashboard hijo (dentro del padre): entra a la primera columna del hijo.
+    const childId = childBoardOf(columnId);
+    const targetColumnId = childId ? boards.find((board) => board.id === childId)?.columns[0]?.id : columnId;
+    if (!targetColumnId) { setNotice("Ese dashboard no tiene columnas."); return; }
     try {
       await request(`/leads/${leadId}/column`, {
         method: "PATCH",
-        body: JSON.stringify({ columnId }),
+        body: JSON.stringify({ columnId: targetColumnId }),
       });
       await refreshData();
     } catch (error) {
@@ -897,7 +907,7 @@ export default function Home() {
     event.preventDefault();
     const sourceId = event.dataTransfer.getData("text/merlynsales-column") || draggingColumnId;
     setDraggingColumnId(null);
-    if (!sourceId || sourceId === destinationId) return;
+    if (!sourceId || sourceId === destinationId || childBoardOf(sourceId) || childBoardOf(destinationId)) return;
     const from = pipeline.findIndex((column) => column.id === sourceId);
     const to = pipeline.findIndex((column) => column.id === destinationId);
     if (from < 0 || to < 0) return;
@@ -906,7 +916,8 @@ export default function Home() {
     reordered.splice(to, 0, moved);
     setPipeline(reordered);
     try {
-      await request("/leads/columns/order", { method: "PUT", body: JSON.stringify({ columnIds: reordered.map((column) => column.id) }) });
+      // Las columnas de los dashboards hijos no se ordenan aquí (van al final).
+      await request("/leads/columns/order", { method: "PUT", body: JSON.stringify({ columnIds: reordered.filter((column) => !column.virtual).map((column) => column.id) }) });
       await loadPipeline();
     } catch (error) {
       await loadPipeline();
@@ -1284,6 +1295,7 @@ export default function Home() {
           columns={filteredPipeline}
           onLoadMore={loadMoreLeads}
           onMoveColumn={canEditPipeline ? moveColumnToBoard : undefined}
+          onSelectBoard={selectBoard}
           onOpenScenarios={activeBoardId ? () => { setScenarioBoardId(activeBoardId); setView("scenarios"); } : undefined}
           boards={boards}
           activeBoardId={activeBoardId}
