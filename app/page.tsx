@@ -197,6 +197,15 @@ export default function Home() {
     const columns = await request<LeadColumn[]>(boardUrl(boardId, keep), { signal });
     if (!signal?.aborted) setPipeline(columns);
   };
+  /** Renombra una columna (conserva leads, ⏳, ⏱, escenarios y reglas). */
+  const renameColumn = async (column: LeadColumn, name: string) => {
+    try {
+      await request(`/leads/columns/${column.id}`, { method: "PATCH", body: JSON.stringify({ name }) });
+      setPipeline((current) => current.map((item) => item.id === column.id ? { ...item, name } : item));
+      await loadPipeline();
+      setNotice(`Columna renombrada a «${name}».`);
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudo renombrar la columna."); throw error; }
+  };
   /** Mueve una columna completa (con sus leads, ⏳ y ⏱) a otro dashboard. */
   const moveColumnToBoard = async (column: LeadColumn, boardId: string) => {
     try {
@@ -1298,6 +1307,7 @@ export default function Home() {
           columns={filteredPipeline}
           onLoadMore={loadMoreLeads}
           onMoveColumn={canEditPipeline ? moveColumnToBoard : undefined}
+          onRenameColumn={canEditPipeline ? renameColumn : undefined}
           onSelectBoard={selectBoard}
           onOpenScenarios={activeBoardId ? () => { setScenarioBoardId(activeBoardId); setView("scenarios"); } : undefined}
           boards={boards}

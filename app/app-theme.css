@@ -243,3 +243,5 @@
 .follow-up-template-window { align-items: flex-start !important; }
 .follow-up-template-window span { display: grid; gap: 2px; font-size: 13px; }
 .follow-up-template-window small { color: var(--muted); font-size: 12px; }
+.column-menu-move input { width: 100%; min-height: 32px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 7px; font: inherit; font-size: 13px; }
+.column-menu-popover form.column-menu-move { padding-bottom: 10px; border-bottom: 1px solid var(--line); }
