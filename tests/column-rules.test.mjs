@@ -5,7 +5,7 @@ import { nationalNumber, ruleIssues, rulePayload, splitPhrases, testRules } from
 test('separa frases por renglón o coma y valida', () => {
   assert.deepEqual(splitPhrases('precio de mayoreo\n distribuidor , ,'), ['precio de mayoreo', 'distribuidor']);
   assert.deepEqual(ruleIssues({ name: '', phrases: '', areaCodes: '', matchMode: 'contains', columnId: '', isActive: true }).length, 3);
-  assert.deepEqual(rulePayload({ name: ' Mayoreo ', phrases: 'a, b', areaCodes: '272, (278) 272', matchMode: 'exact', columnId: 'c', isActive: false }), { name: 'Mayoreo', phrases: ['a', 'b'], areaCodes: ['272', '278'], matchMode: 'exact', columnId: 'c', isActive: false });
+  assert.deepEqual(rulePayload({ name: ' Mayoreo ', phrases: 'a, b', areaCodes: '272, (278) 272', matchMode: 'exact', columnId: 'c', isActive: false }), { name: 'Mayoreo', phrases: ['a', 'b'], areaCodes: ['272', '278'], matchMode: 'exact', columnId: 'c', isActive: false, adMatch: null });
 });
 
 test('prueba un mensaje como lo hará el servidor', () => {
@@ -28,4 +28,15 @@ test('prueba por lada como el servidor', () => {
   assert.equal(nationalNumber('fb:123'), null);
   assert.ok(ruleIssues({ name: 'x', phrases: '', areaCodes: '2721234567', matchMode: 'contains', columnId: 'c', isActive: true })[0].includes('no es una lada'));
   assert.deepEqual(ruleIssues({ name: 'x', phrases: '', areaCodes: '272', matchMode: 'contains', columnId: 'c', isActive: true }), []);
+});
+
+import { adMatches } from '../app/lib/column-rules.ts';
+test('reglas por anuncio: palabra del anuncio o su id; no se prueban con texto', () => {
+  const ad = { sourceId: '120211', headline: 'Caja Emprendedora 120 pares', body: null, sourceUrl: null };
+  assert.equal(adMatches('120', ad), true);
+  assert.equal(adMatches('120211', ad), true);
+  assert.equal(adMatches('12', ad), false, 'palabras completas');
+  assert.equal(adMatches('hoodie', ad), false);
+  assert.deepEqual(ruleIssues({ name: 'Anuncio 120', phrases: '', areaCodes: '', matchMode: 'contains', columnId: 'c', isActive: true, adMatch: '120' }), []);
+  assert.equal(testRules([{ id: 'a', phrases: [], areaCodes: [], matchMode: 'contains', isActive: true, adMatch: '120' }], 'hola'), null);
 });

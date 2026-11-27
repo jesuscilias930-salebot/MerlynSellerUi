@@ -245,3 +245,9 @@
 .follow-up-template-window small { color: var(--muted); font-size: 12px; }
 .column-menu-move input { width: 100%; min-height: 32px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 7px; font: inherit; font-size: 13px; }
 .column-menu-popover form.column-menu-move { padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+/* Reglas por anuncio: anuncios recientes para elegir. */
+.column-rule-ads { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.column-rule-ads small { flex-basis: 100%; color: var(--muted); font-size: 12px; }
+.column-rule-ads button { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 4px 10px; border: 1px solid #d0d5dd; border-radius: 999px; background: #fff; font-size: 12px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.column-rule-ads button.selected { border-color: var(--green); background: #e6f4ec; color: #11573f; }
+.column-rule-ads em { color: var(--muted); font-style: normal; }
