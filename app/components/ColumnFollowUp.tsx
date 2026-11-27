@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, request } from "../lib/api";
-import { MAX_FOLLOW_UP_STEPS, sequenceSummary, splitWait, stepIssues, toMinutes, type FollowUpSequence, type FollowUpStep, type WaitUnit } from "../lib/follow-ups";
+import { MAX_FOLLOW_UP_STEPS, sequenceSummary, splitWait, stepIssues, templateFitsButtons, toMinutes, type FollowUpSequence, type FollowUpStep, type WaitUnit } from "../lib/follow-ups";
 import type { EntrepreneurPackage, LeadColumn, WhatsAppTemplate } from "../lib/types";
 import { useSavedVideos } from "./SavedVideos";
 
@@ -26,10 +26,10 @@ export function useFollowUps() {
   return items;
 }
 
-type DraftStep = { waitValue: string; waitUnit: WaitUnit; text: string; imageIds: string[]; videoId: string; templateId: string };
-const emptyStep = (waitValue = "1", waitUnit: WaitUnit = "days"): DraftStep => ({ waitValue, waitUnit, text: "", imageIds: [], videoId: "", templateId: "" });
-const toDraft = (step: FollowUpStep): DraftStep => { const { value, unit } = splitWait(step.waitMinutes); return { waitValue: String(value), waitUnit: unit, text: step.text || "", imageIds: step.imageIds || [], videoId: step.videoId || "", templateId: step.templateId || "" }; };
-const toStep = (step: DraftStep): FollowUpStep => ({ waitMinutes: toMinutes(Number(step.waitValue), step.waitUnit), ...(step.text.trim() ? { text: step.text.trim() } : {}), imageIds: step.imageIds, videoId: step.videoId || null, templateId: step.templateId || null });
+type DraftStep = { waitValue: string; waitUnit: WaitUnit; text: string; imageIds: string[]; videoId: string; templateId: string; templateInWindow: boolean };
+const emptyStep = (waitValue = "1", waitUnit: WaitUnit = "days"): DraftStep => ({ waitValue, waitUnit, text: "", imageIds: [], videoId: "", templateId: "", templateInWindow: false });
+const toDraft = (step: FollowUpStep): DraftStep => { const { value, unit } = splitWait(step.waitMinutes); return { waitValue: String(value), waitUnit: unit, text: step.text || "", imageIds: step.imageIds || [], videoId: step.videoId || "", templateId: step.templateId || "", templateInWindow: Boolean(step.templateInWindow) }; };
+const toStep = (step: DraftStep): FollowUpStep => ({ waitMinutes: toMinutes(Number(step.waitValue), step.waitUnit), ...(step.text.trim() ? { text: step.text.trim() } : {}), imageIds: step.imageIds, videoId: step.videoId || null, templateId: step.templateId || null, ...(step.templateInWindow && step.templateId ? { templateInWindow: true } : {}) });
 const automaticTemplate = (template: WhatsAppTemplate) => template.status === "APPROVED" && !(template.mappings || []).some(mapping => mapping.source === "manual");
 
 /** Botón ⏱ de cada columna: seguimientos automáticos si el cliente deja de responder. */
@@ -119,6 +119,14 @@ export function ColumnFollowUp({ column, columns, onSaved }: { column: Pick<Lead
               {templates.filter(automaticTemplate).map(template => <option key={template.id} value={template.id}>📋 {template.name}</option>)}
             </select>
           </label>
+          {step.templateId && (() => {
+            const fits = templateFitsButtons(templates.find(template => template.id === step.templateId) as Parameters<typeof templateFitsButtons>[0]);
+            return <label className="column-remarketing-check follow-up-template-window">
+              <input type="checkbox" checked={step.templateInWindow && fits} disabled={!fits} onChange={event => update(index, { templateInWindow: event.target.checked })} />
+              <span>Dentro de las 24 h, enviar esta plantilla <b>gratis</b> como mensaje con sus mismos botones (en lugar del mensaje libre)
+                <small>{fits ? "Sus respuestas las atienden los escenarios de la plantilla, igual que con la plantilla oficial." : "No disponible: la plantilla tiene botones de enlace/teléfono o encabezado con imagen."}</small></span>
+            </label>;
+          })()}
           {steps.length > 1 && <button type="button" className="plain-button" onClick={() => setSteps(current => current.filter((_, position) => position !== index))}>Quitar paso</button>}
         </fieldset>;
       })}

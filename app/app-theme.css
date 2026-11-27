@@ -239,3 +239,7 @@
 .remarketing-schedule-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .remarketing-schedule-notice { color: #11573f; font-size: 12px; }
 .delivery.scheduled { width: auto; padding: 0 6px; border-radius: 999px; background: #fffaeb; color: #b54708; font-size: 11px; white-space: nowrap; }
+
+.follow-up-template-window { align-items: flex-start !important; }
+.follow-up-template-window span { display: grid; gap: 2px; font-size: 13px; }
+.follow-up-template-window small { color: var(--muted); font-size: 12px; }

@@ -17,3 +17,13 @@ test('resumen y borrador', () => {
   assert.deepEqual(timeoutDraft(null), { waitValue: '3', waitUnit: 'days', targetColumnId: '', isActive: true });
   assert.deepEqual(timeoutDraft({ id: 't', columnId: 'c', targetColumnId: 'r2', waitMinutes: 120, isActive: false }), { waitValue: '2', waitUnit: 'hours', targetColumnId: 'r2', isActive: false });
 });
+
+import { templateFitsButtons, stepIssues } from '../app/lib/follow-ups.ts';
+test('plantilla gratis con botones: solo respuesta rápida y encabezado de texto', () => {
+  const quick = { components: [{ type: 'HEADER', format: 'TEXT' }, { type: 'BUTTONS', buttons: [{ type: 'QUICK_REPLY' }, { type: 'QUICK_REPLY' }] }] };
+  assert.equal(templateFitsButtons(quick), true);
+  assert.equal(templateFitsButtons({ components: [{ type: 'BUTTONS', buttons: [{ type: 'URL' }] }] }), false);
+  assert.equal(templateFitsButtons({ components: [{ type: 'HEADER', format: 'IMAGE' }, { type: 'BUTTONS', buttons: [{ type: 'QUICK_REPLY' }] }] }), false);
+  assert.equal(templateFitsButtons({ components: [{ type: 'BODY' }] }), false);
+  assert.deepEqual(stepIssues([{ waitMinutes: 60, templateInWindow: true }]), ['Paso 1: escribe un mensaje o elige fotos, video o plantilla.', 'Paso 1: elige la plantilla que se enviará con sus botones.']);
+});

@@ -1,5 +1,5 @@
 /** Seguimientos automáticos por columna (hasta 3 pasos). */
-export type FollowUpStep = { waitMinutes: number; text?: string; imageIds?: string[]; videoId?: string | null; templateId?: string | null };
+export type FollowUpStep = { waitMinutes: number; text?: string; imageIds?: string[]; videoId?: string | null; templateId?: string | null; /** Dentro de 24 h: la plantilla como mensaje con sus botones (gratis). */ templateInWindow?: boolean };
 export type FollowUpSequence = { id: string; columnId: string; isActive: boolean; activatedAt: string | null; steps: FollowUpStep[]; finalColumnId: string | null; activeCount?: number };
 export type FollowUpStatus = { enabled: false } | { enabled: true; columnName: string; totalSteps: number; stepIndex: number; status: "active" | "completed" | "stopped"; stoppedReason: string | null; nextAt: string | null; waitingForCustomer: boolean };
 
@@ -39,6 +39,7 @@ export function stepIssues(steps: FollowUpStep[]): string[] {
     else if (step.waitMinutes > 43200) issues.push(`Paso ${index + 1}: la espera máxima es de 30 días.`);
     if (!step.text?.trim() && !step.imageIds?.length && !step.videoId && !step.templateId) issues.push(`Paso ${index + 1}: escribe un mensaje o elige fotos, video o plantilla.`);
     if ((step.imageIds?.length || 0) > 10) issues.push(`Paso ${index + 1}: hasta 10 fotos.`);
+    if (step.templateInWindow && !step.templateId) issues.push(`Paso ${index + 1}: elige la plantilla que se enviará con sus botones.`);
   });
   return issues;
 }
@@ -80,3 +81,13 @@ export const timeoutDraft = (timeout?: ColumnTimeout | null) => {
   const { value, unit } = splitWait(timeout?.waitMinutes ?? 3 * 1440);
   return { waitValue: String(value), waitUnit: unit, targetColumnId: timeout?.targetColumnId || "", isActive: timeout?.isActive ?? true };
 };
+
+type TemplateShape = { components?: { type: string; format?: string; buttons?: { type?: string }[] }[] };
+/** ¿La plantilla se puede mandar gratis como mensaje con botones? Solo botones de respuesta rápida y encabezado de texto. */
+export function templateFitsButtons(template?: TemplateShape | null): boolean {
+  const components = template?.components || [];
+  const header = components.find(component => component.type?.toUpperCase() === "HEADER");
+  if (header && (header.format || "TEXT").toUpperCase() !== "TEXT") return false;
+  const buttons = components.find(component => component.type?.toUpperCase() === "BUTTONS")?.buttons || [];
+  return buttons.length > 0 && buttons.every(button => button.type?.toUpperCase() === "QUICK_REPLY");
+}
