@@ -191,3 +191,14 @@
   .merlyn-app .pipeline-header .dashboard-actions { flex-wrap: wrap; }
   .merlyn-app .pipeline-header .add-column input { width: 120px; }
 }
+
+/* Tablero: cada columna ocupa toda la altura (el fondo llega hasta abajo) y desplaza sus leads por
+   dentro, con carga de 20 en 20 al llegar al final. En celular el tablero conserva su scroll normal. */
+@media (min-width: 761px) {
+  .merlyn-app .pipeline { height: 100%; min-height: 0; overflow: hidden; }
+  .merlyn-app .pipeline > .kanban { overflow-x: auto; overflow-y: hidden; align-items: stretch; }
+  .merlyn-app .kanban > .lead-column { min-height: 0; max-height: 100%; }
+  .merlyn-app .lead-column > .lead-stack { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+}
+.load-more-sentinel { display: grid; place-items: center; min-height: 36px; padding: 4px 0 8px; color: #667085; font-size: 12px; }
+.load-more-sentinel .plain-button { font-size: 12px; }

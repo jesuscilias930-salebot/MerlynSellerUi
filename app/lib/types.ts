@@ -109,7 +109,7 @@ export type WhatsAppTemplateVariable = { component: "body" | "header"; position:
 export type WhatsAppTemplateMapping = { component: "body" | "header"; position: number; source: "contact.name" | "contact.phone" | "fixed" | "manual"; value?: string; label?: string };
 export type WhatsAppTemplate = { id: string; metaTemplateId: string; name: string; language: string; status: string; category: string | null; components: { type: string; text?: string }[]; variables: WhatsAppTemplateVariable[]; mappings: WhatsAppTemplateMapping[]; updatedAt: string };
 
-export type LeadColumn = { id: string; name: string; position: number; leads: Chat[]; boardId?: string; boardName?: string; shortName?: string; leadCount?: number; scenariosPaused?: number };
+export type LeadColumn = { id: string; name: string; position: number; leads: Chat[]; /** Leads ya cargados (sin el filtro local), para pedir la siguiente página. */ loadedCount?: number; boardId?: string; boardName?: string; shortName?: string; leadCount?: number; scenariosPaused?: number };
 /** Multi dashboard: un dashboard por producto y zona, con contadores ligeros de sus columnas. */
 export type BoardColumnSummary = { id: string; name: string; position: number; boardId: string; leadCount: number; scenariosPaused: number; unreadLeads: number };
 export type LeadBoardSummary = { id: string; name: string; product: string | null; zone: string | null; position: number; isDefault: boolean; leadCount: number; unreadLeads: number; columns: BoardColumnSummary[] };

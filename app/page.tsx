@@ -50,6 +50,10 @@ import { rangeLabel, type DateRange } from "./lib/lead-move";
 import { useAutoDismiss } from "./lib/use-auto-dismiss";
 import { OutgoingContext, outgoingFromComposer, withOutgoing, type OutgoingItem } from "./lib/outgoing";
 
+/** Leads por página en cada columna del tablero (scroll infinito). */
+const LEADS_PAGE = 20;
+/** El servidor filtra «No leídos» y «Pendientes»; lo demás se pide completo. */
+const serverLeadFilter = (filter: string) => (filter === "unread" || filter === "needs-response" ? filter : "all");
 type View = "finances" | "conversation-analysis" | "videos" | "ecommerce-presentation" | "ecommerce-testimonials" | "column-rules" | "ecommerce-categories" | "feature" | "inbox" | "pipeline" | "remarketing" | "automations" | "quick-replies" | "stickers" | "documents" | "collections" | "cta-buttons" | "option-messages" | "business-hours" | "deliveries" | "reminders" | "templates" | "scenarios" | "chat-ads" | "shipping" | "control" | "ecommerce-orders" | "ecommerce-bundles" | "ecommerce-products";
 type ControlTab = import("./components/ControlPanel").ControlTab;
 type UploadResponse = { error?: string; mediaId?: string; filename?: string };
@@ -177,6 +181,8 @@ export default function Home() {
     });
     return boardId;
   };
+  /** Leads del tablero: 20 por columna con el filtro aplicado en el servidor; al refrescar se pide lo ya cargado. */
+  const boardUrl = (boardId: string, limit = LEADS_PAGE) => `/leads/board?boardId=${encodeURIComponent(boardId)}&filter=${serverLeadFilter(dashboardFilter)}&limit=${limit}`;
   /** Dashboards (ligero) y, solo en la vista del tablero, los leads del dashboard abierto. */
   const loadPipeline = async (signal?: AbortSignal, selectBoardId?: string) => {
     const list = await request<LeadBoardSummary[]>("/leads/boards", { signal });
@@ -184,8 +190,23 @@ export default function Home() {
     let boardId = applyBoards(list);
     if (selectBoardId && list.some((board) => board.id === selectBoardId)) { boardId = selectBoardId; setActiveBoardId(boardId); storeBoard(boardId); }
     if (view !== "pipeline" || !boardId) return;
-    const columns = await request<LeadColumn[]>(`/leads/board?boardId=${boardId}`, { signal });
+    // Si cambió de dashboard se empieza en la primera página; si no, se conserva lo que ya se desplazó.
+    const keep = boardId === activeBoardId ? Math.min(200, Math.max(LEADS_PAGE, ...pipeline.map((column) => column.leads.length))) : LEADS_PAGE;
+    const columns = await request<LeadColumn[]>(boardUrl(boardId, keep), { signal });
     if (!signal?.aborted) setPipeline(columns);
+  };
+  /** Scroll infinito: siguiente página de una columna (sin repetir leads si el orden cambió mientras tanto). */
+  const loadMoreLeads = async (target: LeadColumn) => {
+    const loaded = pipeline.find((column) => column.id === target.id);
+    if (!loaded) return;
+    try {
+      const page = await request<{ leads: Chat[]; leadCount: number }>(`/leads/columns/${target.id}/leads?offset=${loaded.leads.length}&limit=${LEADS_PAGE}&filter=${serverLeadFilter(dashboardFilter)}`);
+      setPipeline((current) => current.map((column) => {
+        if (column.id !== target.id) return column;
+        const seen = new Set(column.leads.map((lead) => lead.id));
+        return { ...column, leads: [...column.leads, ...page.leads.filter((lead) => !seen.has(lead.id))], leadCount: page.leadCount };
+      }));
+    } catch (error) { setNotice(error instanceof Error ? error.message : "No se pudieron cargar más leads."); }
   };
   const selectBoard = (boardId: string) => {
     if (boardId === activeBoardId) return;
@@ -286,6 +307,7 @@ export default function Home() {
   }
   const filteredPipeline = pipeline.map((column) => ({
     ...column,
+    loadedCount: column.leads.length,
     leads: column.leads.filter((lead) => matchesFilter(lead, dashboardFilter)),
   }));
   const playIncomingSound = () => {
@@ -322,14 +344,16 @@ export default function Home() {
     const controller = new AbortController();
     void Promise.resolve().then(async () => {
       try {
-        const columns = await request<LeadColumn[]>(`/leads/board?boardId=${activeBoardId}`, { signal: controller.signal });
+        const columns = await request<LeadColumn[]>(boardUrl(activeBoardId), { signal: controller.signal });
         if (!controller.signal.aborted) setPipeline(columns);
       } catch (error) {
         if (!controller.signal.aborted && !(error instanceof Error && error.name === "AbortError")) setNotice(error instanceof Error ? error.message : "No se pudo cargar el dashboard.");
       }
     });
     return () => controller.abort();
-  }, [user, view, activeBoardId]);
+    // boardUrl solo cambia con el filtro, que ya está en la lista.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, view, activeBoardId, dashboardFilter]);
 
   useEffect(() => {
     if (!user) return;
@@ -1247,6 +1271,7 @@ export default function Home() {
         <LeadBoard
           tabs={<BoardTabs boards={boards} activeBoardId={activeBoardId} canEdit={canEditPipeline} onSelect={selectBoard} onChanged={(selectId) => loadPipeline(undefined, selectId)} />}
           columns={filteredPipeline}
+          onLoadMore={loadMoreLeads}
           boards={boards}
           activeBoardId={activeBoardId}
           onRemarketingSent={(message) => { setNotice(message); void refreshData(); }}
