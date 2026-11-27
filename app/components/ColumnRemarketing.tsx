@@ -6,9 +6,10 @@ import { templateCampaignIssues, templateCampaignPreview } from "../lib/template
 import type { LeadColumn, RemarketingPreset, WhatsAppTemplate } from "../lib/types";
 import type { MoveRule } from "./RemarketingMovesPanel";
 import { scheduledLabel } from "../lib/remarketing-schedule";
+import { templateFitsButtons } from "../lib/follow-ups";
 
 type Choice = { kind: "template" | "preset"; id: string } | { kind: "temporary" };
-type Audience = { total: number; eligible: number };
+type Audience = { total: number; eligible: number; inWindow?: number };
 type Data = { templates: WhatsAppTemplate[]; presets: RemarketingPreset[]; rules: MoveRule[] };
 
 /** Botón 📣 de cada columna del tablero: envía el remarketing asignado a esa columna,
@@ -23,6 +24,8 @@ export function ColumnRemarketing({ column, onSent }: { column: Pick<LeadColumn,
   const [values, setValues] = useState<Record<string, string>>({});
   const [audience, setAudience] = useState<{ key: string; value?: Audience; error?: string } | null>(null);
   const [enableScenarios, setEnableScenarios] = useState(false);
+  // Gratis con botones a quien escribió en las últimas 24 h (respuestas → escenarios de plantilla).
+  const [freeInWindow, setFreeInWindow] = useState(true);
   const [sending, setSending] = useState(false);
   useEffect(() => {
     if (!open) return;
@@ -73,8 +76,10 @@ export function ColumnRemarketing({ column, onSent }: { column: Pick<LeadColumn,
     setSending(true); setError("");
     try {
       if (choice.kind === "template") {
-        const result = await request<{ queued: number; scheduledFor?: string }>("/remarketing/template-campaigns", { method: "POST", body: JSON.stringify({ columnId: column.id, templateId: choice.id, manualValues: values, enableScenarios }) });
-        onSent?.(result.scheduledFor ? `Horario de pausa: la plantilla para ${result.queued} ${result.queued === 1 ? "lead" : "leads"} de «${column.name}» quedó programada para ${scheduledLabel(result.scheduledFor)}.` : `Plantilla en cola para ${result.queued} ${result.queued === 1 ? "lead" : "leads"} de «${column.name}».`);
+        const free = freeInWindow && templateFitsButtons(template as Parameters<typeof templateFitsButtons>[0]);
+        const result = await request<{ queued: number; free?: number; scheduledFor?: string }>("/remarketing/template-campaigns", { method: "POST", body: JSON.stringify({ columnId: column.id, templateId: choice.id, manualValues: values, enableScenarios, freeInWindow: free }) });
+        const freeNote = result.free ? ` ${result.free} ${result.free === 1 ? "va gratis" : "van gratis"} con botones (escribieron en las últimas 24 h).` : "";
+        onSent?.(result.scheduledFor ? `Horario de pausa: la plantilla para ${result.queued} ${result.queued === 1 ? "lead" : "leads"} de «${column.name}» quedó programada para ${scheduledLabel(result.scheduledFor)}.${freeNote}` : `Plantilla en cola para ${result.queued} ${result.queued === 1 ? "lead" : "leads"} de «${column.name}».${freeNote}`);
       } else {
         const body = choice.kind === "temporary" ? text.trim() : preset?.body || undefined;
         const result = await request<{ queued: number; scheduledFor?: string }>("/remarketing/campaigns", { method: "POST", body: JSON.stringify({
@@ -112,6 +117,14 @@ export function ColumnRemarketing({ column, onSent }: { column: Pick<LeadColumn,
         <div className="template-campaign-preview"><small>Así se verá</small><p>{templateCampaignPreview(template, values)}</p></div>
       </>}
       {choice && <p className="column-remarketing-audience">{!currentAudience ? "Calculando destinatarios…" : currentAudience.error || <><b>{eligible} de {currentAudience.value?.total}</b> {eligible === 1 ? "lead lo recibirá" : "leads lo recibirán"}{choice.kind === "template" ? "" : " (los demás no han escrito en 24 h: usa una plantilla oficial)"}.</>}</p>}
+      {choice?.kind === "template" && (() => {
+        const fits = templateFitsButtons(template as Parameters<typeof templateFitsButtons>[0]);
+        const inWindow = currentAudience?.value?.inWindow ?? 0;
+        return <label className="column-remarketing-check follow-up-template-window"><input type="checkbox" checked={freeInWindow && fits} disabled={!fits} onChange={event => setFreeInWindow(event.target.checked)} />
+          <span>Gratis a quien escribió en las últimas 24 h: el mismo mensaje con sus botones{fits && inWindow ? ` (${inWindow} ${inWindow === 1 ? "lead" : "leads"})` : ""}
+            <small>{fits ? "Sus respuestas las atienden los escenarios de la plantilla. Al resto se le envía la plantilla oficial." : "No disponible: la plantilla tiene botones de enlace/teléfono o encabezado con imagen."}</small></span>
+        </label>;
+      })()}
       {choice && <label className="column-remarketing-check"><input type="checkbox" checked={enableScenarios} onChange={event => setEnableScenarios(event.target.checked)} /> Encender escenarios para todos</label>}
       {choice && issues.length > 0 && (choice.kind !== "temporary" || text) && <p className="template-campaign-error">{issues[0]}</p>}
       {error && <p className="template-campaign-error" role="alert">{error}</p>}

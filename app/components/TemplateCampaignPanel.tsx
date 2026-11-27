@@ -7,9 +7,10 @@ import type { LeadColumn, WhatsAppTemplate } from "../lib/types";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { RemarketingMovesPanel, type MoveRule } from "./RemarketingMovesPanel";
 import { RemarketingScheduleCard } from "./RemarketingScheduleCard";
+import { templateFitsButtons } from "../lib/follow-ups";
 
-type Preview = { total: number; scenariosPaused?: number; eligible: number; otherChannel: number; recent: number; overLimit: number; max: number };
-type Result = { queued: number; scenariosEnabled?: number; skipped: { otherChannel: number; recent: number; overLimit: number; missingData: number }; warning?: string };
+type Preview = { total: number; scenariosPaused?: number; eligible: number; inWindow?: number; otherChannel: number; recent: number; overLimit: number; max: number };
+type Result = { queued: number; free?: number; scenariosEnabled?: number; skipped: { otherChannel: number; recent: number; overLimit: number; missingData: number }; warning?: string };
 
 /** Casilla «Encender escenarios para todos» junto a la columna; el backend solo enciende los que estén pausados. */
 export function ScenariosCheckbox({ checked, paused, onChange }: { checked: boolean; paused?: number; onChange: (value: boolean) => void }) {
@@ -32,6 +33,7 @@ export function TemplateCampaignPanel({ columns }: { columns: Pick<LeadColumn, "
   const [result, setResult] = useState<Result | null>(null);
   const [reload, setReload] = useState(0);
   const [enableScenarios, setEnableScenarios] = useState(false);
+  const [freeInWindow, setFreeInWindow] = useState(true);
   const [moveRules, setMoveRules] = useState<MoveRule[]>([]);
   useEffect(() => {
     let active = true;
@@ -62,7 +64,7 @@ export function TemplateCampaignPanel({ columns }: { columns: Pick<LeadColumn, "
   const column = columns.find(item => item.id === columnId);
   const send = async () => {
     setConfirm(false); setSending(true); setError(""); setResult(null);
-    try { setResult(await request<Result>("/remarketing/template-campaigns", { method: "POST", body: JSON.stringify({ columnId, templateId, manualValues: values, enableScenarios }) })); setReload(value => value + 1); }
+    try { setResult(await request<Result>("/remarketing/template-campaigns", { method: "POST", body: JSON.stringify({ columnId, templateId, manualValues: values, enableScenarios, freeInWindow: freeInWindow && templateFitsButtons(template as Parameters<typeof templateFitsButtons>[0]) }) })); setReload(value => value + 1); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "No se pudo enviar."); }
     finally { setSending(false); }
   };
@@ -76,6 +78,14 @@ export function TemplateCampaignPanel({ columns }: { columns: Pick<LeadColumn, "
         <label>Enviar a los leads de la columna<select value={columnId} onChange={event => { setColumnId(event.target.value); setResult(null); }}>
           <option value="">Elige una columna</option>{columns.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select></label>
+        {template && (() => {
+          const fits = templateFitsButtons(template as Parameters<typeof templateFitsButtons>[0]);
+          const inWindow = current?.data?.inWindow ?? 0;
+          return <label className="column-remarketing-check follow-up-template-window"><input type="checkbox" checked={freeInWindow && fits} disabled={!fits} onChange={event => setFreeInWindow(event.target.checked)} />
+            <span>Gratis a quien escribió en las últimas 24 h: el mismo mensaje con sus botones{fits && inWindow ? ` (${inWindow} ${inWindow === 1 ? "lead" : "leads"})` : ""}
+              <small>{fits ? "Sus respuestas las atienden los escenarios de la plantilla. Al resto se le envía la plantilla oficial." : "No disponible: la plantilla tiene botones de enlace/teléfono o encabezado con imagen."}</small></span>
+          </label>;
+        })()}
         <ScenariosCheckbox checked={enableScenarios} paused={current?.data?.scenariosPaused} onChange={setEnableScenarios} />
       </div>
       {manual.map(mapping => { const key = `${mapping.component}:${mapping.position}`; return <label key={key}>{mapping.label || `Variable {{${mapping.position}}}`} <small>(igual para todos)</small><input value={values[key] || ""} maxLength={1024} onChange={event => setValues(current => ({ ...current, [key]: event.target.value }))} /></label>; })}
@@ -91,7 +101,7 @@ export function TemplateCampaignPanel({ columns }: { columns: Pick<LeadColumn, "
       </div>}
       {issues.length > 0 && templateId && <p className="template-campaign-error">{issues[0]}</p>}
       {error && <p className="template-campaign-error" role="alert">{error}</p>}
-      {result && <p className="template-campaign-result" role="status">✓ {result.queued} {result.queued === 1 ? "mensaje en cola" : "mensajes en cola"}. Se envían en los próximos minutos; las respuestas llegan al inbox.{result.scenariosEnabled ? ` Se encendieron los escenarios en ${result.scenariosEnabled} ${result.scenariosEnabled === 1 ? "chat" : "chats"}.` : ""}{result.skipped.missingData > 0 ? ` ${result.skipped.missingData} se omitieron por falta de datos (${result.warning}).` : ""}</p>}
+      {result && <p className="template-campaign-result" role="status">✓ {result.queued} {result.queued === 1 ? "mensaje en cola" : "mensajes en cola"}{result.free ? ` (${result.free} gratis con botones)` : ""}. Se envían en los próximos minutos; las respuestas llegan al inbox.{result.scenariosEnabled ? ` Se encendieron los escenarios en ${result.scenariosEnabled} ${result.scenariosEnabled === 1 ? "chat" : "chats"}.` : ""}{result.skipped.missingData > 0 ? ` ${result.skipped.missingData} se omitieron por falta de datos (${result.warning}).` : ""}</p>}
       <button type="button" className="primary-action" disabled={sending || !columnId || !current?.data?.eligible || issues.length > 0} onClick={() => setConfirm(true)}>{sending ? "Enviando…" : "Enviar plantilla"}</button>
       <small className="template-campaign-hint">Meta cobra cada plantilla de marketing enviada y limita cuántas puedes mandar por día según la calidad de tu número. Envía solo a quien te dio permiso de contactarlo.</small>
     </div>
